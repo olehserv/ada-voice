@@ -25,9 +25,10 @@ board; delete = orphan (no trash subsystem); daily backup includes audio; self-c
 - [ ] Audio engine: persistent capture→mix→cable graph behind `IAudioCaptureDevice`/`IAudioRenderDevice` seams; monitor tap; ducking + ducking opt-out interop; single-playback rule; 10 ms stop fade; OFF AIR state; drift policy (drop-oldest / insert-silence, logged); device-loss recovery; DEGRADED alarm on system default device; `RegisterApplicationRestart`
 - [ ] Recorder: record/re-record, trim silence, RMS loudness-match to calibrated reference (peak ceiling −3 dBFS), preview to monitor, OFF AIR enforcement
 - [ ] Library: categories, tags, search, move-via-edit-dialog, delete-as-orphan, JSON repository (atomic writes)
-- [ ] Board UI: large phrase buttons (enable as background decode lands), Topmost toggle (default on), status bar (engine state incl. OFF AIR, mic meter, progress), big STOP
+- [ ] Board UI: large phrase buttons (enable as background decode lands), Topmost toggle (default on), status bar (engine state incl. OFF AIR, mic meter, progress), big STOP; **WPF-UI fixed dark theme + tokens per /DESIGN.md**; **Full + Docked layouts (min 420×560)**
+- [ ] Interaction states per design 05 §2: first-run welcome board, decode-dimmed buttons, broken-phrase repair, search/category empty states, saved/backup toasts
 - [ ] Global stop hotkey `Pause` via `RegisterHotKey`, reassignable, conflict-surfaced, `Ctrl+F12` fallback
-- [ ] Settings: devices with meters, live duck sliders, re-run calibration, language choice (applies on restart), behavior toggles
+- [ ] Settings: grouped IA (Levels → Behavior → Language & Backup → Devices with confirm-on-change), devices with meters, live duck sliders, re-run calibration, language choice (applies on restart)
 - [ ] Localization UA/PL/EN (static .resx, completeness test)
 - [ ] Backup: daily zip incl. `audio\` (keep 7), manual export/import
 - [ ] Tests per [design 08](../design/08-testing.md): state machine, golden-file DSP, storage, services; CI from Phase 1
@@ -90,9 +91,12 @@ recovery); export→import round-trips losslessly.
 
 ### Phase 3 — Board UI + Recorder UI + localization (1–2 wks)
 
-MVVM screens, search, edit-dialog categorization, status bar + STOP, Topmost toggle,
-recorder panel with OFF AIR banner; static `.resx` UA/PL/EN + completeness test.
-**Exit:** full record→organize→play→stop flow usable; localization test green.
+MVVM screens built on WPF-UI dark theme + /DESIGN.md tokens; Full **and Docked** layouts;
+search, edit-dialog categorization, status bar + STOP, Topmost toggle, recorder panel with
+OFF AIR banner; all §2 interaction states (first-run welcome, decode-dimmed, broken-phrase,
+empty search/category, toasts); static `.resx` UA/PL/EN + completeness test.
+**Exit:** full record→organize→play→stop flow usable in both layouts; localization test
+green; every state in the 05 §2 table reachable and styled.
 
 ### Operator pilot (½ day, after Phase 3)
 
@@ -103,8 +107,8 @@ Findings feed Phase 4. **The only user's acceptance is validated here, not at th
 ### Phase 4 — Stop hotkey + Settings + wizard (1 wk)
 
 `RegisterHotKey` stop (`Pause` + fallback), conflict surfacing; settings page with live duck
-sliders, calibration re-run, device meters; setup wizard with all environment checks and
-loopback self-test.
+sliders, calibration re-run, device meters; setup wizard with all environment checks,
+loopback self-test, and the first-call confidence card (decision #24).
 **Exit:** stop fires while Chrome is focused; wizard succeeds on a clean Windows VM
 (self-contained install, no runtime download).
 
@@ -143,16 +147,14 @@ local usage stats for board layout.
 |--------|---------|-----|------|--------|----------|
 | CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
 | Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR (PLAN) | 8 issues + 14 outside-voice findings, all resolved; 0 critical gaps open |
-| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | — |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR (PLAN) | 22 issues (8 inside + 14 outside-voice), all resolved; 0 critical gaps |
+| Design Review | `/plan-design-review` | UI/UX gaps | 1 | CLEAR (FULL) | score: 4/10 → 9/10, 7 decisions (visual system, dark theme, Docked layout, state table, Settings IA, confidence step, DESIGN.md) |
 | DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
 
-- **CROSS-MODEL:** Outside voice (Claude fresh-context subagent; Codex CLI unavailable)
-  raised 14 findings; all 14 accepted by the user (9 additive fixes batched, 4 decisions
-  individually: spike both architectures, Topmost in MVP, loudness calibration, early human
-  gates). Two tensions with the inside review (Voicemeeter rehearsal, trash removal
-  side-effect) were resolved in the outside voice's favor.
-- **VERDICT:** ENG CLEARED — design updated in place (docs/design/ + this roadmap), ready
-  for Phase 0.
+- **CROSS-MODEL:** Eng-review outside voice (Claude fresh-context subagent; Codex CLI
+  unavailable) raised 14 findings; all 14 accepted. Design review ran without outside
+  voices (user choice) and without mockups (no OpenAI key — captured in TODOS.md).
+- **VERDICT:** ENG + DESIGN CLEARED — design docs, /DESIGN.md, and this roadmap updated in
+  place; ready for Phase 0.
 
 NO UNRESOLVED DECISIONS

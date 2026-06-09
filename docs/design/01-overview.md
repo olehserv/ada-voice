@@ -88,6 +88,10 @@ No cloud, no accounts, fully offline.
 | 18 | Crash resilience | `RegisterApplicationRestart` so Windows relaunches after a crash; DEGRADED alarm plays via the **system default output device**, independent of the monitor setting |
 | 19 | Installer | Inno Setup, **self-contained .NET 10** (no runtime download for a non-technical user; ~80 MB larger accepted). Code signing explicitly deferred — SmartScreen warning accepted for family use; revisit if ever distributed |
 | 20 | Human gates | A8 employer-permission check is a Phase 0 gate; supervised half-day operator pilot after Phase 3 (not first contact at Phase 5) |
+| 21 | Visual system | WPF-UI library (Fluent), **fixed dark theme**, Segoe UI Variable, tokenized status colors, 4 px grid — canonical in [/DESIGN.md](../../DESIGN.md) (design review 2026-06-10) |
+| 22 | Window layouts | Two named layouts: Full (≥720 px) and Docked (420–719 px, rail→dropdown, 2-col grid); min 420×560; Docked is the primary real-world shape |
+| 23 | Interaction states | Every feature × state (loading/empty/error/success/partial) specified in [05 §2](05-ui-design.md); first-run empty board is a designed welcome with a primary action |
+| 24 | First-call confidence | Wizard ends with a test-call checklist (call a friend/own phone, play 2 phrases) before the first client call — designed bridge over the peak-fear moment |
 
 ## 5. Key User Flows
 
@@ -103,6 +107,8 @@ No cloud, no accounts, fully offline.
 6. Stop-hotkey check: verifies `Pause` exists, live press-to-test; offers `Ctrl+F12` fallback.
 7. Wizard instructs: in Chrome / Zoho, select microphone **CABLE Output**.
 8. Built-in loopback test: speak → level meter shows signal on the cable side → confirm.
+9. First-call confidence card: make a test call (own phone / friend via Zoho), play two
+   phrases, confirm they sound natural — before the first client call (decision #24).
 
 ### F2 — Record a phrase
 
