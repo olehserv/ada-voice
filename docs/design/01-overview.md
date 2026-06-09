@@ -24,10 +24,12 @@ No cloud, no accounts, fully offline.
 - Categories/scripts, tags, search/filter
 - Instant playback into the virtual mic; instant stop; one phrase at a time
 - Continuous hardware-mic passthrough into the virtual mic with configurable ducking
+- One-time voice-level calibration so phrases match her live loudness
 - Global emergency-stop hotkey (works while Chrome has focus)
-- Runtime-switchable UI language: Ukrainian / Polish / English
+- Always-on-top toggle for the main board (usable beside a full-screen Chrome)
+- UI in Ukrainian / Polish / English (language change applies on restart)
 - Settings: audio devices, duck levels, routing test wizard
-- Local storage, backup/export/import (zip)
+- Local storage, daily backup (metadata **and** audio), export/import (zip)
 
 ### Out of scope (v1)
 
@@ -35,13 +37,15 @@ No cloud, no accounts, fully offline.
 - Call recording (the client's side is never captured)
 - Multi-user / profiles
 - Per-phrase hotkeys (deferred — see roadmap)
+- Runtime (no-restart) language switching, drag-and-drop categorization, trash/auto-purge
+  subsystem (all trimmed in review 2026-06-10 — simpler equivalents ship instead)
 - Auto-detection of conversation context, telephony integration
 - macOS / Linux
 
 ## 3. Assumptions
 
 > All assumptions are listed here explicitly. Items marked ⚠ are unverified until the
-> Phase 0 routing spike.
+> Phase 0 spike.
 
 | # | Assumption | Basis |
 |---|------------|-------|
@@ -49,26 +53,41 @@ No cloud, no accounts, fully offline.
 | A2 | Single PC, single operator | Confirmed by user |
 | A3 | Wired/USB headset (not Bluetooth) | Confirmed by user |
 | A4 | Communication tool: Zoho CRM Web in Google Chrome (Zoho Voice / PhoneBridge softphone, WebRTC) | Confirmed by user |
-| A5 | ⚠ Zoho's softphone respects Chrome's microphone device selection, so "CABLE Output" can be chosen as mic | Standard WebRTC behavior; must be verified on her account in Phase 0 |
-| A6 | ⚠ Pre-recorded speech survives Chrome + Zoho echo-cancellation / noise-suppression intelligibly | Speech normally passes; double processing unverified until Phase 0 test call |
+| A5 | ⚠ Zoho's softphone respects Chrome's microphone device selection, so "CABLE Output" can be chosen as mic | Standard WebRTC behavior; verified in Phase 0 |
+| A6 | ⚠ Pre-recorded speech survives Chrome + Zoho audio processing intelligibly. Chrome processes mic input at the getUserMedia layer: **noise suppression, echo cancellation, and automatic gain control (AGC)**, with resampling to ~32 kHz mono on desktop. AGC is the most adversarial to this design — it can re-amplify the ducked mic and re-level phrases | Verified against Chrome documentation 2026-06-10; behavior on her account tested in Phase 0 |
 | A7 | Library: a few dozen phrases, 5–15 s each; total audio well under 1 GB | Confirmed by user |
-| A8 | Employer/platform permits assistive audio tools | **Unverified** — user should confirm (see [07-risks-security.md](07-risks-security.md)) |
+| A8 | Employer/platform permits assistive audio tools | **Phase 0 gate** — confirmed by email *before* the build starts, not before rollout (review 2026-06-10) |
 | A9 | VB-CABLE may be installed on the machine | Confirmed by user |
 | A10 | Hotkey style preferences deferred; only global STOP needed in MVP | Confirmed by user |
+| A11 | ⚠ Latency budgets are design targets, not measurements, until Phase 0 measures mouth-to-Chrome end to end (including VB-CABLE's internal buffering) | Review 2026-06-10 |
 
-## 4. Confirmed Decisions (2026-06-10)
+## 4. Confirmed Decisions (canonical)
 
-| Question | Decision |
-|----------|----------|
-| Communication platform | Zoho CRM Web in Google Chrome |
-| Headset | Wired |
-| Mic behavior during phrase playback | Ducked; level configurable live (`micDuckDb`, default −12 dB) |
-| Phrase audible in her headphones | Yes, ducked; level configurable live (`monitorPhraseDb`, default −6 dB) |
-| Library size | Few dozen phrases, 5–15 s → all pre-decoded to RAM |
-| UI language | Switchable UA / PL / EN at runtime, in MVP |
-| VB-CABLE + admin | Approved |
-| Per-phrase hotkeys | Deferred to post-MVP; global STOP stays |
-| New trigger vs. current phrase | New trigger stops the current phrase (default; "ignore" mode available as toggle) |
+> **This is the single source of truth for project decisions.** Other documents link here.
+> Last updated: 2026-06-10 (eng review).
+
+| # | Question | Decision |
+|---|----------|----------|
+| 1 | Communication platform | Zoho CRM Web in Google Chrome |
+| 2 | Headset | Wired |
+| 3 | Mic behavior during phrase playback | Ducked; level configurable live (`micDuckDb`, default −12 dB) |
+| 4 | Phrase audible in her headphones | Yes, ducked; level configurable live (`monitorPhraseDb`, default −6 dB) |
+| 5 | Library size | Few dozen phrases, 5–15 s → all pre-decoded to RAM (on a background thread; buttons enable as phrases become ready) |
+| 6 | UI language | UA / PL / EN; choice applies **on restart** (static `.resx`, no dynamic-binding tax) |
+| 7 | VB-CABLE + admin | Approved |
+| 8 | Per-phrase hotkeys | Deferred to post-MVP; global STOP stays |
+| 9 | New trigger vs. current phrase | New trigger stops the current phrase (default; "ignore" mode available as toggle) |
+| 10 | Emergency-stop hotkey | **`Pause`** (not Ctrl+Space — IME/layout-switch conflict on multilingual setups); wizard verifies the key exists and tests it live; `Ctrl+F12` fallback |
+| 11 | Recording vs. live call | **Recording during calls is not allowed.** Opening the Recorder takes the app OFF AIR (cable output paused, prominent banner); closing restores the live state. Enforced by design, not discipline |
+| 12 | Windows communications ducking | Engine opts out programmatically (`SetDuckingPreference` interop) on its cable + monitor sessions; wizard also sets Sound → Communications → "Do nothing" as fallback |
+| 13 | Phrase loudness | RMS/loudness-matched to a wizard-calibrated live-mic reference (sets per-phrase `gainDb`); peak ceiling −3 dBFS retained. Calibration re-runnable from Settings |
+| 14 | Deletion | No trash subsystem. Delete = confirm dialog; metadata entry removed, WAV kept on disk as an orphan (renamed `deleted-{id}.wav`) — voice recordings are never unrecoverable |
+| 15 | Backup | Daily zip includes `library.json`, `settings.json` **and `audio\`** (her voice is the irreplaceable data); keep 7 |
+| 16 | Board window | Always-on-top (`Topmost`) toggle in MVP, default ON — no focus hunt mid-call |
+| 17 | Architecture fallback | Voicemeeter (Option B) is **rehearsed in Phase 0** (~half a day), so the fallback is known-good, not theoretical. Architecture A stays primary |
+| 18 | Crash resilience | `RegisterApplicationRestart` so Windows relaunches after a crash; DEGRADED alarm plays via the **system default output device**, independent of the monitor setting |
+| 19 | Installer | Inno Setup, **self-contained .NET 10** (no runtime download for a non-technical user; ~80 MB larger accepted). Code signing explicitly deferred — SmartScreen warning accepted for family use; revisit if ever distributed |
+| 20 | Human gates | A8 employer-permission check is a Phase 0 gate; supervised half-day operator pilot after Phase 3 (not first contact at Phase 5) |
 
 ## 5. Key User Flows
 
@@ -76,14 +95,20 @@ No cloud, no accounts, fully offline.
 
 1. Install AdaVoice → guided setup wizard.
 2. Wizard detects VB-CABLE; if missing, links to the installer and verifies after install.
-3. Pick hardware mic + monitoring output (headphones). Engine starts passthrough.
-4. Wizard instructs: in Chrome / Zoho, select microphone **CABLE Output**.
-5. Built-in loopback test: speak → level meter shows signal on the cable side → confirm.
+3. Environment checks: Windows mic privacy allows desktop apps; CABLE shared-mode format is
+   48 kHz (offers to fix); **default output device is NOT CABLE Input** (system sounds must
+   not reach the client); AdaVoice session not muted in Volume Mixer.
+4. Pick hardware mic + monitoring output (headphones). Engine starts passthrough.
+5. Voice calibration: "speak normally for 5 seconds" → live-mic RMS reference stored.
+6. Stop-hotkey check: verifies `Pause` exists, live press-to-test; offers `Ctrl+F12` fallback.
+7. Wizard instructs: in Chrome / Zoho, select microphone **CABLE Output**.
+8. Built-in loopback test: speak → level meter shows signal on the cable side → confirm.
 
 ### F2 — Record a phrase
 
-Recording panel → choose category → Record → speak → Stop → auto-trim silence + peak
-normalization → preview → Save (title, tags).
+Recording panel (app goes **OFF AIR** — cable paused, banner shown) → choose category →
+Record → speak → Stop → auto-trim silence + loudness-match to calibrated reference →
+preview (monitor only) → Save (title, tags) → close panel → back ON AIR.
 
 ### F3 — During a live call (critical flow)
 
@@ -96,51 +121,61 @@ sequenceDiagram
     actor Cl as Client
 
     Note over AV,VC: Mic passthrough runs continuously
-    Op->>AV: Click phrase button
+    Op->>AV: Click phrase button (board is Topmost — no window hunt)
     AV->>AV: Duck mic to micDuckDb, mix phrase in
     AV->>VC: Phrase + ducked mic (one stream)
     VC->>ZV: Appears as microphone signal
     ZV->>Cl: Client hears the phrase as her voice
     AV-->>Op: Phrase monitored in headphones (ducked)
     Cl->>ZV: Client replies (normal speaker path, untouched)
-    Op->>AV: Ctrl+Space (emergency stop)
+    Op->>AV: Pause key (emergency stop)
     AV->>AV: 10 ms fade-out, mic gain restored
     Op->>ZV: Speaks live, mic already flowing
 ```
 
 ### F4 — Reorganize library
 
-Drag phrases between categories, edit titles/tags, delete to trash.
+Edit dialog per phrase: change category, title, tags. Delete with confirm (file kept as orphan).
 
 ### F5 — Backup
 
-Settings → Export → single `.zip` (metadata + audio). Import restores on a new PC.
+Automatic daily zip (metadata + audio). Manual: Settings → Export → single `.zip`;
+Import restores on a new PC.
 
 ## 6. Functional Requirements
 
 | ID | Requirement |
 |----|-------------|
-| FR-1 | CRUD phrases: create (record), rename, delete (to trash folder), re-record |
+| FR-1 | CRUD phrases: create (record), rename, delete (confirm dialog; WAV kept as orphan), re-record |
 | FR-2 | Phrase metadata: title, category, tags, duration, created/updated, file path, gain |
-| FR-3 | Categories: create/rename/delete/reorder; a phrase belongs to exactly one category |
+| FR-3 | Categories: create/rename/delete/reorder; a phrase belongs to exactly one category; phrase moved via edit dialog |
 | FR-4 | Local preview playback (monitor device only, never into the call) |
-| FR-5 | Live playback into virtual mic; trigger-to-audio latency < 100 ms (target ~40 ms) |
+| FR-5 | Live playback into virtual mic; trigger-to-cable latency < 100 ms (target ~40 ms app-side; end-to-end measured in Phase 0) |
 | FR-6 | Exactly one phrase at a time; new trigger stops current (default) or is ignored (toggle) |
-| FR-7 | Emergency stop: global hotkey + always-visible button; effective within one audio buffer (~20 ms) with 10 ms fade |
+| FR-7 | Emergency stop: global `Pause` hotkey + always-visible button; effective within one audio buffer (~20 ms) with 10 ms fade |
 | FR-8 | Continuous mic passthrough with live-configurable ducking while a phrase plays |
 | FR-9 | Phrase playback mirrored to headphones at live-configurable monitor level |
 | FR-10 | Search by title/tag, keyboard-first (type-to-filter) |
-| FR-11 | Settings: capture device, virtual cable device, monitor device, duck levels, stop hotkey, UI language |
+| FR-11 | Settings: capture device, virtual cable device, monitor device, duck levels, stop hotkey, UI language (restart), Topmost toggle, re-run calibration |
 | FR-12 | Routing self-test wizard + live status indicators (mic level, cable level, engine state) |
-| FR-13 | Export/import library as zip; automatic daily metadata backup |
-| FR-14 | UI fully localized UA/PL/EN, switchable at runtime without restart |
+| FR-13 | Daily backup of metadata + audio (keep 7); manual export/import as zip |
+| FR-14 | UI fully localized UA/PL/EN; language choice applies on restart |
+| FR-15 | Recording mode is mutually exclusive with on-air: Recorder open ⇒ cable output paused + OFF AIR banner |
+| FR-16 | Voice-level calibration: wizard measures live-mic RMS; phrase saves loudness-match to it via `gainDb` |
+| FR-17 | Engine opts out of Windows communications ducking on its render sessions |
+| FR-18 | App registers for OS restart after crash; DEGRADED alarm plays on the system default device regardless of monitor setting |
 
 ## 7. Non-Functional Requirements
 
-- **Latency:** phrase trigger → audible in cable < 100 ms; passthrough adds < 50 ms to mic path.
+- **Latency:** phrase trigger → cable < 100 ms app-side (target ~40 ms). Passthrough adds
+  **≤ 60 ms target / 80 ms hard ceiling** to the mic path, app-side. VB-CABLE internal
+  buffering and Chrome capture buffering add more — the **mouth-to-Chrome end-to-end number
+  is measured in Phase 0** and buffer sizes tuned then (A11).
 - **Reliability:** survives 8-hour shifts; auto-recovers from device changes; never *silently*
-  stops forwarding the mic — DEGRADED state must be loudly visible/audible.
+  stops forwarding the mic — DEGRADED state must be loudly visible/audible (system default
+  device, not the optional monitor).
 - **Footprint:** < 150 MB RAM with full phrase cache (~100 MB worst case at A7 scale).
 - **Offline:** zero network calls. **Privacy:** recordings never leave the machine.
-- **Install:** single installer + separate user-driven VB-CABLE install (licensing).
-- **Maintainability:** MVVM, audio engine isolated behind interfaces, no driver code, solo-dev friendly.
+- **Install:** single self-contained installer + separate user-driven VB-CABLE install (licensing).
+- **Maintainability:** MVVM, audio engine isolated behind interfaces (see
+  [08-testing.md](08-testing.md) for the device seams), no driver code, solo-dev friendly.

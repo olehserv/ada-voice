@@ -20,7 +20,7 @@ flowchart TB
         HOT["HotkeyService<br/>(RegisterHotKey)"]
         BAK["BackupService"]
         SET["SettingsService"]
-        LOC["LocalizationService<br/>(UA / PL / EN, runtime switch)"]
+        LOC["LocalizationService<br/>(UA / PL / EN, applies on restart)"]
     end
     subgraph CORE["Audio core (no UI dependencies)"]
         ENG["AudioEngine<br/>graph lifecycle, watchdog"]
@@ -62,10 +62,12 @@ flowchart TB
 | Virtual device | **VB-CABLE** | De-facto standard; free; cannot be bundled (user-driven install via wizard) |
 | Metadata | JSON files, atomic write (tmp + rename) | Solo-dev simple, human-recoverable, trivially backed up |
 | Audio format | **WAV PCM 16-bit / 48 kHz / mono** | Zero decode latency, no licensing, matches engine format. ~5.6 MB/min — irrelevant at 5–15 s per phrase. MP3 only as a future *export* option |
-| Localization | `.resx` per language + `LocalizationService` | Runtime switching without restart; no hard-coded XAML strings (rule enforced from day one) |
-| Hotkeys | Win32 `RegisterHotKey` via `HwndSource` | System-wide, simpler and AV-friendlier than low-level keyboard hooks |
+| Localization | Static `.resx` per language (uk/pl/en) | Language choice applies on restart — avoids the `DynamicResource` binding tax on every view that runtime switching would impose. No hard-coded XAML strings (rule enforced from day one) |
+| Hotkeys | Win32 `RegisterHotKey` via `HwndSource` | System-wide, simpler and AV-friendlier than low-level keyboard hooks. Default stop key: `Pause` (see decision #10) |
+| Ducking opt-out | `IAudioSessionControl2::SetDuckingPreference` COM interop (~30 lines) | NAudio doesn't wrap it; required so Windows doesn't attenuate the cable stream when a call starts |
+| Crash resilience | `RegisterApplicationRestart` | Windows relaunches the app after a crash — the mic-forwarding process must not stay dead |
 | Logging | Serilog → rolling file | Post-hoc diagnosis of audio issues |
-| Installer | Inno Setup (MSIX possible later) | Simple, supports per-user install |
+| Installer | Inno Setup, **self-contained .NET 10 publish** | No runtime download on a clean machine (non-technical user); ~80 MB larger accepted. Code signing deferred (documented decision #19) |
 
 ### WAV vs. MP3 tradeoff (explicit)
 
@@ -79,7 +81,7 @@ flowchart TB
 
 | Alternative | When it would win | Why not now |
 |---|---|---|
-| Voicemeeter does the mixing (routing Option B) | If in-app passthrough proves flaky in Phase 0 or real use | Operator must manage a second complex app |
+| Voicemeeter does the mixing (routing Option B) | If in-app passthrough proves flaky in Phase 0 or real use — **spiked in Phase 0 so this switch is rehearsed** | Operator must manage a second complex app; A stays primary while B is known-good standby |
 | No passthrough; Windows "Listen to this device" | Minimal app complexity | +50–150 ms latency; hidden fragile OS settings |
 | SQLite instead of JSON | Library grows beyond ~1–2k phrases or rich querying appears | Overkill at few-dozen scale; repository interface keeps migration trivial |
 | Two-process split (audio service + UI) | Hardening: UI crash would no longer kill the mic | Over-engineering for v1; listed as future enhancement |
