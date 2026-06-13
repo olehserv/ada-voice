@@ -28,5 +28,5 @@ The **canonical decisions table lives in [01-overview.md §4](01-overview.md#4-c
 this section is a gist only. In short: VB-CABLE + in-app mixer (Voicemeeter rehearsed as
 plan B in Phase 0), Zoho CRM in Chrome with a wired headset, configurable ducking, `Pause`
 as the emergency-stop hotkey, UA/PL/EN UI applied on restart, recording is mutually
-exclusive with being on air, and two non-technical gates (employer permission, operator
-pilot) moved ahead of the build.
+exclusive with being on air, and one non-technical gate — a supervised operator pilot after
+Phase 3 (the employer-permission gate was resolved 2026-06-13: no agreement needed).

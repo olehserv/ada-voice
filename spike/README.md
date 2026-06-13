@@ -5,10 +5,12 @@ Not production code; nothing here ships. The one reusable artifact is
 `DuckingOptOut.cs` — the `IAudioSessionControl2::SetDuckingPreference` COM shim
 that NAudio doesn't wrap (reference implementation for Phase 1).
 
-## Gate first (do NOT skip)
+## Permission gate — resolved
 
-**A8 — employer/Zoho permission confirmed by email before building further.**
-A "no" kills the project (design 01 §4, decision #20).
+**A8 — no employer/Zoho agreement required (employer is loyal), confirmed 2026-06-13.**
+No longer a gate (design 01 §4, decision #20). This spike still has to answer the
+*technical* unknowns A5/A6 — does Zoho/Chrome pass pre-recorded speech through AGC
+intelligibly — see the test matrix below.
 
 ## Prerequisites (target machine)
 
@@ -42,7 +44,7 @@ a few sentences in Audacity (48 kHz mono WAV) and pass the folder.
 
 ## Phase 0 test matrix (roadmap exit criteria)
 
-- [ ] **A8 gate**: employer/Zoho permission email confirmed
+- [x] **A8**: employer/Zoho permission — resolved 2026-06-13 (no agreement needed; employer loyal)
 - [ ] Chrome sees "CABLE Output" as mic; Zoho call connects with it
 - [ ] Passthrough: far end hears live voice clearly through the spike
 - [ ] Phrases intelligible to the far end **post-AGC** (use recorded speech, not test tones)

@@ -45,9 +45,10 @@
 - **No deception by design:** the product deliberately excludes features that simulate
   presence — no auto-replies, no scheduled playback, no unattended operation. One trigger =
   one human decision.
-- **Workplace/platform compliance — Phase 0 gate (decision #20):** employer and Zoho-terms
-  permission is confirmed **before the build starts** (it is an email, not engineering).
-  A "no" here kills the project; the answer must not arrive after 5–7 weeks of work.
+- **Workplace/platform compliance — resolved (2026-06-13, decision #20):** no employer or
+  Zoho-terms agreement is required (employer is loyal). No longer a gate. The product's
+  transparency/consent stance above (real operator present, one trigger = one human decision)
+  is what keeps it appropriate to use.
 - If the platform records calls, AdaVoice adds no new client data — phrase audio is already
   the operator's own.
 
@@ -64,7 +65,7 @@
 | Echo/feedback (monitor leaking into mic) | Medium | Low | Wired headset confirmed; monitoring goes to headphones only |
 | Latency creep over long sessions (buffer drift) | Medium | Medium | Bounded buffer with drop-oldest/insert-silence + logging; 8-hour soak test in Phase 1 |
 | Stop hotkey unusable (missing Pause key) or conflicting | Low | Low | Wizard existence check + live press-to-test; `Ctrl+F12` fallback; conflict detection at registration |
-| Employer/platform policy forbids the tool | High | Unknown → resolved early | **Phase 0 gate** (decision #20) — answered before the build |
+| Employer/platform policy forbids the tool | High | **Resolved (2026-06-13)** | No employer/Zoho agreement needed (employer is loyal); risk closed (decision #20) |
 | Operator rejects the UX (buttons, workflow, focus) | Medium | Unknown → resolved early | Supervised half-day pilot after Phase 3 (decision #20), not first contact at Phase 5 |
 | WASAPI edge cases (exclusive-mode apps stealing devices) | Medium | Low | Shared mode everywhere; rebuild logic |
 | NAudio/driver quirks specific to her hardware | Medium | Unknown | Phase 0 spike runs on the actual target machine |

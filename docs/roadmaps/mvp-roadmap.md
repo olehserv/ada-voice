@@ -55,8 +55,10 @@ flowchart LR
 
 Throwaway console prototype (not production code): NAudio mic→CABLE passthrough + WAV mixing.
 
-- **Gate (non-technical, day 1):** A8 — employer/Zoho permission confirmed by email. A "no"
-  kills the project; do not build first.
+- **A8 permission gate — resolved (2026-06-13):** no employer/Zoho agreement is required
+  (employer is loyal). Phase 0 proceeds directly to technical validation. This does **not**
+  resolve the technical unknowns A5/A6 (does Zoho/Chrome pass pre-recorded speech through
+  AGC intelligibly) — those are still measured below.
 - Test end-to-end in Chrome against a **real Zoho Voice call** on the target machine.
 - Measure **mouth-to-Chrome latency end-to-end** (includes VB-CABLE internal buffering and
   Chrome capture buffering — not just app-internal timing); tune VB-CABLE control-panel
@@ -127,8 +129,8 @@ final manual call-test checklist ([design 08 §4](../design/08-testing.md)), pil
    through NS/EC/**AGC** — **verified only by Phase 0** (A5/A6).
 2. Wired headset on Windows 10/11 x64; admin available for VB-CABLE install (confirmed).
 3. Library stays at "few dozen" scale — full RAM pre-decode is safe (~100 MB ceiling).
-4. Employer/platform permits assistive audio tools — **Phase 0 gate, answered before the
-   build** (A8).
+4. Employer/platform permits assistive audio tools — **resolved 2026-06-13: no employer/Zoho
+   agreement needed (employer is loyal); no longer a gate** (A8).
 5. VB-CABLE cannot be bundled (license) — wizard-driven manual install is acceptable UX.
 6. ⚠ All latency numbers are app-side design targets until Phase 0 measures mouth-to-Chrome
    end-to-end, including VB-CABLE internal buffering (A11).

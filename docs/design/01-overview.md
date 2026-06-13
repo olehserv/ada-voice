@@ -56,7 +56,7 @@ No cloud, no accounts, fully offline.
 | A5 | ⚠ Zoho's softphone respects Chrome's microphone device selection, so "CABLE Output" can be chosen as mic | Standard WebRTC behavior; verified in Phase 0 |
 | A6 | ⚠ Pre-recorded speech survives Chrome + Zoho audio processing intelligibly. Chrome processes mic input at the getUserMedia layer: **noise suppression, echo cancellation, and automatic gain control (AGC)**, with resampling to ~32 kHz mono on desktop. AGC is the most adversarial to this design — it can re-amplify the ducked mic and re-level phrases | Verified against Chrome documentation 2026-06-10; behavior on her account tested in Phase 0 |
 | A7 | Library: a few dozen phrases, 5–15 s each; total audio well under 1 GB | Confirmed by user |
-| A8 | Employer/platform permits assistive audio tools | **Phase 0 gate** — confirmed by email *before* the build starts, not before rollout (review 2026-06-10) |
+| A8 | Employer/platform permits assistive audio tools | **Resolved (2026-06-13):** no agreement with the employer or Zoho is required (employer is loyal). No longer a gate; this does **not** affect the technical unknowns A5/A6, which Phase 0 still measures |
 | A9 | VB-CABLE may be installed on the machine | Confirmed by user |
 | A10 | Hotkey style preferences deferred; only global STOP needed in MVP | Confirmed by user |
 | A11 | ⚠ Latency budgets are design targets, not measurements, until Phase 0 measures mouth-to-Chrome end to end (including VB-CABLE's internal buffering) | Review 2026-06-10 |
@@ -87,7 +87,7 @@ No cloud, no accounts, fully offline.
 | 17 | Architecture fallback | Voicemeeter (Option B) is **rehearsed in Phase 0** (~half a day), so the fallback is known-good, not theoretical. Architecture A stays primary |
 | 18 | Crash resilience | `RegisterApplicationRestart` so Windows relaunches after a crash; DEGRADED alarm plays via the **system default output device**, independent of the monitor setting |
 | 19 | Installer | Inno Setup, **self-contained .NET 10** (no runtime download for a non-technical user; ~80 MB larger accepted). Code signing explicitly deferred — SmartScreen warning accepted for family use; revisit if ever distributed |
-| 20 | Human gates | A8 employer-permission check is a Phase 0 gate; supervised half-day operator pilot after Phase 3 (not first contact at Phase 5) |
+| 20 | Human gates | Employer-permission gate **removed (2026-06-13):** no employer/Zoho agreement needed (employer is loyal). One human gate remains — the supervised half-day operator pilot after Phase 3 (not first contact at Phase 5) |
 | 21 | Visual system | WPF-UI library (Fluent), **fixed dark theme**, Segoe UI Variable, tokenized status colors, 4 px grid — canonical in [/DESIGN.md](../../DESIGN.md) (design review 2026-06-10) |
 | 22 | Window layouts | Two named layouts: Full (≥720 px) and Docked (420–719 px, rail→dropdown, 2-col grid); min 420×560; Docked is the primary real-world shape |
 | 23 | Interaction states | Every feature × state (loading/empty/error/success/partial) specified in [05 §2](05-ui-design.md); first-run empty board is a designed welcome with a primary action |
