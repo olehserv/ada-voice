@@ -1,7 +1,13 @@
 # AdaVoice — MVP Implementation Roadmap
 
-Implementation-oriented summary. Full design: [`../design/`](../design/README.md).
-**Status: design complete and eng-reviewed (2026-06-10); no code or project scaffolding exists yet.**
+Strategy layer: **what order, how long, which go/no-go gates.** Full design:
+[`../design/`](../design/README.md). Execution detail:
+[implementation plan](../plans/implementation-plan.md). Release gate:
+[production-readiness plan](../plans/production-readiness-plan.md). Live status:
+[handoff.md](../../handoff.md).
+
+**Status (2026-06-13): design complete and eng-reviewed; Phase 0 spike code written but not
+yet run on hardware; no production app code or scaffolding exists yet.**
 
 ## Goal
 
@@ -25,7 +31,7 @@ board; delete = orphan (no trash subsystem); daily backup includes audio; self-c
 - [ ] Audio engine: persistent capture→mix→cable graph behind `IAudioCaptureDevice`/`IAudioRenderDevice` seams; monitor tap; ducking + ducking opt-out interop; single-playback rule; 10 ms stop fade; OFF AIR state; drift policy (drop-oldest / insert-silence, logged); device-loss recovery; DEGRADED alarm on system default device; `RegisterApplicationRestart`
 - [ ] Recorder: record/re-record, trim silence, RMS loudness-match to calibrated reference (peak ceiling −3 dBFS), preview to monitor, OFF AIR enforcement
 - [ ] Library: categories, tags, search, move-via-edit-dialog, delete-as-orphan, JSON repository (atomic writes)
-- [ ] Board UI: large phrase buttons (enable as background decode lands), Topmost toggle (default on), status bar (engine state incl. OFF AIR, mic meter, progress), big STOP; **WPF-UI fixed dark theme + tokens per /DESIGN.md**; **Full + Docked layouts (min 420×560)**
+- [ ] Board UI: large phrase buttons (enable as background decode lands), Topmost toggle (default on), status bar (engine state incl. OFF AIR, mic meter, progress), big STOP; **WPF-UI fixed dark theme + tokens per [design 09](../design/09-design-system.md)**; **Full + Docked layouts (min 420×560)**
 - [ ] Interaction states per design 05 §2: first-run welcome board, decode-dimmed buttons, broken-phrase repair, search/category empty states, saved/backup toasts
 - [ ] Global stop hotkey `Pause` via `RegisterHotKey`, reassignable, conflict-surfaced, `Ctrl+F12` fallback
 - [ ] Settings: grouped IA (Levels → Behavior → Language & Backup → Devices with confirm-on-change), devices with meters, live duck sliders, re-run calibration, language choice (applies on restart)
@@ -93,7 +99,7 @@ recovery); export→import round-trips losslessly.
 
 ### Phase 3 — Board UI + Recorder UI + localization (1–2 wks)
 
-MVVM screens built on WPF-UI dark theme + /DESIGN.md tokens; Full **and Docked** layouts;
+MVVM screens built on WPF-UI dark theme + [design 09](../design/09-design-system.md) tokens; Full **and Docked** layouts;
 search, edit-dialog categorization, status bar + STOP, Topmost toggle, recorder panel with
 OFF AIR banner; all §2 interaction states (first-run welcome, decode-dimmed, broken-phrase,
 empty search/category, toasts); static `.resx` UA/PL/EN + completeness test.
@@ -150,13 +156,13 @@ local usage stats for board layout.
 | CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
 | Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
 | Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR (PLAN) | 22 issues (8 inside + 14 outside-voice), all resolved; 0 critical gaps |
-| Design Review | `/plan-design-review` | UI/UX gaps | 1 | CLEAR (FULL) | score: 4/10 → 9/10, 7 decisions (visual system, dark theme, Docked layout, state table, Settings IA, confidence step, DESIGN.md) |
+| Design Review | `/plan-design-review` | UI/UX gaps | 1 | CLEAR (FULL) | score: 4/10 → 9/10, 7 decisions (visual system, dark theme, Docked layout, state table, Settings IA, confidence step, design-system doc) |
 | DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
 
 - **CROSS-MODEL:** Eng-review outside voice (Claude fresh-context subagent; Codex CLI
   unavailable) raised 14 findings; all 14 accepted. Design review ran without outside
-  voices (user choice) and without mockups (no OpenAI key — captured in TODOS.md).
-- **VERDICT:** ENG + DESIGN CLEARED — design docs, /DESIGN.md, and this roadmap updated in
-  place; ready for Phase 0.
+  voices (user choice) and without mockups (no OpenAI key — tracked in [handoff.md](../../handoff.md)).
+- **VERDICT:** ENG + DESIGN CLEARED — design docs, the [design system](../design/09-design-system.md),
+  and this roadmap updated in place; ready for Phase 0.
 
 NO UNRESOLVED DECISIONS

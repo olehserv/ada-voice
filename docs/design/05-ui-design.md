@@ -4,10 +4,11 @@ Design goal: an operator under time pressure, mid-call, with Chrome focused most
 Big targets, constant status visibility, one-keystroke panic stop, window always reachable.
 The best outcome is invisibility: she stops noticing the app exists.
 
-Design source of truth: [`/DESIGN.md`](../../DESIGN.md) (tokens, type ramp, theme). This
-document specifies the screens; DESIGN.md specifies the system they're built from.
+Design source of truth: [`09-design-system.md`](09-design-system.md) (tokens, type ramp,
+theme). This document specifies the screens; the design system specifies what they're built
+from.
 
-## 0. Visual System (summary — canonical in /DESIGN.md)
+## 0. Visual System (summary — canonical in 09-design-system.md)
 
 - **Theme:** WPF-UI library (Fluent / Windows 11 style, MIT), **fixed dark theme**
   (decision: operator preference; one palette, verified once).

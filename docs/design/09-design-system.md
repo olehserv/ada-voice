@@ -1,7 +1,7 @@
 # AdaVoice — Design System
 
 Single source of truth for visual decisions. Screens are specified in
-[docs/design/05-ui-design.md](docs/design/05-ui-design.md); they are built from the
+[05-ui-design.md](05-ui-design.md); they are built from the
 tokens below. Established by design review 2026-06-10.
 
 ## Direction

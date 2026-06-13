@@ -19,8 +19,13 @@ outside-voice challenge). No application code exists yet.
 | [06-audio-engine.md](06-audio-engine.md) | Audio engine internals, recording engine, hotkeys, latency budget |
 | [07-risks-security.md](07-risks-security.md) | Error handling, edge cases, security/privacy, legal/ethical notes, risk register |
 | [08-testing.md](08-testing.md) | Test strategy: device seams, golden-file DSP tests, state-machine tests, manual call checklist |
+| [09-design-system.md](09-design-system.md) | **Canonical visual system**: theme, color tokens, typography, spacing, layout rules (built from by 05) |
 
-Implementation plan: [../roadmaps/mvp-roadmap.md](../roadmaps/mvp-roadmap.md)
+Planning docs:
+[roadmap](../roadmaps/mvp-roadmap.md) (strategy) ·
+[implementation plan](../plans/implementation-plan.md) (execution) ·
+[production-readiness plan](../plans/production-readiness-plan.md) (release gate) ·
+[handoff.md](../../handoff.md) (live status)
 
 ## Key decisions
 
