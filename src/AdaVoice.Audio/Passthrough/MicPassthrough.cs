@@ -15,7 +15,7 @@ namespace AdaVoice.Audio.Passthrough;
 /// pull-based: it reads when it needs audio. A <see cref="BufferedWaveProvider"/> joins
 /// the two sides and absorbs small clock differences between the mic and the output.
 /// </remarks>
-public sealed class MicPassthrough : IDisposable
+public sealed class MicPassthrough : IMicDuck, IDisposable
 {
     private const int MaxBacklogMs = 100;
 
