@@ -1,0 +1,31 @@
+name: CI
+
+# Audio-core unit + golden-file tests run against FAKE devices (design 08 §1), so the
+# full suite runs headless on a Windows runner with no real audio hardware. Real-device
+# verification stays manual/local. Installer/signing is deferred to Phase 5.
+
+on:
+  push:
+    branches: [ "main", "feat/**" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore AdaVoice.slnx
+
+      - name: Build
+        run: dotnet build AdaVoice.slnx --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test AdaVoice.slnx --no-build --configuration Release --verbosity normal
