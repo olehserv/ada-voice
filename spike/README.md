@@ -63,3 +63,45 @@ a few sentences in Audacity (48 kHz mono WAV) and pass the folder.
 
 **Go/no-go**: all of the above pass → Phase 1. A fails → adopt the rehearsed
 Voicemeeter config and re-scope Phase 1 (engine shrinks to a soundboard).
+
+## Phase 0 findings — WebRTC substitute test (2026-06-14)
+
+No Zoho access yet, so Chrome's mic-processing risk (A5/A6) was tested against a
+**WebRTC substitute**: the local helper page `agc-test/` capturing **CABLE Output**
+through `getUserMedia`, on **headphones**, while the spike fed mic + phrases into
+**CABLE Input**. This exercises the same Chrome AGC/NS/EC pipeline a softphone uses;
+it does **not** cover Zoho's own constraints or the PSTN leg.
+
+### Results
+
+| Chrome setting | Observed effect on the phrase | Verdict |
+|----------------|-------------------------------|---------|
+| **autoGainControl** | Off → clean, room noise barely present during a phrase. On → overall level higher/sharper, room noise up slightly, **phrase still plays well**. | Mild, survivable. |
+| **noiseSuppression** | No noticeable impact. | Neutral. |
+| **echoCancellation** | On → phrases played badly, choppy, dropped when room noise occurred. **Traced to a test artifact**, not real behaviour (see below). | Harmless on a real headset call; **highest-risk item to confirm on Zoho**. |
+| **App ducking (spike)** | Works as designed. Deeper duck (more-negative dB) → less room noise during a phrase; shallower → more. | ✅ Confirmed. |
+
+### The echoCancellation artifact (important)
+
+AEC removes from the mic whatever matches the **speaker** output. The helper page
+*monitors the captured cable back to the headphones*, so AEC saw the phrase coming
+out the speaker **and** in the mic → treated the phrase as echo → cancelled/chopped
+it. Turning the page's **"monitor to headphones" off** broke that loop and the level
+held steady. On a real call the speaker plays the **far-end voice** (uncorrelated
+with the phrase), so AEC should leave phrases alone — *provided a headset is used*.
+
+### What this confirms
+
+- Chrome's AGC/NS do **not** mangle phrases at usable levels.
+- **Ducking is the main lever for a clean signal into AGC**: a ducked mic during a
+  phrase means less room noise on the cable, so AGC has little to react to.
+- A **fairly deep duck** is a good default here (phrases are the operator's voice, so
+  she is usually not talking *during* one). Final value → operator pilot.
+- The **wired-headset decision** (design 01 §4) gains a second justification: it keeps
+  AEC away from the phrases.
+
+### Still open — needs a real Zoho call
+
+- [ ] Does **Zoho force** AGC / NS / **EC** on with no user toggle?
+- [ ] Confirm **headphones-only** keeps AEC off the phrases on a live call.
+- [ ] **PSTN narrowband** leg to a real phone (substitute stays wideband Opus).
