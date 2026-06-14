@@ -7,11 +7,10 @@ namespace AdaVoice.Audio.Tests.Fakes;
 /// </summary>
 public static class TestAudio
 {
-    public const int SampleRate = 48_000;
+    public const int SampleRate = AudioFormats.SampleRate;
 
     /// <summary>The format the engine uses: 48 kHz, float, mono.</summary>
-    public static WaveFormat EngineFormat { get; } =
-        WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, 1);
+    public static WaveFormat EngineFormat => AudioFormats.Engine;
 
     /// <summary>Turn float samples into raw IEEE-float bytes.</summary>
     public static byte[] ToBytes(float[] samples)
