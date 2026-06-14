@@ -9,11 +9,11 @@ namespace AdaVoice.Audio.Abstractions;
 /// source at its own speed and sends it to the hardware.
 /// </summary>
 /// <remarks>
-/// This contract is not final yet. Design 08 §1 described the output seam as
-/// <c>int Read(float[])</c>. Here we use an <see cref="Init"/> method that takes a source,
-/// because it matches <c>WasapiOut.Init(ISampleProvider)</c> and the spike. We will test
-/// this design against real WASAPI in Phase 1, step 4. We do this before the engine uses
-/// it, so the design may still change.
+/// This contract was validated against real WASAPI in Phase 1, step 4. Design 08 §1 first
+/// described the output seam as <c>int Read(float[])</c>. We use an <see cref="Init"/>
+/// method that takes a source instead, because it matches <c>WasapiOut.Init(...)</c> and
+/// the spike. A real mic-to-cable passthrough through this seam worked, so the engine can
+/// rely on it.
 /// </remarks>
 public interface IAudioRenderDevice : IDisposable
 {
