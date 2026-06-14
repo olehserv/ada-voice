@@ -1,8 +1,8 @@
 name: CI
 
-# Audio-core unit + golden-file tests run against FAKE devices (design 08 §1), so the
-# full suite runs headless on a Windows runner with no real audio hardware. Real-device
-# verification stays manual/local. Installer/signing is deferred to Phase 5.
+# The audio-core tests use fake devices (design 08 §1). Because of this, all tests can
+# run on a Windows runner that has no real audio hardware. Tests that need real devices
+# are run by hand on a local machine. The installer and code signing come later, in Phase 5.
 
 on:
   push:

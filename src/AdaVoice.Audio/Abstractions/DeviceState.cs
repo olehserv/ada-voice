@@ -1,6 +1,6 @@
 namespace AdaVoice.Audio.Abstractions;
 
-/// <summary>Lifecycle of a single hardware stream behind a device seam.</summary>
+/// <summary>The state of one audio stream from a device.</summary>
 public enum DeviceState
 {
     Stopped,
@@ -8,11 +8,11 @@ public enum DeviceState
     Faulted,
 }
 
-/// <summary>Raised when a device stream changes state (e.g. a fault on device loss).</summary>
+/// <summary>Sent when a device stream changes its state. For example, when a device is lost.</summary>
 public sealed class DeviceStateChangedEventArgs(DeviceState state, Exception? error = null) : EventArgs
 {
     public DeviceState State { get; } = state;
 
-    /// <summary>Set when <see cref="State"/> is <see cref="DeviceState.Faulted"/>.</summary>
+    /// <summary>Holds the error when <see cref="State"/> is <see cref="DeviceState.Faulted"/>. It is null in other cases.</summary>
     public Exception? Error { get; } = error;
 }

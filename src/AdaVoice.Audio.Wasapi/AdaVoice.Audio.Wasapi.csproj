@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Windows TFM: this project is the only place WASAPI / COM interop lives. -->
+    <!-- This project targets Windows. It is the only project that uses WASAPI and COM. -->
     <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>

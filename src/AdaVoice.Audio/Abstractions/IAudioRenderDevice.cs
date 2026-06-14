@@ -3,15 +3,17 @@ using NAudio.Wave;
 namespace AdaVoice.Audio.Abstractions;
 
 /// <summary>
-/// Seam over a render endpoint — CABLE Input / headphone monitor in production, an
-/// in-memory collector in tests. The engine hands the device the mixed sample source;
-/// the device pulls from it on its own clock and writes to hardware.
+/// One output for audio. In the real app this is CABLE Input or the headphone monitor.
+/// In tests it can be an object that stores the audio in memory.
+/// The engine gives the device the mixed audio source. The device reads from this
+/// source at its own speed and sends it to the hardware.
 /// </summary>
 /// <remarks>
-/// PROVISIONAL contract. Design 08 §1 sketched the render seam as <c>int Read(float[])</c>.
-/// This <see cref="Init"/>-a-source shape maps directly onto <c>WasapiOut.Init(ISampleProvider)</c>
-/// and the spike. The exact pull contract is validated against real WASAPI in Phase 1
-/// step 4 — before the engine is built on top of it — so this may still change.
+/// This contract is not final yet. Design 08 §1 described the output seam as
+/// <c>int Read(float[])</c>. Here we use an <see cref="Init"/> method that takes a source,
+/// because it matches <c>WasapiOut.Init(ISampleProvider)</c> and the spike. We will test
+/// this design against real WASAPI in Phase 1, step 4. We do this before the engine uses
+/// it, so the design may still change.
 /// </remarks>
 public interface IAudioRenderDevice : IDisposable
 {
@@ -21,7 +23,7 @@ public interface IAudioRenderDevice : IDisposable
 
     event EventHandler<DeviceStateChangedEventArgs>? StateChanged;
 
-    /// <summary>Supply the sample source the device renders. Call before <see cref="Start"/>.</summary>
+    /// <summary>Set the audio source that the device will play. Call this before <see cref="Start"/>.</summary>
     void Init(ISampleProvider source);
 
     void Start();

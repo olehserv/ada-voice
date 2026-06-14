@@ -3,8 +3,8 @@ using AdaVoice.Audio.Engine;
 namespace AdaVoice.Audio.Tests;
 
 /// <summary>
-/// Placeholder until the first real slice (live path) lands. Exists so CI has a green
-/// suite from day one and to prove the test project references the core correctly.
+/// A simple test used until the first real feature (the live path) is added. It keeps
+/// CI green from the start. It also proves that the test project can use the core project.
 /// </summary>
 public class ScaffoldTests
 {
