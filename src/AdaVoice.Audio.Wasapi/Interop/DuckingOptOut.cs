@@ -16,19 +16,37 @@ internal static class DuckingOptOut
 {
     public static void Apply(string renderDeviceId)
     {
-        var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumeratorComObject();
-        Marshal.ThrowExceptionForHR(enumerator.GetDevice(renderDeviceId, out var device));
+        IMMDeviceEnumerator? enumerator = null;
+        IMMDevice? device = null;
+        object? managerObj = null;
+        IAudioSessionControl2? control = null;
 
-        var iidSessionManager = typeof(IAudioSessionManager).GUID;
-        const int CLSCTX_ALL = 0x17;
-        Marshal.ThrowExceptionForHR(device.Activate(ref iidSessionManager, CLSCTX_ALL, IntPtr.Zero, out var managerObj));
-        var manager = (IAudioSessionManager)managerObj;
+        try
+        {
+            enumerator = (IMMDeviceEnumerator)new MMDeviceEnumeratorComObject();
+            Marshal.ThrowExceptionForHR(enumerator.GetDevice(renderDeviceId, out device));
 
-        // A null/empty session GUID means the default session for this process on this
-        // device — which is where NAudio's WasapiOut renders.
-        var sessionGuid = Guid.Empty;
-        Marshal.ThrowExceptionForHR(manager.GetAudioSessionControl(ref sessionGuid, 0, out var control));
-        Marshal.ThrowExceptionForHR(control.SetDuckingPreference(true));
+            var iidSessionManager = typeof(IAudioSessionManager).GUID;
+            const int CLSCTX_ALL = 0x17;
+            Marshal.ThrowExceptionForHR(device.Activate(ref iidSessionManager, CLSCTX_ALL, IntPtr.Zero, out managerObj));
+            var manager = (IAudioSessionManager)managerObj;
+
+            // A null/empty session GUID means the default session for this process on this
+            // device — which is where NAudio's WasapiOut renders.
+            var sessionGuid = Guid.Empty;
+            Marshal.ThrowExceptionForHR(manager.GetAudioSessionControl(ref sessionGuid, 0, out control));
+            Marshal.ThrowExceptionForHR(control.SetDuckingPreference(true));
+        }
+        finally
+        {
+            // Release the COM objects we created, newest first. They are RCWs; without this
+            // they linger until GC finalizes them. `manager` is the same RCW as `managerObj`,
+            // so it is released once via `managerObj`.
+            if (control is not null) Marshal.ReleaseComObject(control);
+            if (managerObj is not null) Marshal.ReleaseComObject(managerObj);
+            if (device is not null) Marshal.ReleaseComObject(device);
+            if (enumerator is not null) Marshal.ReleaseComObject(enumerator);
+        }
     }
 }
 

@@ -50,6 +50,10 @@ public class MicPassthroughTests
     {
         var capture = FileCaptureDevice.FromFloat(Enumerable.Repeat(0.1f, 48_000).ToArray());
         using var passthrough = new MicPassthrough(capture);
+
+        DriftKind? lastDrift = null;
+        passthrough.Drift += (_, e) => lastDrift = e.Kind;
+
         capture.Start();
 
         // Nobody reads the output, so the backlog grows past the 100 ms limit.
@@ -58,6 +62,38 @@ public class MicPassthroughTests
         capture.PumpMilliseconds(60); // sees >100 ms, drops oldest, counts one overrun
 
         Assert.Equal(1, passthrough.Overruns);
+        Assert.Equal(DriftKind.Overrun, lastDrift); // surfaced as an event, not just a counter
+    }
+
+    [Fact]
+    public void Underrun_keeps_the_mic_in_the_mixer_and_emits_silence()
+    {
+        // Cardinal rule (06 §2): the live mic must never silently disappear. NAudio's mixer
+        // removes any input whose Read returns fewer samples than asked. So when the buffer
+        // runs empty, the passthrough must return silence (full count), not a short read.
+        // This guards the BufferedWaveProvider.ReadFully setting against a future regression.
+        var mic = Enumerable.Repeat(0.2f, 480).ToArray(); // only 10 ms of audio
+        var capture = FileCaptureDevice.FromFloat(mic);
+        using var passthrough = new MicPassthrough(capture);
+
+        DriftKind? lastDrift = null;
+        passthrough.Drift += (_, e) => lastDrift = e.Kind;
+
+        var mixer = new MixingSampleProvider(TestAudio.EngineFormat) { ReadFully = true };
+        mixer.AddMixerInput(passthrough.Output);
+
+        capture.Start();
+        while (capture.PumpMilliseconds(20)) { }
+
+        // Ask for 100 ms — far more than the 10 ms we have — so the buffer underruns.
+        var buffer = new float[4800];
+        var read = mixer.Read(buffer, 0, buffer.Length);
+
+        Assert.Equal(buffer.Length, read);                      // full buffer returned, no short read
+        Assert.Contains(passthrough.Output, mixer.MixerInputs); // mic input was NOT dropped
+        Assert.Equal(0f, buffer[^1]);                           // the underrun tail is silence
+        Assert.Equal(1, passthrough.Underruns);                 // counted, not silent
+        Assert.Equal(DriftKind.Underrun, lastDrift);            // and surfaced as an event
     }
 
     private static void AssertClose(float[] expected, IReadOnlyList<float> actual, float tolerance = 1e-6f)

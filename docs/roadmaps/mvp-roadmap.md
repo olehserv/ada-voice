@@ -6,8 +6,10 @@ Strategy layer: **what order, how long, which go/no-go gates.** Full design:
 [production-readiness plan](../plans/production-readiness-plan.md). Live status:
 [handoff.md](../../handoff.md).
 
-**Status (2026-06-13): design complete and eng-reviewed; Phase 0 spike code written but not
-yet run on hardware; no production app code or scaffolding exists yet.**
+**Status (2026-06-15): design complete and eng-reviewed; Phase 0 go/no-go gate PASSED on the
+target machine (Architecture A confirmed); Phase 1 audio core partly built (seams +
+passthrough + player, 23 tests green, WASAPI seam hardware-validated) — engine orchestrator,
+recorder, and device monitor still to come.**
 
 ## Goal
 

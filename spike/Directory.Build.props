@@ -1,0 +1,13 @@
+<Project>
+
+  <!--
+    The Phase 0 spike is throwaway code and lives outside AdaVoice.slnx. Keep it independent of
+    the product build rules: no warnings-as-errors. This file replaces the repo-root
+    Directory.Build.props for the spike (MSBuild uses the nearest one only). Central package
+    management is turned off separately, in spike/Directory.Packages.props.
+  -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

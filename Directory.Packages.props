@@ -1,0 +1,25 @@
+<Project>
+
+  <!--
+    Central package management: every package version lives here, once. Project files list the
+    package name only (no Version). This stops the same dependency drifting to two versions
+    across projects as the solution grows (UI, storage, services are still to come).
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Audio core (no Windows dependency) -->
+    <PackageVersion Include="NAudio.Core" Version="2.2.1" />
+    <!-- WASAPI / COM seam (Windows only) -->
+    <PackageVersion Include="NAudio.Wasapi" Version="2.2.1" />
+
+    <!-- Test stack -->
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+</Project>

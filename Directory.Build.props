@@ -1,0 +1,20 @@
+<Project>
+
+  <!--
+    Shared build settings for every product project (src, tests, tools). Kept in one place so
+    new projects inherit the same rules and cannot drift. The throwaway Phase 0 spike opts out
+    via spike/Directory.Build.props.
+  -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- Warnings are bugs-in-waiting. The build is warning-clean today; keep it that way. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- Reproducible output (same source -> same binary). Helps debugging and future signing. -->
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+</Project>

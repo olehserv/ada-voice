@@ -12,11 +12,13 @@ microphone. Her real voice keeps flowing between phrases, and one key stops play
 
 ## Status
 
-**Design complete and reviewed. Phase 0 spike written but not yet run on hardware. No
-production app code exists yet.**
+**Design complete and reviewed. Phase 0 go/no-go gate passed on the target machine
+(Architecture A confirmed). Phase 1 audio core is partly built — the device seams,
+mic passthrough, and phrase player exist with 23 passing tests, and the WASAPI seam is
+hardware-validated.**
 
 The single source of live status is **[handoff.md](handoff.md)** — read it first.
-Next real step: run the Phase 0 spike against a real Zoho call (the go/no-go gate).
+Next real step: finish the Phase 1 engine (orchestrator, recorder, device monitor).
 
 ## How it works (the core idea)
 

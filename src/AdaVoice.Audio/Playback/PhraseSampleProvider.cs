@@ -8,6 +8,11 @@ namespace AdaVoice.Audio.Playback;
 /// fade-out so the sound does not click, then it ends. When it ends, <see cref="Read"/>
 /// returns fewer samples than asked (and then 0), which makes the mixer remove it.
 /// </summary>
+/// <remarks>
+/// Assumes the engine format is mono. The fade-out is applied per sample, which equals per
+/// frame only for mono audio. If the engine ever becomes multi-channel, the fade length and
+/// the per-sample step must be reworked to count frames, not samples.
+/// </remarks>
 public sealed class PhraseSampleProvider : ISampleProvider
 {
     private readonly float[] _data;
