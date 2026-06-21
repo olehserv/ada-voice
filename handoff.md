@@ -15,9 +15,9 @@ _Last updated: 2026-06-22._
 ## Status in one line
 
 **Design complete and reviewed. Phase 0 go/no-go gate PASSED on the target machine
-(Architecture A confirmed). Phase 1 engine core (state machine + reliability) is complete and
-unit-tested; the WASAPI seam is hardware-validated.** Next real step: the real WASAPI
-`IAudioDeviceFactory` + `IDeviceMonitor`, so the engine runs on hardware.
+(Architecture A confirmed). Phase 1 engine core is complete and unit-tested, and the real WASAPI
+`IAudioDeviceFactory` + `IDeviceMonitor` are built.** Next real step: the runnable host — a real
+`IEngineClock` plus a composition root that wires everything together so the engine runs live.
 
 ## Done
 
@@ -48,26 +48,35 @@ unit-tested; the WASAPI seam is hardware-validated.** Next real step: the real W
   tests green against fakes (`ManualEngineClock` + `FakeDeviceFactory`); full solution builds clean.
   Code: [`src/AdaVoice.Audio/Engine/AudioEngine.cs`](src/AdaVoice.Audio/Engine/AudioEngine.cs).
   Out of scope and still to come: the real WASAPI factory, the device monitor, and the host.
+- ✅ **WASAPI factory + device monitor — complete (2026-06-22)** — `WasapiDeviceFactory`
+  (resolves Mic/Cable/Alarm `MMDevice`s by role, builds the existing seams, transient
+  `AudioDeviceException` on a missing device) and `WasapiDeviceMonitor` (`IMMNotificationClient` →
+  `DeviceChanged`, role-agnostic, emits all default-changes). Also a core fix: the DEGRADED alarm
+  is now built at the alarm device's own sample rate (the system default output is often 44.1 kHz
+  and the seam does not resample — previously this threw out of the control loop). Seams now
+  dispose their `MMDevice` (rebuild COM-leak fix). 50 unit tests green; full solution builds clean.
+  Hardware checks: `tools/AudioSeamCheck --factory` and `--monitor` (still to be run on the target
+  machine).
 - ✅ **Doc structure cleanup** (2026-06-13) — removed the original brief (`1_DESIGN.md`) and
   `TODOS.md`; moved the design system into [`docs/design/09-design-system.md`](docs/design/09-design-system.md);
   added planning docs under [`docs/plans/`](docs/plans/).
 
 ## In progress / interrupted
 
-- _Nothing actively in progress._ The project is paused inside Phase 1, after the engine core,
-  before the real WASAPI factory/monitor that lets the engine run on hardware.
+- _Nothing actively in progress._ The project is paused inside Phase 1, after the engine core and
+  the WASAPI factory/monitor, before the host that wires them together and runs the engine live.
 
 ## Next action
 
-**Continue Phase 1 — build the real WASAPI `IAudioDeviceFactory` + `IDeviceMonitor`, so the
-completed engine runs end-to-end on hardware.** The factory resolves Mic/Cable/Alarm `MMDevice`s
-by `DeviceRole` and constructs the existing `WasapiCaptureDevice` / `WasapiRenderDevice`
-(building on `WasapiDevices.DefaultCommunicationsMic` / `FindByName` / `Active`); the monitor wraps
-`IMMNotificationClient` and emits `DeviceChanged`. After that: a small host/runner (wires the
-factory, monitor, clock, and `RegisterApplicationRestart`, subscribes to events, logs via Serilog)
-and the `Recorder` (trim + RMS loudness-match + OFF AIR). Already done in the engine core: the
-state machine, watchdog, drift forwarding, and the DEGRADED alarm. Smaller doc task still open:
-create `spike/PHASE0-RESULTS.md` with the measured Phase 0 numbers.
+**Continue Phase 1 — build the runnable host, so the engine runs live end-to-end.** Two parts:
+(1) a real `IEngineClock` (`SystemEngineClock`: monotonic time + a watchdog timer), and (2) a
+composition root that wires `WasapiDeviceFactory` + `WasapiDeviceMonitor` + the clock into the
+`AudioEngine`, maps the monitor's `deviceId` → `DeviceRole` (the `WasapiDevices.ById` helper lands
+here), posts `DeviceChanged` into the engine, subscribes to engine events and logs them (Serilog),
+and calls `RegisterApplicationRestart`. After that: the `Recorder` (trim + RMS loudness-match + OFF
+AIR). Already done: the engine core (state machine, watchdog, drift, DEGRADED alarm) and the WASAPI
+factory/monitor. Smaller doc task still open: create `spike/PHASE0-RESULTS.md` with the measured
+Phase 0 numbers.
 
 ## Open questions
 
