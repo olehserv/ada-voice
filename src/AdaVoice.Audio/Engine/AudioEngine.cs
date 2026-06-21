@@ -75,6 +75,7 @@ public sealed class AudioEngine : IDisposable
         switch (command)
         {
             case EngineCommand.Start: HandleStart(); break;
+            case EngineCommand.Stop: HandleStop(); break;
             // more cases added in later tasks
         }
     }
@@ -86,6 +87,15 @@ public sealed class AudioEngine : IDisposable
 
         BuildGraph();
         SetState(EngineState.Live);
+    }
+
+    private void HandleStop()
+    {
+        if (State == EngineState.Stopped)
+            return;
+
+        TeardownGraph();
+        SetState(EngineState.Stopped);
     }
 
     private void BuildGraph()
@@ -134,13 +144,48 @@ public sealed class AudioEngine : IDisposable
 
     private void Raise(EngineEvent e) => Events?.Invoke(this, e);
 
-    public void Dispose()
+    /// <summary>
+    /// Stop and dispose the whole live graph and null every part, so the engine is back to a
+    /// clean Stopped shape. The one place that guarantees every stream — including the alarm —
+    /// is silenced; both <see cref="HandleStop"/> and <see cref="Dispose"/> go through here.
+    /// </summary>
+    private void TeardownGraph()
     {
         _watchdog?.Dispose();
-        _capture?.Dispose();
-        _cableRender?.Dispose();
-        _passthrough?.Dispose();
+        _watchdog = null;
+
+        if (_capture is not null)
+        {
+            _capture.StateChanged -= OnCaptureStateChanged;
+            _capture.Stop();
+            _capture.Dispose();
+            _capture = null;
+        }
+
+        if (_cableRender is not null)
+        {
+            _cableRender.StateChanged -= OnCableStateChanged;
+            _cableRender.Stop();
+            _cableRender.Dispose();
+            _cableRender = null;
+        }
+
+        if (_passthrough is not null)
+        {
+            _passthrough.Drift -= OnDrift;
+            _passthrough.Dispose();
+            _passthrough = null;
+        }
+
         _player?.Dispose();
+        _player = null;
+        _mixer = null;
+        _gate = null;
+    }
+
+    public void Dispose()
+    {
+        TeardownGraph();
         _queue.Dispose();
     }
 }
