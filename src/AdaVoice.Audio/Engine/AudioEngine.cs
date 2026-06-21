@@ -122,6 +122,9 @@ public sealed class AudioEngine : IDisposable
     private void HandleStreamFaulted(DeviceRole role, Exception? error)
     {
         // Already broken (or stopped): one fault is enough; ignore the rest until we recover.
+        // In-spec limit (design §2.2 "ignore the rest until we recover"): if the other stream also
+        // dies while Degraded, we do not track it — recovery of the first restores Live even if the
+        // second is now dead. Cascading-fault handling is deliberately out of scope for this slice.
         if (State is EngineState.Degraded or EngineState.Stopped)
             return;
 

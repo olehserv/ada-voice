@@ -249,6 +249,31 @@ public class AudioEngineTests
     }
 
     [Fact]
+    public void Degraded_rebuilds_the_mic_and_audio_flows_again()
+    {
+        var (engine, factory, clock, events) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+
+        factory.LastMic!.Fault(new InvalidOperationException("mic died"));
+        engine.DrainPending();
+        Assert.Equal(EngineState.Degraded, engine.State);
+
+        clock.Advance(FirstBackoffMs);
+        clock.FireTicks();
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.Live, engine.State);
+        Assert.Contains(events, e => e is EngineEvent.RebuildResult { Role: DeviceRole.Mic, Success: true });
+
+        // The cardinal assertion: the rebuilt mic must be re-wired into the mixer. Push to the NEW
+        // mic and pull the cable — audio must flow, proving AddMixerInput ran, not just a state flip.
+        factory.LastMic!.Push(TestAudio.Sine(440, 4800));
+        factory.LastCable!.Pull(4800);
+        Assert.Contains(factory.LastCable!.Captured, s => s != 0f);
+    }
+
+    [Fact]
     public void Rebuild_after_a_fault_in_off_air_returns_to_off_air()
     {
         var (engine, factory, clock, _) = NewEngine();
