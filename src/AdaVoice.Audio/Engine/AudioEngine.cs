@@ -9,9 +9,10 @@ namespace AdaVoice.Audio.Engine;
 /// <summary>
 /// Owns the audio graph's lifecycle and state. Driven by a single command queue processed on
 /// one thread (see <see cref="DrainPending"/> / <see cref="TryProcessNext"/>), so all state
-/// transitions and stream open/close happen serialized — no locks in the core logic. Design:
-/// docs/superpowers/specs/2026-06-15-audio-engine-design.md. Built up one transition per task;
-/// fault/Degraded handling and teardown arrive in later slices.
+/// transitions and stream open/close happen serialized — no locks in the core logic. Covers the
+/// full state machine: Stopped/Live/OffAir/Degraded, OFF AIR gating, phrase playback, the watchdog,
+/// fault-driven rebuild with backoff, and the DEGRADED alarm. Design:
+/// docs/superpowers/specs/2026-06-15-audio-engine-design.md.
 /// </summary>
 public sealed class AudioEngine : IDisposable
 {
