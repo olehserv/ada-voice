@@ -163,4 +163,71 @@ public class AudioEngineTests
 
         Assert.Contains(events, e => e is EngineEvent.DriftLogged);
     }
+
+    [Fact]
+    public void Capture_fault_goes_degraded_and_sounds_the_alarm()
+    {
+        var (engine, factory, _, events) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+
+        factory.LastMic!.Fault(new InvalidOperationException("mic died"));
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.Degraded, engine.State);
+        Assert.NotNull(factory.LastAlarm);
+        Assert.Equal(DeviceState.Running, factory.LastAlarm!.State);
+        Assert.Contains(events, e => e is EngineEvent.StateChanged { State: EngineState.Degraded });
+    }
+
+    [Fact]
+    public void Watchdog_stall_goes_degraded()
+    {
+        var (engine, factory, clock, _) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+
+        // Never pull the cable, so the gate's last-read stamp goes stale.
+        clock.Advance(StallMs + 100);
+        clock.FireTicks();
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.Degraded, engine.State);
+        Assert.NotNull(factory.LastAlarm);
+    }
+
+    [Fact]
+    public void Degraded_still_holds_when_the_alarm_device_is_gone()
+    {
+        var (engine, factory, _, _) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+
+        factory.FailNext(DeviceRole.Alarm, transient: true);
+        factory.LastMic!.Fault(new InvalidOperationException("mic died"));
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.Degraded, engine.State); // visual banner still shows
+        Assert.Null(factory.LastAlarm);                   // no sound possible, handled honestly
+    }
+
+    [Fact]
+    public void Stop_while_degraded_silences_the_alarm()
+    {
+        var (engine, factory, _, _) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+        factory.LastMic!.Fault(new InvalidOperationException("mic died"));
+        engine.DrainPending();
+        var alarm = factory.LastAlarm!;
+
+        engine.Stop();
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.Stopped, engine.State);
+        Assert.Equal(DeviceState.Stopped, alarm.State);
+    }
+
+    // Mirrors AudioEngine.StallThresholdMs; kept here so the watchdog test reads clearly.
+    private const int StallMs = 500;
 }

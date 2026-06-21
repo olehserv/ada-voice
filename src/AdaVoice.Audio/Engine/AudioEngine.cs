@@ -17,6 +17,9 @@ public sealed class AudioEngine : IDisposable
 {
     private const int WatchdogIntervalMs = 100;
 
+    // How long the cable render may go without a read before we treat it as a stall (design §2.2).
+    private const int StallThresholdMs = 500;
+
     private readonly IAudioDeviceFactory _factory;
     private readonly IEngineClock _clock;
     private readonly PhrasePlayerOptions? _playerOptions;
@@ -30,6 +33,12 @@ public sealed class AudioEngine : IDisposable
     private PhrasePlayer? _player;
     private CableGate? _gate;
     private IDisposable? _watchdog;
+
+    // Degraded bookkeeping: the alarm stream, the state to return to after recovery, and which
+    // stream broke (so the rebuild in commit 4b touches only that one).
+    private IAudioRenderDevice? _alarmRender;
+    private EngineState _restoreState;
+    private DeviceRole _faultedRole;
 
     public AudioEngine(IAudioDeviceFactory factory, IEngineClock clock, PhrasePlayerOptions? playerOptions = null)
     {
@@ -80,6 +89,8 @@ public sealed class AudioEngine : IDisposable
             case EngineCommand.ExitOffAir: HandleExitOffAir(); break;
             case EngineCommand.Play play: HandlePlay(play.Phrase); break;
             case EngineCommand.StopPhrase: HandleStopPhrase(); break;
+            case EngineCommand.StreamFaulted f: HandleStreamFaulted(f.Role, f.Error); break;
+            case EngineCommand.WatchdogTick: HandleWatchdogTick(); break;
             // more cases added in later tasks
         }
     }
@@ -100,6 +111,65 @@ public sealed class AudioEngine : IDisposable
 
         TeardownGraph();
         SetState(EngineState.Stopped);
+    }
+
+    private void HandleStreamFaulted(DeviceRole role, Exception? error)
+    {
+        // Already broken (or stopped): one fault is enough; ignore the rest until we recover.
+        if (State is EngineState.Degraded or EngineState.Stopped)
+            return;
+
+        EnterDegraded(role, error?.Message);
+    }
+
+    private void HandleWatchdogTick()
+    {
+        // While we believe the cable is live, a stale gate stamp means the render thread stopped
+        // pulling — treat that as a cable fault. (Rebuild timing while Degraded arrives in 4b.)
+        if (State is EngineState.Live or EngineState.OffAir
+            && _clock.NowMs - _gate!.LastReadMs > StallThresholdMs)
+        {
+            EnterDegraded(DeviceRole.Cable, "cable render stalled");
+        }
+    }
+
+    /// <summary>
+    /// Enter Degraded from a fault: remember where to return to and which stream broke, sound the
+    /// alarm, and announce the state. The dead device is left alone here — disposing and recreating
+    /// it belongs to the rebuild (commit 4b), so we never double-dispose.
+    /// </summary>
+    private void EnterDegraded(DeviceRole role, string? error)
+    {
+        _restoreState = State;
+        _faultedRole = role;
+        StartAlarm();
+        SetState(EngineState.Degraded, error);
+    }
+
+    private void StartAlarm()
+    {
+        try
+        {
+            _alarmRender = _factory.CreateRender(DeviceRole.Alarm);
+            _alarmRender.Init(new AlarmTone(AudioFormats.Engine));
+            _alarmRender.Start();
+        }
+        catch (AudioDeviceException)
+        {
+            // Honest limit (design §2.4): if even the system default output is gone we cannot
+            // make sound. Stay Degraded so the visual banner still shows; the host logs it.
+            _alarmRender = null;
+        }
+    }
+
+    private void StopAlarm()
+    {
+        if (_alarmRender is null)
+            return;
+
+        _alarmRender.Stop();
+        _alarmRender.Dispose();
+        _alarmRender = null;
     }
 
     private void HandlePlay(Phrase phrase)
@@ -193,6 +263,8 @@ public sealed class AudioEngine : IDisposable
     {
         _watchdog?.Dispose();
         _watchdog = null;
+
+        StopAlarm(); // never leave the alarm beeping after the engine stops
 
         if (_capture is not null)
         {
