@@ -76,6 +76,8 @@ public sealed class AudioEngine : IDisposable
         {
             case EngineCommand.Start: HandleStart(); break;
             case EngineCommand.Stop: HandleStop(); break;
+            case EngineCommand.EnterOffAir: HandleEnterOffAir(); break;
+            case EngineCommand.ExitOffAir: HandleExitOffAir(); break;
             // more cases added in later tasks
         }
     }
@@ -96,6 +98,24 @@ public sealed class AudioEngine : IDisposable
 
         TeardownGraph();
         SetState(EngineState.Stopped);
+    }
+
+    private void HandleEnterOffAir()
+    {
+        if (State != EngineState.Live)
+            return;
+
+        _gate!.IsOpen = false; // stream keeps pulling; the gate just emits silence
+        SetState(EngineState.OffAir);
+    }
+
+    private void HandleExitOffAir()
+    {
+        if (State != EngineState.OffAir)
+            return;
+
+        _gate!.IsOpen = true;
+        SetState(EngineState.Live);
     }
 
     private void BuildGraph()
