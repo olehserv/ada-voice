@@ -370,6 +370,41 @@ public class AudioEngineTests
         Assert.Contains(events, e => e is EngineEvent.StateChanged { State: EngineState.Stopped, Error: not null });
     }
 
+    [Fact]
+    public void Device_removed_while_live_goes_degraded()
+    {
+        var (engine, factory, _, _) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+
+        engine.Post(new EngineCommand.DeviceChanged(DeviceRole.Cable, DeviceChangeKind.Removed));
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.Degraded, engine.State);
+        Assert.NotNull(factory.LastAlarm);
+    }
+
+    [Fact]
+    public void Device_arrived_rebuilds_immediately_skipping_backoff()
+    {
+        var (engine, factory, clock, _) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+        factory.LastCable!.Fault(new InvalidOperationException("cable died"));
+        engine.DrainPending();
+        Assert.Equal(1, factory.CableCreateCount);
+
+        // Far short of the 250 ms first backoff, the replugged device triggers an immediate retry.
+        clock.Advance(10);
+        engine.Post(new EngineCommand.DeviceChanged(DeviceRole.Cable, DeviceChangeKind.Added));
+        engine.DrainPending();
+        clock.FireTicks();
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.Live, engine.State);
+        Assert.Equal(2, factory.CableCreateCount);
+    }
+
     // Mirrors AudioEngine.StallThresholdMs; kept here so the watchdog test reads clearly.
     private const int StallMs = 500;
 

@@ -97,7 +97,7 @@ public sealed class AudioEngine : IDisposable
             case EngineCommand.StopPhrase: HandleStopPhrase(); break;
             case EngineCommand.StreamFaulted f: HandleStreamFaulted(f.Role, f.Error); break;
             case EngineCommand.WatchdogTick: HandleWatchdogTick(); break;
-            // more cases added in later tasks
+            case EngineCommand.DeviceChanged dc: HandleDeviceChanged(dc.Role, dc.Kind); break;
         }
     }
 
@@ -129,6 +129,25 @@ public sealed class AudioEngine : IDisposable
             return;
 
         EnterDegraded(role, error?.Message);
+    }
+
+    private void HandleDeviceChanged(DeviceRole role, DeviceChangeKind kind)
+    {
+        switch (kind)
+        {
+            // A device we use vanished, or the default output moved: treat it as a fault on that
+            // stream so the rebuild loop recovers it.
+            case DeviceChangeKind.Removed or DeviceChangeKind.DefaultChanged
+                when State is EngineState.Live or EngineState.OffAir:
+                EnterDegraded(role, $"device {kind} for {role}");
+                break;
+
+            // The device we are waiting for came back: skip the remaining backoff and let the next
+            // watchdog tick rebuild now, so replugging a headset recovers fast (design §2.2).
+            case DeviceChangeKind.Added when State == EngineState.Degraded && role == _faultedRole:
+                _nextAttemptMs = _clock.NowMs;
+                break;
+        }
     }
 
     private void HandleWatchdogTick()
