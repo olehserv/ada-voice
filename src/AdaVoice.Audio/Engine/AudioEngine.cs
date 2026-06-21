@@ -20,6 +20,10 @@ public sealed class AudioEngine : IDisposable
     // How long the cable render may go without a read before we treat it as a stall (design §2.2).
     private const int StallThresholdMs = 500;
 
+    // Rebuild backoff while Degraded: 250 ms → 500 ms → 1 s → 2 s → 5 s, then steady 5 s polling
+    // (design §2.2). A device-arrived event (commit 4c) can shortcut this.
+    private static readonly int[] Backoff = [250, 500, 1000, 2000, 5000];
+
     private readonly IAudioDeviceFactory _factory;
     private readonly IEngineClock _clock;
     private readonly PhrasePlayerOptions? _playerOptions;
@@ -39,6 +43,8 @@ public sealed class AudioEngine : IDisposable
     private IAudioRenderDevice? _alarmRender;
     private EngineState _restoreState;
     private DeviceRole _faultedRole;
+    private int _attempt;          // how many rebuild attempts have failed in this Degraded spell
+    private long _nextAttemptMs;   // clock time of the next allowed rebuild attempt
 
     public AudioEngine(IAudioDeviceFactory factory, IEngineClock clock, PhrasePlayerOptions? playerOptions = null)
     {
@@ -124,12 +130,20 @@ public sealed class AudioEngine : IDisposable
 
     private void HandleWatchdogTick()
     {
-        // While we believe the cable is live, a stale gate stamp means the render thread stopped
-        // pulling — treat that as a cable fault. (Rebuild timing while Degraded arrives in 4b.)
-        if (State is EngineState.Live or EngineState.OffAir
-            && _clock.NowMs - _gate!.LastReadMs > StallThresholdMs)
+        switch (State)
         {
-            EnterDegraded(DeviceRole.Cable, "cable render stalled");
+            // While we believe the cable is live, a stale gate stamp means the render thread
+            // stopped pulling — treat that as a cable fault.
+            case EngineState.Live or EngineState.OffAir:
+                if (_clock.NowMs - _gate!.LastReadMs > StallThresholdMs)
+                    EnterDegraded(DeviceRole.Cable, "cable render stalled");
+                break;
+
+            // While Degraded, the same tick drives the rebuild schedule (one clock, no extra timer).
+            case EngineState.Degraded:
+                if (_clock.NowMs >= _nextAttemptMs)
+                    AttemptRebuild();
+                break;
         }
     }
 
@@ -142,8 +156,65 @@ public sealed class AudioEngine : IDisposable
     {
         _restoreState = State;
         _faultedRole = role;
+        _attempt = 0;
+        _nextAttemptMs = _clock.NowMs + Backoff[0];
         StartAlarm();
         SetState(EngineState.Degraded, error);
+    }
+
+    /// <summary>
+    /// One rebuild attempt for the broken stream only (design §2.4). Success silences the alarm and
+    /// returns to where we were; a transient failure schedules the next attempt with backoff; a
+    /// terminal failure stops the engine loudly.
+    /// </summary>
+    private void AttemptRebuild()
+    {
+        try
+        {
+            if (_faultedRole == DeviceRole.Cable)
+                RebuildCable();
+            else
+                RebuildMic();
+        }
+        catch (AudioDeviceException ex) when (ex.IsTransient)
+        {
+            Raise(new EngineEvent.RebuildResult(_faultedRole, Success: false, _attempt));
+            _attempt++;
+            _nextAttemptMs = _clock.NowMs + Backoff[Math.Min(_attempt, Backoff.Length - 1)];
+            return;
+        }
+        catch (AudioDeviceException ex)
+        {
+            // Terminal (non-recoverable) error: stop everything and surface it loudly.
+            TeardownGraph();
+            SetState(EngineState.Stopped, ex.Message);
+            return;
+        }
+
+        StopAlarm();
+        Raise(new EngineEvent.RebuildResult(_faultedRole, Success: true, _attempt));
+        _gate!.IsOpen = _restoreState == EngineState.Live; // keep silence if we return to OFF AIR
+        SetState(_restoreState);
+    }
+
+    private void RebuildCable()
+    {
+        DisposeCable();
+        _cableRender = _factory.CreateRender(DeviceRole.Cable);
+        _cableRender.StateChanged += OnCableStateChanged;
+        _cableRender.Init(_gate!);
+        _cableRender.Start();
+    }
+
+    private void RebuildMic()
+    {
+        DisposeMicChain();
+        _capture = _factory.CreateCapture(DeviceRole.Mic);
+        _capture.StateChanged += OnCaptureStateChanged;
+        _passthrough = new MicPassthrough(_capture);
+        _passthrough.Drift += OnDrift;
+        _mixer!.AddMixerInput(_passthrough.Output);
+        _capture.Start();
     }
 
     private void StartAlarm()
@@ -265,7 +336,18 @@ public sealed class AudioEngine : IDisposable
         _watchdog = null;
 
         StopAlarm(); // never leave the alarm beeping after the engine stops
+        DisposeMicChain();
+        DisposeCable();
 
+        _player?.Dispose();
+        _player = null;
+        _mixer = null;
+        _gate = null;
+    }
+
+    /// <summary>Stop, unwire, and dispose the capture and its passthrough. Safe to call twice.</summary>
+    private void DisposeMicChain()
+    {
         if (_capture is not null)
         {
             _capture.StateChanged -= OnCaptureStateChanged;
@@ -274,25 +356,25 @@ public sealed class AudioEngine : IDisposable
             _capture = null;
         }
 
-        if (_cableRender is not null)
-        {
-            _cableRender.StateChanged -= OnCableStateChanged;
-            _cableRender.Stop();
-            _cableRender.Dispose();
-            _cableRender = null;
-        }
-
         if (_passthrough is not null)
         {
             _passthrough.Drift -= OnDrift;
+            _mixer?.RemoveMixerInput(_passthrough.Output);
             _passthrough.Dispose();
             _passthrough = null;
         }
+    }
 
-        _player?.Dispose();
-        _player = null;
-        _mixer = null;
-        _gate = null;
+    /// <summary>Stop, unwire, and dispose the cable render. Safe to call twice.</summary>
+    private void DisposeCable()
+    {
+        if (_cableRender is null)
+            return;
+
+        _cableRender.StateChanged -= OnCableStateChanged;
+        _cableRender.Stop();
+        _cableRender.Dispose();
+        _cableRender = null;
     }
 
     public void Dispose()

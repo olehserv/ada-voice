@@ -228,6 +228,126 @@ public class AudioEngineTests
         Assert.Equal(DeviceState.Stopped, alarm.State);
     }
 
+    [Fact]
+    public void Degraded_rebuilds_the_cable_and_returns_to_live()
+    {
+        var (engine, factory, clock, events) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+        factory.LastCable!.Fault(new InvalidOperationException("cable died"));
+        engine.DrainPending();
+        Assert.Equal(EngineState.Degraded, engine.State);
+
+        clock.Advance(FirstBackoffMs);
+        clock.FireTicks();
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.Live, engine.State);
+        Assert.Equal(2, factory.CableCreateCount);               // a fresh cable was built
+        Assert.Equal(DeviceState.Stopped, factory.LastAlarm!.State); // alarm silenced
+        Assert.Contains(events, e => e is EngineEvent.RebuildResult { Role: DeviceRole.Cable, Success: true });
+    }
+
+    [Fact]
+    public void Rebuild_after_a_fault_in_off_air_returns_to_off_air()
+    {
+        var (engine, factory, clock, _) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+        engine.EnterOffAir();
+        engine.DrainPending();
+
+        factory.LastCable!.Fault(new InvalidOperationException("cable died"));
+        engine.DrainPending();
+        clock.Advance(FirstBackoffMs);
+        clock.FireTicks();
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.OffAir, engine.State);
+
+        // The cable is still gated to silence after recovery.
+        var cable = factory.LastCable!;
+        factory.LastMic!.Push(TestAudio.Sine(440, 4800));
+        cable.Pull(4800);
+        Assert.All(cable.Captured, s => Assert.Equal(0f, s));
+    }
+
+    [Fact]
+    public void Rebuild_waits_for_the_backoff_delay()
+    {
+        var (engine, factory, clock, _) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+        factory.LastCable!.Fault(new InvalidOperationException("cable died"));
+        engine.DrainPending();
+        Assert.Equal(1, factory.CableCreateCount);
+
+        clock.Advance(FirstBackoffMs - 50); // not yet due
+        clock.FireTicks();
+        engine.DrainPending();
+        Assert.Equal(EngineState.Degraded, engine.State);
+        Assert.Equal(1, factory.CableCreateCount);
+
+        clock.Advance(50); // now due
+        clock.FireTicks();
+        engine.DrainPending();
+        Assert.Equal(EngineState.Live, engine.State);
+        Assert.Equal(2, factory.CableCreateCount);
+    }
+
+    [Fact]
+    public void Transient_rebuild_failure_keeps_retrying_with_backoff()
+    {
+        var (engine, factory, clock, events) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+        factory.LastCable!.Fault(new InvalidOperationException("cable died"));
+        engine.DrainPending();
+
+        // First attempt (after 250 ms) fails transiently.
+        factory.FailNext(DeviceRole.Cable, transient: true);
+        clock.Advance(FirstBackoffMs);
+        clock.FireTicks();
+        engine.DrainPending();
+        Assert.Equal(EngineState.Degraded, engine.State);
+        Assert.Contains(events, e => e is EngineEvent.RebuildResult { Success: false });
+
+        // Next attempt is scheduled later (500 ms), not immediately.
+        clock.Advance(200);
+        clock.FireTicks();
+        engine.DrainPending();
+        Assert.Equal(EngineState.Degraded, engine.State);
+
+        // After the longer backoff it succeeds.
+        clock.Advance(400);
+        clock.FireTicks();
+        engine.DrainPending();
+        Assert.Equal(EngineState.Live, engine.State);
+    }
+
+    [Fact]
+    public void Terminal_rebuild_failure_stops_the_engine()
+    {
+        var (engine, factory, clock, events) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+        factory.LastCable!.Fault(new InvalidOperationException("cable died"));
+        engine.DrainPending();
+        var alarm = factory.LastAlarm!;
+
+        factory.FailNext(DeviceRole.Cable, transient: false); // non-recoverable
+        clock.Advance(FirstBackoffMs);
+        clock.FireTicks();
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.Stopped, engine.State);
+        Assert.Equal(DeviceState.Stopped, alarm.State); // alarm silenced on terminal stop
+        Assert.Contains(events, e => e is EngineEvent.StateChanged { State: EngineState.Stopped, Error: not null });
+    }
+
     // Mirrors AudioEngine.StallThresholdMs; kept here so the watchdog test reads clearly.
     private const int StallMs = 500;
+
+    // Mirrors the first AudioEngine backoff step.
+    private const int FirstBackoffMs = 250;
 }
