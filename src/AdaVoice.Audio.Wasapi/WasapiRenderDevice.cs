@@ -85,11 +85,15 @@ public sealed class WasapiRenderDevice : IAudioRenderDevice
 
     public void Dispose()
     {
-        if (_output is null)
-            return;
+        if (_output is not null)
+        {
+            _output.PlaybackStopped -= OnPlaybackStopped;
+            _output.Dispose();
+        }
 
-        _output.PlaybackStopped -= OnPlaybackStopped;
-        _output.Dispose();
+        // The seam owns the MMDevice it was handed: the factory resolves a fresh one on every
+        // rebuild, so this must be released or a flapping device slowly leaks COM objects.
+        _device.Dispose();
     }
 
     private void SetState(DeviceState state, Exception? error = null)

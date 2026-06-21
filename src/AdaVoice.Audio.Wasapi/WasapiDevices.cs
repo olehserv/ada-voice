@@ -20,6 +20,14 @@ public static class WasapiDevices
         return enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
     }
 
+    /// <summary>The system default output. Used for the DEGRADED alarm so it sounds where the
+    /// operator is already listening.</summary>
+    public static MMDevice DefaultRender()
+    {
+        using var enumerator = new MMDeviceEnumerator();
+        return enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+    }
+
     public static MMDevice? FindByName(DataFlow flow, string nameSubstring)
     {
         using var enumerator = new MMDeviceEnumerator();

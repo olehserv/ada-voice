@@ -15,9 +15,11 @@ namespace AdaVoice.Audio.Wasapi;
 public sealed class WasapiCaptureDevice : IAudioCaptureDevice
 {
     private readonly WasapiCapture _capture;
+    private readonly MMDevice _device;
 
     public WasapiCaptureDevice(MMDevice device, int latencyMs = 20)
     {
+        _device = device;
         _capture = new WasapiCapture(device, useEventSync: true, audioBufferMillisecondsLength: latencyMs);
         _capture.DataAvailable += OnDataAvailable;
         _capture.RecordingStopped += OnRecordingStopped;
@@ -49,6 +51,10 @@ public sealed class WasapiCaptureDevice : IAudioCaptureDevice
         _capture.DataAvailable -= OnDataAvailable;
         _capture.RecordingStopped -= OnRecordingStopped;
         _capture.Dispose();
+
+        // The seam owns the MMDevice it was handed (the factory resolves a fresh one per rebuild),
+        // so release it here to avoid a slow COM leak.
+        _device.Dispose();
     }
 
     private void SetState(DeviceState state, Exception? error = null)
