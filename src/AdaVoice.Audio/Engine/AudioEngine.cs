@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using AdaVoice.Audio.Abstractions;
 using AdaVoice.Audio.Passthrough;
 using AdaVoice.Audio.Playback;
+using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
 namespace AdaVoice.Audio.Engine;
@@ -245,13 +246,19 @@ public sealed class AudioEngine : IDisposable
         try
         {
             _alarmRender = _factory.CreateRender(DeviceRole.Alarm);
-            _alarmRender.Init(new AlarmTone(AudioFormats.Engine));
+
+            // Build the tone at the alarm device's own rate. The alarm device is the system default
+            // output and is often 44.1 kHz; the render seam does not resample, so a fixed 48 kHz tone
+            // would be rejected. Mono — ChannelAdapter up-mixes to the device's channel count.
+            var toneFormat = WaveFormat.CreateIeeeFloatWaveFormat(_alarmRender.Format.SampleRate, channels: 1);
+            _alarmRender.Init(new AlarmTone(toneFormat));
             _alarmRender.Start();
         }
-        catch (AudioDeviceException)
+        catch (Exception)
         {
-            // Honest limit (design §2.4): if even the system default output is gone we cannot
-            // make sound. Stay Degraded so the visual banner still shows; the host logs it.
+            // The alarm is best-effort. Honest limit (design §2.4): if the default output is gone or
+            // unusable we cannot make sound — stay Degraded so the visual banner still shows and the
+            // host logs it. A failure here must never kill the control thread.
             _alarmRender = null;
         }
     }

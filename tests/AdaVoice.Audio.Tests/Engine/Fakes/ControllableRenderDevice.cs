@@ -14,14 +14,29 @@ public sealed class ControllableRenderDevice : IAudioRenderDevice
     private readonly List<float> _captured = [];
     private ISampleProvider? _source;
 
-    public WaveFormat Format => TestAudio.EngineFormat;
+    public ControllableRenderDevice(WaveFormat? format = null) => Format = format ?? TestAudio.EngineFormat;
+
+    public WaveFormat Format { get; }
     public DeviceState State { get; private set; } = DeviceState.Stopped;
 
     public event EventHandler<DeviceStateChangedEventArgs>? StateChanged;
 
     public IReadOnlyList<float> Captured => _captured;
 
-    public void Init(ISampleProvider source) => _source = source;
+    /// <summary>
+    /// Mirrors <c>WasapiRenderDevice.Init</c>: the real seam does not resample, so it refuses a
+    /// source whose sample rate differs from the device. Keeping the fake faithful here is what
+    /// lets a unit test catch the alarm-rate bug the real device would throw on.
+    /// </summary>
+    public void Init(ISampleProvider source)
+    {
+        if (source.WaveFormat.SampleRate != Format.SampleRate)
+            throw new NotSupportedException(
+                $"Source is {source.WaveFormat.SampleRate} Hz but the device is {Format.SampleRate} Hz.");
+
+        _source = source;
+    }
+
     public void Start() => State = DeviceState.Running;
     public void Stop() => State = DeviceState.Stopped;
 

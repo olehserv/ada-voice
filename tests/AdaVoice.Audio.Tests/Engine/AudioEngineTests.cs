@@ -3,6 +3,7 @@ using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Playback;
 using AdaVoice.Audio.Tests.Engine.Fakes;
 using AdaVoice.Audio.Tests.Fakes;
+using NAudio.Wave;
 
 namespace AdaVoice.Audio.Tests.Engine;
 
@@ -194,6 +195,25 @@ public class AudioEngineTests
 
         Assert.Equal(EngineState.Degraded, engine.State);
         Assert.NotNull(factory.LastAlarm);
+    }
+
+    [Fact]
+    public void Alarm_sounds_even_when_the_default_output_is_not_48k()
+    {
+        // The alarm device is the system default output, often 44.1 kHz. The tone must be built at
+        // the device's rate or the real render seam throws on Init and the alarm never sounds.
+        var factory = new FakeDeviceFactory { AlarmFormat = WaveFormat.CreateIeeeFloatWaveFormat(44_100, 1) };
+        var clock = new ManualEngineClock();
+        using var engine = new AudioEngine(factory, clock);
+        engine.Start();
+        engine.DrainPending();
+
+        factory.LastMic!.Fault(new InvalidOperationException("mic died"));
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.Degraded, engine.State);
+        Assert.NotNull(factory.LastAlarm);
+        Assert.Equal(DeviceState.Running, factory.LastAlarm!.State);
     }
 
     [Fact]
