@@ -78,6 +78,8 @@ public sealed class AudioEngine : IDisposable
             case EngineCommand.Stop: HandleStop(); break;
             case EngineCommand.EnterOffAir: HandleEnterOffAir(); break;
             case EngineCommand.ExitOffAir: HandleExitOffAir(); break;
+            case EngineCommand.Play play: HandlePlay(play.Phrase); break;
+            case EngineCommand.StopPhrase: HandleStopPhrase(); break;
             // more cases added in later tasks
         }
     }
@@ -98,6 +100,24 @@ public sealed class AudioEngine : IDisposable
 
         TeardownGraph();
         SetState(EngineState.Stopped);
+    }
+
+    private void HandlePlay(Phrase phrase)
+    {
+        // Only Live plays. While OffAir the recorder owns the cable, so a phrase is ignored
+        // (design spec §2.2). The core does no logging; the host can log the ignore if wanted.
+        if (State != EngineState.Live)
+            return;
+
+        _player!.Play(phrase);
+    }
+
+    private void HandleStopPhrase()
+    {
+        if (State != EngineState.Live)
+            return;
+
+        _player!.Stop();
     }
 
     private void HandleEnterOffAir()

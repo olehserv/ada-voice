@@ -1,5 +1,6 @@
 using AdaVoice.Audio.Abstractions;
 using AdaVoice.Audio.Engine;
+using AdaVoice.Audio.Playback;
 using AdaVoice.Audio.Tests.Engine.Fakes;
 using AdaVoice.Audio.Tests.Fakes;
 
@@ -108,5 +109,58 @@ public class AudioEngineTests
         engine.DrainPending();
 
         Assert.Equal(EngineState.Stopped, engine.State);
+    }
+
+    [Fact]
+    public void Play_while_live_sends_the_phrase_to_the_cable()
+    {
+        var (engine, factory, _, _) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+        var cable = factory.LastCable!;
+
+        engine.Play(new Phrase("p", TestAudio.Sine(440, 4800)));
+        engine.DrainPending();
+        cable.Pull(4800);
+
+        Assert.Contains(cable.Captured, s => s != 0f);
+    }
+
+    [Fact]
+    public void Play_is_ignored_while_off_air()
+    {
+        var (engine, factory, _, _) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+        var cable = factory.LastCable!;
+
+        engine.EnterOffAir();
+        engine.DrainPending();
+
+        engine.Play(new Phrase("p", Enumerable.Repeat(0.5f, 48_000).ToArray()));
+        engine.DrainPending();
+
+        engine.ExitOffAir();
+        engine.DrainPending();
+        cable.Pull(4800);
+
+        // If Play had been honored during OFF AIR, the phrase would now be sounding.
+        Assert.All(cable.Captured, s => Assert.Equal(0f, s));
+    }
+
+    [Fact]
+    public void Mic_drift_is_forwarded_as_a_drift_event()
+    {
+        var (engine, factory, _, events) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+        var mic = factory.LastMic!;
+
+        // Two seconds of audio pushed back-to-back overflows the 100 ms backlog and forces an
+        // overrun, which MicPassthrough reports as drift.
+        mic.Push(new float[TestAudio.SampleRate]);
+        mic.Push(new float[TestAudio.SampleRate]);
+
+        Assert.Contains(events, e => e is EngineEvent.DriftLogged);
     }
 }
