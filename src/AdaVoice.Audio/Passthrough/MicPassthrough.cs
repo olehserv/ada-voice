@@ -41,7 +41,7 @@ public sealed class MicPassthrough : IMicDuck, IDisposable
         };
         _capture.DataAvailable += OnDataAvailable;
 
-        var chain = ToEngineFormat(_buffer.ToSampleProvider());
+        var chain = EngineFormat.Convert(_buffer.ToSampleProvider());
         _gain = new RampGain(chain);
 
         // The watch sits at the very end of the chain so it sees the same reads the mixer makes.
@@ -86,20 +86,6 @@ public sealed class MicPassthrough : IMicDuck, IDisposable
     {
         Interlocked.Increment(ref _underruns);
         Drift?.Invoke(this, new DriftEventArgs(DriftKind.Underrun));
-    }
-
-    private static ISampleProvider ToEngineFormat(ISampleProvider source)
-    {
-        if (source.WaveFormat.Channels == 2)
-            source = source.ToMono(0.5f, 0.5f); // average both channels to avoid clipping
-        else if (source.WaveFormat.Channels > 2)
-            throw new NotSupportedException(
-                $"Mic has {source.WaveFormat.Channels} channels. Use a mono or stereo device.");
-
-        if (source.WaveFormat.SampleRate != AudioFormats.SampleRate)
-            source = new WdlResamplingSampleProvider(source, AudioFormats.SampleRate);
-
-        return source;
     }
 
     public void Dispose() => _capture.DataAvailable -= OnDataAvailable;
