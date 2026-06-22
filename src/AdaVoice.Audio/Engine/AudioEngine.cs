@@ -69,7 +69,17 @@ public sealed class AudioEngine : IDisposable
     public void EnterOffAir() => Post(new EngineCommand.EnterOffAir());
     public void ExitOffAir() => Post(new EngineCommand.ExitOffAir());
 
-    public void Post(EngineCommand command) => _queue.Add(command);
+    public void Post(EngineCommand command)
+    {
+        // Late posts can arrive from the clock timer or a device-monitor callback during shutdown,
+        // after the queue is disposed. Ignore them rather than throw on an unobserved thread.
+        try
+        {
+            _queue.Add(command);
+        }
+        catch (ObjectDisposedException) { }
+        catch (InvalidOperationException) { } // queue marked complete-for-adding
+    }
 
     /// <summary>Process every queued command now, on the calling thread. Used by tests and the runner.</summary>
     public void DrainPending()
@@ -108,7 +118,22 @@ public sealed class AudioEngine : IDisposable
         if (State != EngineState.Stopped)
             return;
 
-        BuildGraph();
+        try
+        {
+            BuildGraph();
+        }
+        catch (Exception ex)
+        {
+            // Opening the graph failed — e.g. a missing device, or a cable not at 48 kHz (the render
+            // seam refuses to resample). Clean up the partial graph and stay Stopped with the error
+            // surfaced, so the caller can fix it and press Start again.
+            // v1 limit: we do not auto-retry from a cold Start. The design §2.2 "Start fails →
+            // Degraded + backoff" needs cold-start (dual-stream) rebuild and is deferred to the host.
+            TeardownGraph();
+            SetState(EngineState.Stopped, ex.Message);
+            return;
+        }
+
         SetState(EngineState.Live);
     }
 

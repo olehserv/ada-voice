@@ -50,6 +50,34 @@ public class AudioEngineTests
     }
 
     [Fact]
+    public void Failed_start_stays_stopped_and_surfaces_the_error()
+    {
+        var (engine, factory, _, events) = NewEngine();
+        factory.FailNext(DeviceRole.Cable, transient: true, message: "no cable");
+
+        engine.Start();
+        engine.DrainPending(); // must not throw out of Handle
+
+        Assert.Equal(EngineState.Stopped, engine.State);
+        Assert.Contains(events, e => e is EngineEvent.StateChanged { State: EngineState.Stopped, Error: not null });
+
+        // The partial graph must have been cleaned, so a good Start now reaches Live.
+        engine.Start();
+        engine.DrainPending();
+        Assert.Equal(EngineState.Live, engine.State);
+    }
+
+    [Fact]
+    public void Post_after_dispose_does_not_throw()
+    {
+        var (engine, _, _, _) = NewEngine();
+        engine.Dispose();
+
+        // A clock timer or device-monitor callback can post during shutdown after the queue is gone.
+        engine.Post(new EngineCommand.WatchdogTick());
+    }
+
+    [Fact]
     public void Stop_when_already_stopped_does_nothing()
     {
         var (engine, _, _, events) = NewEngine();
