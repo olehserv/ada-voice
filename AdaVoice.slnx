@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/AdaVoice.Audio.Wasapi/AdaVoice.Audio.Wasapi.csproj" />
     <Project Path="src/AdaVoice.Audio/AdaVoice.Audio.csproj" />
+    <Project Path="src/AdaVoice.Host/AdaVoice.Host.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AdaVoice.Audio.Tests/AdaVoice.Audio.Tests.csproj" />
