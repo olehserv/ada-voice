@@ -10,6 +10,20 @@ namespace AdaVoice.Audio.Storage;
 /// </summary>
 public static class WavFile
 {
+    /// <summary>Read a WAV file into engine-format float samples (the saved files are 48 kHz mono).</summary>
+    public static float[] Load(string path)
+    {
+        using var reader = new WaveFileReader(path);
+        var provider = reader.ToSampleProvider();
+        var all = new List<float>();
+        var buffer = new float[4096];
+        int n;
+        while ((n = provider.Read(buffer, 0, buffer.Length)) > 0)
+            all.AddRange(buffer.AsSpan(0, n));
+
+        return [.. all];
+    }
+
     public static void Save(string path, float[] samples)
     {
         var tmp = path + ".tmp";

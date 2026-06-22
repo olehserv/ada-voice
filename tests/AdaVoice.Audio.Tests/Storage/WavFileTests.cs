@@ -53,6 +53,23 @@ public class WavFileTests
     }
 
     [Fact]
+    public void Save_then_Load_roundtrips_the_samples()
+    {
+        var samples = TestAudio.Sine(440, 4800, amplitude: 0.5);
+        var path = TempWavPath();
+        try
+        {
+            WavFile.Save(path, samples);
+
+            var loaded = WavFile.Load(path);
+            Assert.Equal(samples.Length, loaded.Length);
+            for (var i = 0; i < samples.Length; i++)
+                Assert.True(Math.Abs(samples[i] - loaded[i]) < 1e-3, $"sample {i}");
+        }
+        finally { Cleanup(path); }
+    }
+
+    [Fact]
     public void A_failed_save_leaves_no_final_file()
     {
         var path = Path.Combine(Path.GetTempPath(), "adavoice-no-such-dir-" + Guid.NewGuid().ToString("N"), "x.wav");
