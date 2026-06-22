@@ -27,6 +27,11 @@ public sealed class Recorder
     private readonly List<float> _samples = [];
     private readonly float[] _pull = new float[4096];
 
+    // OnDataAvailable runs on the capture device's thread; Stop runs on the caller's thread. Stopping
+    // the device does not wait for an in-flight callback, so both can touch _samples/_converted at
+    // once — guard them. (_buffer is already internally thread-safe.)
+    private readonly Lock _sync = new();
+
     public Recorder(IAudioCaptureDevice capture, RecorderOptions? options = null)
     {
         _capture = capture;
@@ -55,12 +60,17 @@ public sealed class Recorder
 
         // Flush the resampler's internal latency with a little silence, then drain. The trim below
         // removes this trailing silence.
-        var flushBytes = _capture.Format.AverageBytesPerSecond * FlushMs / 1000;
-        _buffer.AddSamples(new byte[flushBytes], 0, flushBytes);
-        Drain();
+        float[] raw;
+        lock (_sync)
+        {
+            var flushBytes = _capture.Format.AverageBytesPerSecond * FlushMs / 1000;
+            _buffer.AddSamples(new byte[flushBytes], 0, flushBytes);
+            Drain();
+            raw = _samples.ToArray();
+        }
 
         var trimmed = SilenceTrim.Trim(
-            _samples.ToArray(), AudioFormats.SampleRate, _options.SilenceThresholdDbfs, _options.PaddingMs);
+            raw, AudioFormats.SampleRate, _options.SilenceThresholdDbfs, _options.PaddingMs);
         if (trimmed.Length == 0)
             return RecordingResult.NoSignal;
 
@@ -75,9 +85,11 @@ public sealed class Recorder
     private void OnDataAvailable(object? sender, CaptureBufferEventArgs e)
     {
         _buffer.AddSamples(e.Buffer, 0, e.BytesRecorded);
-        Drain();
+        lock (_sync)
+            Drain();
     }
 
+    // Caller must hold _sync.
     private void Drain()
     {
         int n;
