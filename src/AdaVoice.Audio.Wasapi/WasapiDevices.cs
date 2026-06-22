@@ -34,4 +34,13 @@ public static class WasapiDevices
         return enumerator.EnumerateAudioEndPoints(flow, DeviceState.Active)
             .FirstOrDefault(d => d.FriendlyName.Contains(nameSubstring, StringComparison.OrdinalIgnoreCase));
     }
+
+    /// <summary>The active device with this endpoint id, or null. Used by the host to classify a
+    /// device-monitor event's id (which flow / role it belongs to).</summary>
+    public static MMDevice? ById(string id)
+    {
+        using var enumerator = new MMDeviceEnumerator();
+        return enumerator.EnumerateAudioEndPoints(DataFlow.All, DeviceState.Active)
+            .FirstOrDefault(d => d.ID == id);
+    }
 }
