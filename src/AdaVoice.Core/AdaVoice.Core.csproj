@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Non-audio domain + persistence. No UI and no audio-device dependency (design 03):
+         the host bridges metadata (here) with audio samples (AdaVoice.Audio). -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+</Project>
