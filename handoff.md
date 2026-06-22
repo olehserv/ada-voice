@@ -14,10 +14,11 @@ _Last updated: 2026-06-22._
 
 ## Status in one line
 
-**Design complete and reviewed. Phase 0 go/no-go gate PASSED on the target machine
-(Architecture A confirmed). Phase 1 engine runs live end-to-end: engine core + WASAPI
-factory/monitor + a `SystemEngineClock` and a console composition root (`AdaVoice.Host`).** Next
-real step: run it on the target machine (hardware checklist below), then the `Recorder`.
+**Design complete and reviewed. Phase 0 go/no-go gate PASSED. Phase 1 engine runs live end-to-end
+(engine core + WASAPI factory/monitor + `SystemEngineClock` + console host), and the Recorder core
+(record → trim → loudness-match → save WAV) is built and wired into the host.** Next real step: run
+the host + record on the target machine (checklist below), then the storage layer (`library.json`)
+and preview (monitor stream).
 
 ## Done
 
@@ -66,28 +67,42 @@ real step: run it on the target machine (hardware checklist below), then the `Re
   Stopped with the error surfaced instead of crashing the (new) control thread, and `Post` ignores
   a disposed queue. 54 unit tests green; full solution builds clean. **Not yet run on hardware** —
   see Next action.
+- ✅ **Recorder core — complete (2026-06-23)** — DSP (`Loudness` RMS/peak, `SilenceTrim`
+  −45 dBFS/150 ms, `LoudnessMatch.ComputeGainDb` with −3 dBFS ceiling), `WavFile.Save` (float →
+  16-bit PCM, atomic temp→final), and `Recorder` (record from a capture device → engine-format via a
+  shared `Dsp.EngineFormat` converter with push-drain + resampler tail-flush → trim →
+  loudness-match). Wired into the host on `[R]` (OFF AIR → record → save WAV under `recordings/`).
+  72 unit tests green incl. a 44.1 kHz-stereo resample test; a capture-thread race in the Recorder
+  was found and fixed (lock). **Saved takes are the raw trimmed audio; `gainDb` is metadata that
+  will be applied once playback + library land.** **Not yet run on hardware.**
 - ✅ **Doc structure cleanup** (2026-06-13) — removed the original brief (`1_DESIGN.md`) and
   `TODOS.md`; moved the design system into [`docs/design/09-design-system.md`](docs/design/09-design-system.md);
   added planning docs under [`docs/plans/`](docs/plans/).
 
 ## In progress / interrupted
 
-- _Nothing actively in progress._ The project is paused inside Phase 1: the engine runs live in
-  code, but the host has not yet been run on the target machine, and the `Recorder` is not built.
+- _Nothing actively in progress._ The project is paused inside Phase 1: the engine + Recorder run in
+  code, but have not yet been run on the target machine; storage, preview, and the wizard are next.
 
 ## Next action
 
-**1) Run the host on the target machine** (the engine has never touched real hardware as a whole):
-`dotnet run --project src/AdaVoice.Host`, then `S` (Live, mic audible on `CABLE Output`), `P` (beep
-to the cable), `O`/`O` (OFF AIR off/on), unplug the cable (alarm sounds + rebuild logged), replug
-(fast recovery), `Q`. Watch the Serilog file under the host's `logs/`. Note: the cable must be at
-48 kHz or `Start` will surface a format error and stay Stopped (by design for now).
+**1) Run the host + record on the target machine.** `dotnet run --project src/AdaVoice.Host`: `S`
+(Live, mic on `CABLE Output`), `P` (beep), `O`/`O` (OFF AIR), unplug/replug the cable (alarm +
+fast recovery), and **`R` … speak … `R`** (records OFF AIR → saves a 48 kHz/16-bit WAV under
+`recordings/`, logs `gainDb`/duration). Confirm the cable stays silent while recording and a playable
+WAV appears. Cable must be at 48 kHz or `Start` stays Stopped with an error (by design for now).
 
-**2) Then build the `Recorder`** (trim + RMS loudness-match + preview + save) that drives OFF AIR.
+**2) Then the storage layer + preview.** `library.json` metadata with atomic writes (design 04) so a
+take becomes a catalogued phrase with its `gainDb`; the headphone-monitor render stream so preview
+can play to the monitor (never the cable). Then the setup wizard (calibrates `micReferenceRms`).
+Then the WPF UI (Phase 3) reuses `EngineHost`.
 
-Then the WPF UI / ViewModels (Phase 3) reuse `EngineHost`. Smaller doc task still open: create
-`spike/PHASE0-RESULTS.md` with the measured Phase 0 numbers. Deferred from this slice: cold-start
-auto-retry into Degraded (a failed `Start` currently just stays Stopped with the error surfaced).
+**Open follow-ups (named so they're not lost):**
+- **2nd-capture fallback:** the Recorder opens its own mic capture; if a driver refuses a second
+  WASAPI capture client, the fallback is tapping the engine's existing capture. Decide owner —
+  likely the storage/preview slice or the WPF slice. Watch for it on the hardware run.
+- Cold-start auto-retry into Degraded (a failed `Start` currently just stays Stopped, error surfaced).
+- Doc task: create `spike/PHASE0-RESULTS.md` with the measured Phase 0 numbers.
 
 ## Open questions
 
