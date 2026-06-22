@@ -1,5 +1,6 @@
 using AdaVoice.Audio;
 using AdaVoice.Audio.Playback;
+using AdaVoice.Audio.Storage;
 using AdaVoice.Audio.Wasapi;
 using AdaVoice.Host;
 using Serilog;
@@ -26,14 +27,18 @@ try
         Log.Information("{Event}", msg);
     });
 
+    var recordingsDir = Path.Combine(AppContext.BaseDirectory, "recordings");
+    Directory.CreateDirectory(recordingsDir);
+
     Console.WriteLine("AdaVoice host.");
     Console.WriteLine($"Mic:   {options.MicName ?? "(default communications)"}");
     Console.WriteLine($"Cable: {options.CableName}");
     Console.WriteLine($"Log:   {logPath}");
     Console.WriteLine();
-    Console.WriteLine("Keys: [S] start  [T] stop  [O] OFF AIR toggle  [P] play beep  [Q] quit");
+    Console.WriteLine("Keys: [S] start  [T] stop  [O] OFF AIR toggle  [P] play beep  [R] record  [Q] quit");
 
     var offAir = false;
+    var recording = false;
     var quit = false;
     while (!quit)
     {
@@ -46,6 +51,9 @@ try
                 if (offAir) host.EnterOffAir(); else host.ExitOffAir();
                 break;
             case ConsoleKey.P: host.Play(Beep()); break;
+            case ConsoleKey.R:
+                recording = ToggleRecording(host, recording, recordingsDir);
+                break;
             case ConsoleKey.Q: quit = true; break;
         }
     }
@@ -56,6 +64,43 @@ finally
 }
 
 return 0;
+
+// Toggle a recording take. First R: OFF AIR + record. Second R: stop, process, save a WAV.
+static bool ToggleRecording(EngineHost host, bool recording, string dir)
+{
+    if (!recording)
+    {
+        if (host.TryStartRecording())
+        {
+            Console.WriteLine("Recording… press R to stop. (OFF AIR)");
+            return true;
+        }
+
+        Console.WriteLine("Cannot record — press S to go Live first.");
+        return false;
+    }
+
+    var result = host.StopRecording();
+    if (result is { HasSignal: true })
+    {
+        var path = Path.Combine(dir, $"take-{DateTime.Now:yyyyMMdd-HHmmss}.wav");
+        try
+        {
+            WavFile.Save(path, result.Samples);
+            Console.WriteLine($"Saved {path}  gainDb={result.GainDb:F1}  durationMs={result.DurationMs}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Save failed: {ex.Message}");
+        }
+    }
+    else
+    {
+        Console.WriteLine("No signal — nothing saved.");
+    }
+
+    return false;
+}
 
 // A 1-second 660 Hz tone, so [P] sends something audible to the cable.
 static Phrase Beep()

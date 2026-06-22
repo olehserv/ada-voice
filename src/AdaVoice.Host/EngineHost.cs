@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using AdaVoice.Audio.Abstractions;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Playback;
+using AdaVoice.Audio.Recording;
 using AdaVoice.Audio.Wasapi;
 using NAudio.CoreAudioApi;
 
@@ -16,21 +18,28 @@ namespace AdaVoice.Host;
 public sealed class EngineHost : IDisposable
 {
     private readonly WasapiAudioOptions _options;
+    private readonly RecorderOptions _recorderOptions;
     private readonly Action<string> _log;
+    private readonly WasapiDeviceFactory _factory;
     private readonly WasapiDeviceMonitor _monitor;
     private readonly AudioEngine _engine;
     private readonly Thread _controlThread;
     private volatile bool _running;
 
-    public EngineHost(WasapiAudioOptions options, Action<string>? log = null)
+    // Recording state (only touched from the UI/driver thread).
+    private Recorder? _recorder;
+    private IAudioCaptureDevice? _recordingCapture;
+
+    public EngineHost(WasapiAudioOptions options, Action<string>? log = null, RecorderOptions? recorderOptions = null)
     {
         _options = options;
+        _recorderOptions = recorderOptions ?? new RecorderOptions();
         _log = log ?? (_ => { });
 
         var clock = new SystemEngineClock();
-        var factory = new WasapiDeviceFactory(options);
+        _factory = new WasapiDeviceFactory(options);
         _monitor = new WasapiDeviceMonitor();
-        _engine = new AudioEngine(factory, clock);
+        _engine = new AudioEngine(_factory, clock);
 
         _engine.Events += OnEngineEvent;
         _monitor.DeviceChanged += OnDeviceChanged;
@@ -56,6 +65,54 @@ public sealed class EngineHost : IDisposable
     public void Play(Phrase phrase) => _engine.Play(phrase);
     public void EnterOffAir() => _engine.EnterOffAir();
     public void ExitOffAir() => _engine.ExitOffAir();
+
+    /// <summary>
+    /// Take the engine OFF AIR and start recording the mic on its own capture. Returns false if the
+    /// engine could not reach OFF AIR (e.g. not Live yet) — recording is only allowed off air
+    /// (decision #11). OFF AIR is processed on the control thread, so we wait for the state.
+    /// </summary>
+    public bool TryStartRecording()
+    {
+        if (_recorder is not null)
+            return false; // already recording
+
+        EnterOffAir();
+        if (!WaitForState(EngineState.OffAir, TimeSpan.FromSeconds(2)))
+            return false;
+
+        _recordingCapture = _factory.CreateCapture(DeviceRole.Mic);
+        _recorder = new Recorder(_recordingCapture, _recorderOptions);
+        _recorder.Start();
+        return true;
+    }
+
+    /// <summary>Stop the current take, restore the live state, and return the processed result.</summary>
+    public RecordingResult? StopRecording()
+    {
+        if (_recorder is null)
+            return null;
+
+        var result = _recorder.Stop();
+        _recordingCapture!.Dispose();
+        _recorder = null;
+        _recordingCapture = null;
+
+        ExitOffAir();
+        return result;
+    }
+
+    private bool WaitForState(EngineState target, TimeSpan timeout)
+    {
+        var sw = Stopwatch.StartNew();
+        while (sw.Elapsed < timeout)
+        {
+            if (_engine.State == target)
+                return true;
+            Thread.Sleep(5);
+        }
+
+        return _engine.State == target;
+    }
 
     /// <summary>The single thread every command handler runs on. The clock timer and the device
     /// monitor only enqueue; all state transitions happen here.</summary>
@@ -127,6 +184,8 @@ public sealed class EngineHost : IDisposable
         _running = false;
         if (_controlThread.IsAlive)
             _controlThread.Join(TimeSpan.FromSeconds(2));
+
+        _recordingCapture?.Dispose(); // in case we are disposed mid-take
 
         _monitor.DeviceChanged -= OnDeviceChanged;
         _monitor.Dispose();
