@@ -15,9 +15,9 @@ _Last updated: 2026-06-22._
 ## Status in one line
 
 **Design complete and reviewed. Phase 0 go/no-go gate PASSED on the target machine
-(Architecture A confirmed). Phase 1 engine core is complete and unit-tested, and the real WASAPI
-`IAudioDeviceFactory` + `IDeviceMonitor` are built.** Next real step: the runnable host — a real
-`IEngineClock` plus a composition root that wires everything together so the engine runs live.
+(Architecture A confirmed). Phase 1 engine runs live end-to-end: engine core + WASAPI
+factory/monitor + a `SystemEngineClock` and a console composition root (`AdaVoice.Host`).** Next
+real step: run it on the target machine (hardware checklist below), then the `Recorder`.
 
 ## Done
 
@@ -57,26 +57,37 @@ _Last updated: 2026-06-22._
   dispose their `MMDevice` (rebuild COM-leak fix). 50 unit tests green; full solution builds clean.
   Hardware checks: `tools/AudioSeamCheck --factory` and `--monitor` (still to be run on the target
   machine).
+- ✅ **Runnable host — complete (2026-06-22)** — `SystemEngineClock` (real `IEngineClock`:
+  Stopwatch + Timer) and a new `AdaVoice.Host` console project. `EngineHost` wires the factory +
+  monitor + clock into the engine and runs the single control loop on a dedicated thread with a
+  catch-all so no handler can kill it; it maps device-monitor events to a role (best-effort,
+  pragmatic v1) and disposes in a safe order. `Program` adds Serilog rolling-file logging,
+  `RegisterApplicationRestart`, and keyboard controls. Also a core fix: a failed `Start` now stays
+  Stopped with the error surfaced instead of crashing the (new) control thread, and `Post` ignores
+  a disposed queue. 54 unit tests green; full solution builds clean. **Not yet run on hardware** —
+  see Next action.
 - ✅ **Doc structure cleanup** (2026-06-13) — removed the original brief (`1_DESIGN.md`) and
   `TODOS.md`; moved the design system into [`docs/design/09-design-system.md`](docs/design/09-design-system.md);
   added planning docs under [`docs/plans/`](docs/plans/).
 
 ## In progress / interrupted
 
-- _Nothing actively in progress._ The project is paused inside Phase 1, after the engine core and
-  the WASAPI factory/monitor, before the host that wires them together and runs the engine live.
+- _Nothing actively in progress._ The project is paused inside Phase 1: the engine runs live in
+  code, but the host has not yet been run on the target machine, and the `Recorder` is not built.
 
 ## Next action
 
-**Continue Phase 1 — build the runnable host, so the engine runs live end-to-end.** Two parts:
-(1) a real `IEngineClock` (`SystemEngineClock`: monotonic time + a watchdog timer), and (2) a
-composition root that wires `WasapiDeviceFactory` + `WasapiDeviceMonitor` + the clock into the
-`AudioEngine`, maps the monitor's `deviceId` → `DeviceRole` (the `WasapiDevices.ById` helper lands
-here), posts `DeviceChanged` into the engine, subscribes to engine events and logs them (Serilog),
-and calls `RegisterApplicationRestart`. After that: the `Recorder` (trim + RMS loudness-match + OFF
-AIR). Already done: the engine core (state machine, watchdog, drift, DEGRADED alarm) and the WASAPI
-factory/monitor. Smaller doc task still open: create `spike/PHASE0-RESULTS.md` with the measured
-Phase 0 numbers.
+**1) Run the host on the target machine** (the engine has never touched real hardware as a whole):
+`dotnet run --project src/AdaVoice.Host`, then `S` (Live, mic audible on `CABLE Output`), `P` (beep
+to the cable), `O`/`O` (OFF AIR off/on), unplug the cable (alarm sounds + rebuild logged), replug
+(fast recovery), `Q`. Watch the Serilog file under the host's `logs/`. Note: the cable must be at
+48 kHz or `Start` will surface a format error and stay Stopped (by design for now).
+
+**2) Then build the `Recorder`** (trim + RMS loudness-match + preview + save) that drives OFF AIR.
+
+Then the WPF UI / ViewModels (Phase 3) reuse `EngineHost`. Smaller doc task still open: create
+`spike/PHASE0-RESULTS.md` with the measured Phase 0 numbers. Deferred from this slice: cold-start
+auto-retry into Degraded (a failed `Start` currently just stays Stopped with the error surfaced).
 
 ## Open questions
 
