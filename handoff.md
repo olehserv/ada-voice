@@ -15,10 +15,10 @@ _Last updated: 2026-06-22._
 ## Status in one line
 
 **Design complete and reviewed. Phase 0 go/no-go gate PASSED. Phase 1 engine runs live end-to-end
-(engine core + WASAPI factory/monitor + `SystemEngineClock` + console host), and the Recorder core
-(record → trim → loudness-match → save WAV) is built and wired into the host.** Next real step: run
-the host + record on the target machine (checklist below), then the storage layer (`library.json`)
-and preview (monitor stream).
+(engine core + WASAPI factory/monitor + `SystemEngineClock` + console host); the Recorder records →
+trims → loudness-matches → catalogues a take into `library.json`, and preview plays it to the
+monitor.** Next real step: run it on the target machine (checklist below), then the rest of storage
+(categories/delete/backups/settings) and the setup wizard, then the WPF UI.
 
 ## Done
 
@@ -75,32 +75,45 @@ and preview (monitor stream).
   72 unit tests green incl. a 44.1 kHz-stereo resample test; a capture-thread race in the Recorder
   was found and fixed (lock). **Saved takes are the raw trimmed audio; `gainDb` is metadata that
   will be applied once playback + library land.** **Not yet run on hardware.**
+- ✅ **Storage + preview (thin vertical) — complete (2026-06-23)** — new `AdaVoice.Core` project
+  (net10.0, no audio dep): `Library`/`PhraseEntry`/`Category` domain, `IPhraseRepository` +
+  `JsonPhraseRepository` (System.Text.Json, atomic tmp→rename, seeded default), `PhraseLibraryService`
+  (WAV-first `Add`). `WavFile.Load` added (and `Save` now creates its dir). Host catalogues a take
+  into `%LOCALAPPDATA%\AdaVoice\library.json` + `audio\p-….wav` on `[R]`, and `[V]` previews the last
+  phrase to the default output (monitor stand-in) with `gainDb` applied — **refusing if the default
+  output is the cable** (cardinal rule). 80 unit tests green. **Not yet run on hardware.**
 - ✅ **Doc structure cleanup** (2026-06-13) — removed the original brief (`1_DESIGN.md`) and
   `TODOS.md`; moved the design system into [`docs/design/09-design-system.md`](docs/design/09-design-system.md);
   added planning docs under [`docs/plans/`](docs/plans/).
 
 ## In progress / interrupted
 
-- _Nothing actively in progress._ The project is paused inside Phase 1: the engine + Recorder run in
-  code, but have not yet been run on the target machine; storage, preview, and the wizard are next.
+- _Nothing actively in progress._ The project is paused inside Phase 1: engine + Recorder + storage +
+  preview run in code but have not been run on the target machine; the rest of storage and the wizard
+  are next.
 
 ## Next action
 
-**1) Run the host + record on the target machine.** `dotnet run --project src/AdaVoice.Host`: `S`
-(Live, mic on `CABLE Output`), `P` (beep), `O`/`O` (OFF AIR), unplug/replug the cable (alarm +
-fast recovery), and **`R` … speak … `R`** (records OFF AIR → saves a 48 kHz/16-bit WAV under
-`recordings/`, logs `gainDb`/duration). Confirm the cable stays silent while recording and a playable
-WAV appears. Cable must be at 48 kHz or `Start` stays Stopped with an error (by design for now).
+**1) Run the full loop on the target machine.** `dotnet run --project src/AdaVoice.Host`: `S` (Live,
+mic on `CABLE Output`), `P` (beep), `O`/`O` (OFF AIR), unplug/replug the cable (alarm + fast
+recovery); **`R` … speak … `R`** → "Saved p-…"; confirm `%LOCALAPPDATA%\AdaVoice\library.json` has the
+entry and `audio\p-….wav` exists; **`V`** → the take plays on the headphones/default output (not the
+cable); restart → it logs the phrase reloaded. Also: set the Windows default playback to `CABLE Input`
+and press `V` → preview is **refused** with a log line. Cable must be at 48 kHz or `Start` stays
+Stopped with an error (by design for now).
 
-**2) Then the storage layer + preview.** `library.json` metadata with atomic writes (design 04) so a
-take becomes a catalogued phrase with its `gainDb`; the headphone-monitor render stream so preview
-can play to the monitor (never the cable). Then the setup wizard (calibrates `micReferenceRms`).
-Then the WPF UI (Phase 3) reuses `EngineHost`.
+**2) Then the rest of storage + the wizard.** Categories CRUD + tags, delete-as-orphan, daily
+backups, `settings.json`, a configurable monitor device (+ `Monitor` role) so preview targets a
+chosen headphone device instead of the default output, the kill-9 atomic-write test, and startup
+validation of missing files. Then the setup wizard (calibrates `micReferenceRms`). Then the WPF UI
+(Phase 3) reuses `EngineHost`.
 
 **Open follow-ups (named so they're not lost):**
+- **Configurable monitor device:** preview currently uses the default output as the monitor
+  stand-in; a real monitor device selection comes with `settings.json`.
 - **2nd-capture fallback:** the Recorder opens its own mic capture; if a driver refuses a second
-  WASAPI capture client, the fallback is tapping the engine's existing capture. Decide owner —
-  likely the storage/preview slice or the WPF slice. Watch for it on the hardware run.
+  WASAPI capture client, the fallback is tapping the engine's existing capture. Watch for it on the
+  hardware run.
 - Cold-start auto-retry into Degraded (a failed `Start` currently just stays Stopped, error surfaced).
 - Doc task: create `spike/PHASE0-RESULTS.md` with the measured Phase 0 numbers.
 
