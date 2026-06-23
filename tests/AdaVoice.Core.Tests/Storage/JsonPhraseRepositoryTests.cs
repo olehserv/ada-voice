@@ -127,6 +127,49 @@ public class JsonPhraseRepositoryTests : IDisposable
         Assert.Equal(LibraryLoadStatus.Corrupt, result.Status);
     }
 
+    [Fact]
+    public void An_interrupted_save_leaves_the_previous_library_fully_intact()
+    {
+        // "kill-9" simulation: the atomic replace (temp -> rename over library.json) is prevented at
+        // the last step, exactly as a crash mid-replace looks to the next reader. The previous good
+        // library must survive whole — never half-written. (Replace-while-open is Windows semantics.)
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var repo = new JsonPhraseRepository(_root);
+        var library = repo.Load().Library;
+        library.Phrases.Add(new PhraseEntry { Id = "p-keep", FileName = "p-keep.wav" });
+        repo.Save(library); // a known-good library.json on disk
+
+        var libraryFile = AdaVoicePaths.LibraryFile(_root);
+        using (new FileStream(libraryFile, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            // Open without FILE_SHARE_DELETE, so the atomic replace cannot complete.
+            library.Phrases.Add(new PhraseEntry { Id = "p-new", FileName = "p-new.wav" });
+            // The save must fail loudly (IOException or UnauthorizedAccessException, OS-dependent),
+            // never silently corrupt — the type doesn't matter, the integrity below does.
+            Assert.NotNull(Record.Exception(() => repo.Save(library)));
+        }
+
+        var reloaded = new JsonPhraseRepository(_root).Load();
+        Assert.Equal(LibraryLoadStatus.Loaded, reloaded.Status);
+        Assert.Equal("p-keep", Assert.Single(reloaded.Library.Phrases).Id); // old content, whole
+        Assert.False(File.Exists(libraryFile + ".tmp"));                    // failed save cleaned its temp
+    }
+
+    [Fact]
+    public void A_leftover_temp_file_from_a_crash_does_not_affect_load()
+    {
+        WriteLibrary("{\"version\":1,\"categories\":[],\"phrases\":[]}");
+        // A half-written temp left by a crash before the rename — must be ignored, never read.
+        File.WriteAllText(AdaVoicePaths.LibraryFile(_root) + ".tmp", "{ half-written gar");
+
+        var result = new JsonPhraseRepository(_root).Load();
+
+        Assert.Equal(LibraryLoadStatus.Loaded, result.Status);
+        Assert.Empty(result.Library.Phrases);
+    }
+
     private void WriteLibrary(string content)
     {
         Directory.CreateDirectory(_root);
