@@ -1,63 +1,80 @@
-# AdaVoice — Передача справ та прогрес
+# AdaVoice — Передача контексту та прогрес
 
-**Актуальний статус проєкту.** Читайте це першим, коли ви (або нова сесія) знову беретеся за роботу.
-Він відповідає на одне питання: *де ми зараз?*
+**Поточний статус проєкту.** Прочитай це першим, коли ти або нова сесія повертаєтесь до роботи. Документ відповідає на одне питання: *де ми зараз?*
 
-- **Що це таке:** виконана робота, робота в процесі, усе, що було перервано, і відкриті питання.
-- **Чим це не є:** не план (див. [implementation plan](docs/plans/implementation-plan.md)),
-  не стратегія (див. [roadmap](docs/roadmaps/mvp-roadmap.md)) і не запис рішень
+- **Що це:** завершена робота, робота в процесі, усе, що було перервано, та відкриті питання.
+- **Що це не:** план (див. [implementation plan](docs/plans/implementation-plan.md)),
+  стратегія (див. [roadmap](docs/roadmaps/mvp-roadmap.md)) або журнал рішень
   (канонічна таблиця в [design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
 
-_Останнє оновлення: 2026-06-13._
+_Останнє оновлення: 2026-06-15._
 
 ---
 
-## Статус в одному рядку
+## Статус одним реченням
 
-**Дизайн завершено й переглянуто. Код spike для Phase 0 написано, але ще НЕ запущено на залізі.
-Коду робочого застосунку (production) не існує.** Наступний реальний крок: запустити spike для Phase 0 проти справжнього дзвінка Zoho.
+**Дизайн завершено та перевірено. Phase 0 go/no-go gate ПРОЙДЕНО на цільовій машині
+(Architecture A підтверджено). Phase 1 audio core частково зібрано, а WASAPI seam
+перевірено на реальному обладнанні.** Наступний реальний крок: завершити Phase 1 engine
+(orchestrator, recorder, device monitor).
 
-## Зроблено
+## Завершено
 
-- ✅ **Фаза дизайну** — 9 документів у [`docs/design/`](docs/design/README.md), і eng review, і design
-  review обидва ПРОЙДЕНІ (2026-06-10).
-- ✅ **Канонічні рішення** — 24 записи зафіксовано ([design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
-- ✅ **Ворота дозволу A8** — вирішено 2026-06-13: жодної угоди з роботодавцем/Zoho не потрібно
+- ✅ **Design phase** — 9 документів у [`docs/design/`](docs/design/README.md), eng review + design
+  review обидва ПРОЙДЕНО (2026-06-10).
+- ✅ **Canonical decisions** — 24 записи зафіксовано ([design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
+- ✅ **A8 permission gate** — вирішено 2026-06-13: угода з роботодавцем/Zoho не потрібна
   (роботодавець лояльний). Більше не блокує розробку.
-- ✅ **Spike для Phase 0 — код** — одноразовий консольний прототип закомічено в [`spike/`](spike/README.md)
-  (mic→duck→mix→CABLE, самотест latency, interop для відмови від ducking). ~656 lines. Збирається для
+- ✅ **Phase 0 spike — code** — одноразовий консольний прототип закомічено в [`spike/`](spike/README.md)
+  (mic→duck→mix→CABLE, latency self-test, ducking opt-out interop). ~656 рядків. Збирається для
   `net10.0-windows`.
-- ✅ **Прибирання структури документів** (2026-06-13) — видалено початковий бриф (`1_DESIGN.md`) і
-  `TODOS.md`; перенесено дизайн-систему в [`docs/design/09-design-system.md`](docs/design/09-design-system.md);
-  додано планувальні документи в [`docs/plans/`](docs/plans/).
+- ✅ **Phase 0 go/no-go gate — ПРОЙДЕНО (2026-06-15)** — протестовано end-to-end на реальному
+  Zoho Voice дзвінку на цільовій машині. Architecture A підтверджено; відпрацьований fallback
+  через Voicemeeter залишається задокументованим планом B, але не потрібен. (Див. "Відкриті питання" —
+  A5/A6/A11 вирішено.) _Детальні числа (mouth-to-Chrome latency, AGC notes) ще потрібно
+  зафіксувати в `spike/PHASE0-RESULTS.md` — файл ще не створено._
+- ✅ **Phase 1 audio core — частково (2026-06-15)** — production code у [`src/`](src/):
+  device seams (`IAudioCaptureDevice`/`IAudioRenderDevice`), `MicPassthrough` (capture →
+  format → duck), `PhrasePlayer` + `PhraseSampleProvider` (single-playback, fade-out),
+  `RampGain`/`ChannelAdapter` DSP, а також WASAPI seam (`WasapiCaptureDevice`,
+  `WasapiRenderDevice`, `DuckingOptOut` COM interop). 23 unit tests green на fake devices;
+  CI збирає + запускає тести на кожен push. Seam перевірено на реальному обладнанні через
+  [`tools/AudioSeamCheck`](tools/AudioSeamCheck) (live mic→CABLE passthrough with ducking).
+- ✅ **Doc structure cleanup** (2026-06-13) — видалено початковий brief (`1_DESIGN.md`) і
+  `TODOS.md`; дизайн-систему перенесено в [`docs/design/09-design-system.md`](docs/design/09-design-system.md);
+  планувальні документи додано в [`docs/plans/`](docs/plans/).
 
-## В процесі / перервано
+## У процесі / перервано
 
-- _Нічого активно в процесі немає._ Проєкт на паузі на межі Phase 0, чекає на
-  тестування руками на залізі.
+- _Нічого активно не виконується._ Проєкт поставлено на паузу всередині Phase 1, після зрізу
+  audio-core (seams + passthrough + player) і перед engine orchestrator.
 
 ## Наступна дія
 
-**Запустити spike для Phase 0 на Windows-машині проти справжнього дзвінка Zoho Voice.**
-Дотримуйтеся [`spike/README.md`](spike/README.md). Записуйте результати у `spike/PHASE0-RESULTS.md`
-(шаблон ще не створено — попросіть Claude його згенерувати). Рішення go/no-go з цих воріт визначає
-Phase 1 (Architecture A) проти відрепетируваного запасного варіанту Voicemeeter (Architecture B).
+**Продовжити Phase 1 — побудувати `AudioEngine` orchestrator поверх перевірених seams.**
+Згідно з [roadmap Phase 1](docs/roadmaps/mvp-roadmap.md) і [design 06](docs/design/06-audio-engine.md):
+state machine (Stopped/Live/OffAir/Degraded), watchdog (render-pull stall → rebuild),
+`DeviceMonitor` (`IMMNotificationClient` device-loss recovery), drift logging (overrun count
++ underrun count ще не surfaced — див. code note в `MicPassthrough`), `Recorder`
+(trim + RMS loudness-match + OFF AIR), DEGRADED alarm на system default device, і
+`RegisterApplicationRestart`. Менше doc-завдання все ще відкрите: створити `spike/PHASE0-RESULTS.md`
+з виміряними Phase 0 numbers.
 
-## Відкриті питання (вирішуються лише через Phase 0)
+## Відкриті питання
 
-Це **технічні невідомі**, окремі від уже закритого питання дозволу:
+Технічні невизначеності Phase 0 тепер **вирішено** завдяки пройденому gate (2026-06-15):
 
-- ❓ **A5** — чи поважає Zoho/Chrome вибір мікрофона `CABLE Output`? *(очікувано так; перевірити)*
-- ❓ **A6** — чи AGC у Chrome пропускає попередньо записані фрази розбірливо, чи перерівнює їхній рівень?
-  *(адверсаріальна невідома — тестувати справжнім записаним мовленням, а не тонами)*
-- ❓ **A11** — справжня latency від рота до Chrome (застосунок + буфер VB-CABLE + буферизація Chrome).
-  *(ціль на боці застосунку ~40 ms; наскрізно вимірюється через запис loopback)*
-- ❓ Чи тримається відмова від ducking через `SetDuckingPreference` упродовж повторюваних циклів старту/стопу дзвінка?
+- ✅ **A5** — Zoho/Chrome поважає вибір мікрофона `CABLE Output`. *(підтверджено на реальному дзвінку)*
+- ✅ **A6** — Chrome **AGC** пропускає попередньо записані фрази зрозуміло. *(підтверджено;
+  точні AGC/level notes зафіксувати в `spike/PHASE0-RESULTS.md`)*
+- ✅ **A11** — mouth-to-Chrome latency є прийнятною end-to-end. *(підтверджено; записати
+  виміряне число в `spike/PHASE0-RESULTS.md`)*
+- ✅ `SetDuckingPreference` opt-out тримається після повторних циклів start/stop дзвінка.
 
 ## Відкладені / заблоковані пункти
 
-- 🔒 **Дизайнерські макети Board** — запустити designer gstack для 3 варіантів Board у темній темі
-  (Full + Docked) проти [design 09](docs/design/09-design-system.md). **Заблоковано на ключі OpenAI
-  API** (`~/.gstack/openai.json` або `OPENAI_API_KEY`). Найкраще зробити перед тим, як Phase 3 будуватиме
-  Board у XAML. _(Перенесено зі старого TODOS.md, 2026-06-10.)_
-- Беклог пост-MVP живе в [roadmap](docs/roadmaps/mvp-roadmap.md#deferred-post-mvp-backlog).
+- 🔒 **Board design mockups** — запустити gstack designer для 3 dark-theme Board варіантів
+  (Full + Docked) згідно з [design 09](docs/design/09-design-system.md). **Заблоковано через OpenAI
+  API key** (`~/.gstack/openai.json` або `OPENAI_API_KEY`). Найкраще зробити до того, як Phase 3
+  будуватиме Board у XAML. _(Перенесено зі старого TODOS.md, 2026-06-10.)_
+- Post-MVP backlog знаходиться в [roadmap](docs/roadmaps/mvp-roadmap.md#deferred
