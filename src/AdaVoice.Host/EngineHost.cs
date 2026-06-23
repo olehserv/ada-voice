@@ -39,6 +39,7 @@ public sealed class EngineHost : IDisposable
     private readonly Thread _controlThread;
     private readonly string _dataRoot;
     private readonly PhraseLibraryService _library;
+    private readonly LibraryArchiveService _archive;
     private volatile bool _running;
 
     // Recording state (only touched from the UI/driver thread).
@@ -63,9 +64,11 @@ public sealed class EngineHost : IDisposable
 
         _dataRoot = AdaVoicePaths.DefaultRoot;
         var backup = new BackupService(_dataRoot);
+        var repository = new JsonPhraseRepository(_dataRoot, backup.TryReadLatestLibrary);
         _library = new PhraseLibraryService(
-            new JsonPhraseRepository(_dataRoot, backup.TryReadLatestLibrary),
+            repository,
             name => File.Exists(AdaVoicePaths.AudioPath(_dataRoot, name)));
+        _archive = new LibraryArchiveService(_dataRoot, repository);
 
         var detail = _library.LoadDetail is null ? "" : $" — {_library.LoadDetail}";
         _log($"library: {_library.Phrases.Count} phrase(s), status={_library.LoadStatus}{detail}, " +
@@ -153,6 +156,23 @@ public sealed class EngineHost : IDisposable
             if (File.Exists(src))
                 File.Move(src, AdaVoicePaths.AudioPath(_dataRoot, orphan), overwrite: true);
         });
+
+    /// <summary>Export the library (metadata + active phrase WAVs) to a zip. Returns the path written.</summary>
+    public string ExportLibrary(string destinationZipPath)
+    {
+        _archive.Export(destinationZipPath);
+        return destinationZipPath;
+    }
+
+    /// <summary>Import a library archive (merge or replace), then refresh the in-session library so the
+    /// change is visible without a restart.</summary>
+    public ImportResult ImportLibrary(string sourceZipPath, ImportMode mode)
+    {
+        var result = _archive.Import(sourceZipPath, mode);
+        if (result.Success)
+            _library.Reload();
+        return result;
+    }
 
     /// <summary>Load a catalogued phrase from disk and preview it. Returns an error message, or null
     /// on success.</summary>

@@ -1,6 +1,7 @@
 using AdaVoice.Audio;
 using AdaVoice.Audio.Playback;
 using AdaVoice.Audio.Wasapi;
+using AdaVoice.Core.Storage;
 using AdaVoice.Host;
 using Serilog;
 
@@ -31,7 +32,7 @@ try
     Console.WriteLine($"Cable: {options.CableName}");
     Console.WriteLine($"Log:   {logPath}");
     Console.WriteLine();
-    Console.WriteLine("Keys: [S] start  [T] stop  [O] OFF AIR  [P] beep  [R] record  [V] preview last  [D] delete last  [Q] quit");
+    Console.WriteLine("Keys: [S] start  [T] stop  [O] OFF AIR  [P] beep  [R] record  [V] preview last  [D] delete last  [E] export  [I] import  [Q] quit");
 
     var offAir = false;
     var recording = false;
@@ -50,6 +51,8 @@ try
             case ConsoleKey.R: recording = ToggleRecording(host, recording); break;
             case ConsoleKey.V: PreviewLast(host); break;
             case ConsoleKey.D: DeleteLast(host); break;
+            case ConsoleKey.E: Export(host); break;
+            case ConsoleKey.I: Import(host); break;
             case ConsoleKey.Q: quit = true; break;
         }
     }
@@ -125,6 +128,43 @@ static void DeleteLast(EngineHost host)
     Console.WriteLine(deleted is null
         ? "Delete failed — not found."
         : $"Deleted {deleted.Id} (orphaned as deleted-{deleted.FileName}).");
+}
+
+// Export the whole library (metadata + active phrase WAVs) to a timestamped zip in the data root.
+static void Export(EngineHost host)
+{
+    var path = Path.Combine(AdaVoicePaths.DefaultRoot, $"export-{DateTime.Now:yyyyMMdd-HHmmss}.zip");
+    try
+    {
+        host.ExportLibrary(path);
+        Console.WriteLine($"Exported to {path}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Export failed: {ex.Message}");
+    }
+}
+
+// Import a library archive: prompt for the path and merge/replace, then report what changed.
+static void Import(EngineHost host)
+{
+    Console.Write("Import zip path: ");
+    var path = Console.ReadLine()?.Trim().Trim('"');
+    if (string.IsNullOrWhiteSpace(path))
+    {
+        Console.WriteLine("Import cancelled.");
+        return;
+    }
+
+    Console.Write("Mode — [m]erge or [r]eplace? ");
+    var key = Console.ReadKey(intercept: true).Key;
+    Console.WriteLine();
+    var mode = key == ConsoleKey.R ? ImportMode.Replace : ImportMode.Merge;
+
+    var result = host.ImportLibrary(path, mode);
+    Console.WriteLine(result.Success
+        ? $"Imported ({mode}): added {result.Added}, skipped {result.Skipped}."
+        : $"Import failed: {result.Error}");
 }
 
 // A 1-second 660 Hz tone, so [P] sends something audible to the cable.

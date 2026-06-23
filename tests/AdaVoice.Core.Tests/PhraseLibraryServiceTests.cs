@@ -1,3 +1,4 @@
+using AdaVoice.Core.Domain;
 using AdaVoice.Core.Storage;
 
 namespace AdaVoice.Core.Tests;
@@ -97,6 +98,23 @@ public class PhraseLibraryServiceTests : IDisposable
         Assert.Null(result);
         Assert.False(orphaned);
         Assert.Single(service.Phrases);
+    }
+
+    [Fact]
+    public void Reload_picks_up_changes_made_to_the_store_underneath_it()
+    {
+        var repo = new JsonPhraseRepository(_root);
+        var service = new PhraseLibraryService(repo);
+        Assert.Empty(service.Phrases);
+
+        // Change the store underneath the service, as an import does.
+        var library = repo.Load().Library;
+        library.Phrases.Add(new PhraseEntry { Id = "p-ext", FileName = "p-ext.wav" });
+        repo.Save(library);
+
+        Assert.Empty(service.Phrases); // stale until reloaded
+        service.Reload();
+        Assert.Equal("p-ext", Assert.Single(service.Phrases).Id);
     }
 
     public void Dispose()

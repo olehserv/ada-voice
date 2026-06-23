@@ -11,7 +11,8 @@ namespace AdaVoice.Core;
 public sealed class PhraseLibraryService
 {
     private readonly IPhraseRepository _repository;
-    private readonly Library _library;
+    private readonly Func<string, bool> _audioExists;
+    private Library _library = new(); // replaced by Load() in the constructor
 
     /// <param name="repository">The store the library is loaded from and saved to.</param>
     /// <param name="audioExists">Tells whether a phrase's WAV (by file name) exists, used to flag
@@ -20,12 +21,8 @@ public sealed class PhraseLibraryService
     public PhraseLibraryService(IPhraseRepository repository, Func<string, bool>? audioExists = null)
     {
         _repository = repository;
-
-        var result = repository.Load();
-        _library = result.Library;
-        LoadStatus = result.Status;
-        LoadDetail = result.Detail;
-        BrokenPhraseIds = LibraryValidator.FindBrokenPhraseIds(_library, audioExists ?? (_ => true));
+        _audioExists = audioExists ?? (_ => true);
+        Load();
     }
 
     public IReadOnlyList<PhraseEntry> Phrases => _library.Phrases;
@@ -33,14 +30,28 @@ public sealed class PhraseLibraryService
 
     /// <summary>How the library was loaded — the host/UI surfaces this so a corrupt file is never
     /// mistaken for an empty library (design 04 §3).</summary>
-    public LibraryLoadStatus LoadStatus { get; }
+    public LibraryLoadStatus LoadStatus { get; private set; }
 
     /// <summary>Extra detail for <see cref="LoadStatus"/> when something went wrong (else null).</summary>
-    public string? LoadDetail { get; }
+    public string? LoadDetail { get; private set; }
 
     /// <summary>Ids of phrases whose audio file is missing — to be flagged broken in the UI rather
     /// than crashing playback. Runtime-only; never persisted.</summary>
-    public IReadOnlyList<string> BrokenPhraseIds { get; }
+    public IReadOnlyList<string> BrokenPhraseIds { get; private set; } = [];
+
+    /// <summary>Re-read the library from storage, discarding the in-memory copy. Used after an
+    /// operation changes the store underneath the service (e.g. an import) so the running session
+    /// reflects the new state without a restart.</summary>
+    public void Reload() => Load();
+
+    private void Load()
+    {
+        var result = _repository.Load();
+        _library = result.Library;
+        LoadStatus = result.Status;
+        LoadDetail = result.Detail;
+        BrokenPhraseIds = LibraryValidator.FindBrokenPhraseIds(_library, _audioExists);
+    }
 
     /// <summary>
     /// Catalogue a newly recorded take and persist the library. The id (and the
