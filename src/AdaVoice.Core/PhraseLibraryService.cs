@@ -22,13 +22,22 @@ public sealed class PhraseLibraryService
     public IReadOnlyList<PhraseEntry> Phrases => _library.Phrases;
     public IReadOnlyList<Category> Categories => _library.Categories;
 
-    /// <summary>Catalogue a newly recorded take and persist the library. Returns the stored entry.</summary>
-    public PhraseEntry Add(string title, string categoryId, string fileName, int durationMs, double gainDb)
+    /// <summary>
+    /// Catalogue a newly recorded take and persist the library. The id (and the
+    /// <c>{id}.wav</c> file name) are generated here; <paramref name="writeAudio"/> is called with
+    /// that file name to write the WAV <b>before</b> the metadata is persisted — so a write failure
+    /// leaves nothing catalogued, and a later metadata failure leaves only an orphan WAV (design 04).
+    /// </summary>
+    public PhraseEntry Add(string title, string categoryId, int durationMs, double gainDb, Action<string> writeAudio)
     {
+        var id = NewId();
+        var fileName = $"{id}.wav";
+        writeAudio(fileName);
+
         var now = DateTime.UtcNow;
         var entry = new PhraseEntry
         {
-            Id = NewId(),
+            Id = id,
             Title = title,
             CategoryId = categoryId,
             Tags = [],

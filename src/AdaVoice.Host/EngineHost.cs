@@ -1,10 +1,21 @@
 using System.Diagnostics;
+using AdaVoice.Audio;
 using AdaVoice.Audio.Abstractions;
+using AdaVoice.Audio.Dsp;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Playback;
 using AdaVoice.Audio.Recording;
+using AdaVoice.Audio.Storage;
 using AdaVoice.Audio.Wasapi;
+using AdaVoice.Core;
+using AdaVoice.Core.Domain;
+using AdaVoice.Core.Storage;
 using NAudio.CoreAudioApi;
+using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
+
+// Both AdaVoice and NAudio define DeviceState; the seam uses ours.
+using DeviceState = AdaVoice.Audio.Abstractions.DeviceState;
 
 namespace AdaVoice.Host;
 
@@ -17,6 +28,8 @@ namespace AdaVoice.Host;
 /// </summary>
 public sealed class EngineHost : IDisposable
 {
+    private const string DefaultCategoryId = "c-default";
+
     private readonly WasapiAudioOptions _options;
     private readonly RecorderOptions _recorderOptions;
     private readonly Action<string> _log;
@@ -24,6 +37,8 @@ public sealed class EngineHost : IDisposable
     private readonly WasapiDeviceMonitor _monitor;
     private readonly AudioEngine _engine;
     private readonly Thread _controlThread;
+    private readonly string _dataRoot;
+    private readonly PhraseLibraryService _library;
     private volatile bool _running;
 
     // Recording state (only touched from the UI/driver thread).
@@ -45,9 +60,16 @@ public sealed class EngineHost : IDisposable
         _monitor.DeviceChanged += OnDeviceChanged;
 
         _controlThread = new Thread(ControlLoop) { Name = "AudioEngineControl", IsBackground = true };
+
+        _dataRoot = AdaVoicePaths.DefaultRoot;
+        _library = new PhraseLibraryService(new JsonPhraseRepository(_dataRoot));
+        _log($"library: {_library.Phrases.Count} phrase(s) at {_dataRoot}");
     }
 
     public EngineState State => _engine.State;
+
+    /// <summary>The catalogued phrases, in stored order.</summary>
+    public IReadOnlyList<PhraseEntry> Phrases => _library.Phrases;
 
     public void Start()
     {
@@ -99,6 +121,63 @@ public sealed class EngineHost : IDisposable
 
         ExitOffAir();
         return result;
+    }
+
+    /// <summary>Catalogue a recorded take: write its WAV under the data root, then add the metadata
+    /// (WAV first, so a failed write catalogues nothing). Returns the stored entry.</summary>
+    public PhraseEntry SaveTake(RecordingResult result, string title) =>
+        _library.Add(title, DefaultCategoryId, result.DurationMs, result.GainDb,
+            fileName => WavFile.Save(AdaVoicePaths.AudioPath(_dataRoot, fileName), result.Samples));
+
+    /// <summary>Load a catalogued phrase from disk and preview it. Returns an error message, or null
+    /// on success.</summary>
+    public string? PreviewEntry(PhraseEntry entry)
+    {
+        var path = AdaVoicePaths.AudioPath(_dataRoot, entry.FileName);
+        if (!File.Exists(path))
+            return $"missing audio file: {entry.FileName}";
+
+        return Preview(WavFile.Load(path), entry.GainDb);
+    }
+
+    /// <summary>
+    /// Play samples to the default output (the monitor stand-in), applying <paramref name="gainDb"/>.
+    /// Refuses if the default output is the cable — preview must never reach the call (decision #11).
+    /// Blocks until playback finishes. Returns an error message, or null on success.
+    /// </summary>
+    public string? Preview(float[] samples, double gainDb)
+    {
+        var device = WasapiDevices.DefaultRender();
+
+        // Cardinal rule: never feed the take toward the call. If the OS default output is the cable,
+        // refuse rather than play.
+        if (device.FriendlyName.Contains(_options.CableName, StringComparison.OrdinalIgnoreCase))
+        {
+            device.Dispose();
+            return "default output is the cable — pick a different playback device to preview";
+        }
+
+        var deviceRate = device.AudioClient.MixFormat.SampleRate;
+        ISampleProvider source = new PhraseSampleProvider(samples, AudioFormats.Engine, "preview");
+        source = new VolumeSampleProvider(source) { Volume = RampGain.DbToLinear(gainDb) };
+        if (deviceRate != AudioFormats.SampleRate)
+            source = new WdlResamplingSampleProvider(source, deviceRate);
+
+        using var render = new WasapiRenderDevice(device, optOutOfDucking: false);
+        using var done = new ManualResetEventSlim(false);
+        render.StateChanged += (_, e) =>
+        {
+            if (e.State is DeviceState.Stopped or DeviceState.Faulted)
+                done.Set();
+        };
+
+        render.Init(source);
+        render.Start();
+
+        var durationMs = samples.Length * 1000L / AudioFormats.SampleRate;
+        done.Wait(TimeSpan.FromMilliseconds(durationMs + 1000)); // backstop in case the tail is delayed
+        render.Stop();
+        return null;
     }
 
     private bool WaitForState(EngineState target, TimeSpan timeout)

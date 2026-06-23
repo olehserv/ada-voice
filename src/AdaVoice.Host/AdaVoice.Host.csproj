@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\AdaVoice.Audio\AdaVoice.Audio.csproj" />
     <ProjectReference Include="..\AdaVoice.Audio.Wasapi\AdaVoice.Audio.Wasapi.csproj" />
+    <ProjectReference Include="..\AdaVoice.Core\AdaVoice.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

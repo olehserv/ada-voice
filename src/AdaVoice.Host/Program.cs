@@ -1,6 +1,5 @@
 using AdaVoice.Audio;
 using AdaVoice.Audio.Playback;
-using AdaVoice.Audio.Storage;
 using AdaVoice.Audio.Wasapi;
 using AdaVoice.Host;
 using Serilog;
@@ -27,15 +26,12 @@ try
         Log.Information("{Event}", msg);
     });
 
-    var recordingsDir = Path.Combine(AppContext.BaseDirectory, "recordings");
-    Directory.CreateDirectory(recordingsDir);
-
     Console.WriteLine("AdaVoice host.");
     Console.WriteLine($"Mic:   {options.MicName ?? "(default communications)"}");
     Console.WriteLine($"Cable: {options.CableName}");
     Console.WriteLine($"Log:   {logPath}");
     Console.WriteLine();
-    Console.WriteLine("Keys: [S] start  [T] stop  [O] OFF AIR toggle  [P] play beep  [R] record  [Q] quit");
+    Console.WriteLine("Keys: [S] start  [T] stop  [O] OFF AIR  [P] beep  [R] record  [V] preview last  [Q] quit");
 
     var offAir = false;
     var recording = false;
@@ -51,9 +47,8 @@ try
                 if (offAir) host.EnterOffAir(); else host.ExitOffAir();
                 break;
             case ConsoleKey.P: host.Play(Beep()); break;
-            case ConsoleKey.R:
-                recording = ToggleRecording(host, recording, recordingsDir);
-                break;
+            case ConsoleKey.R: recording = ToggleRecording(host, recording); break;
+            case ConsoleKey.V: PreviewLast(host); break;
             case ConsoleKey.Q: quit = true; break;
         }
     }
@@ -65,8 +60,8 @@ finally
 
 return 0;
 
-// Toggle a recording take. First R: OFF AIR + record. Second R: stop, process, save a WAV.
-static bool ToggleRecording(EngineHost host, bool recording, string dir)
+// Toggle a recording take. First R: OFF AIR + record. Second R: stop, process, catalogue.
+static bool ToggleRecording(EngineHost host, bool recording)
 {
     if (!recording)
     {
@@ -83,11 +78,10 @@ static bool ToggleRecording(EngineHost host, bool recording, string dir)
     var result = host.StopRecording();
     if (result is { HasSignal: true })
     {
-        var path = Path.Combine(dir, $"take-{DateTime.Now:yyyyMMdd-HHmmss}.wav");
         try
         {
-            WavFile.Save(path, result.Samples);
-            Console.WriteLine($"Saved {path}  gainDb={result.GainDb:F1}  durationMs={result.DurationMs}");
+            var entry = host.SaveTake(result, $"Take {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            Console.WriteLine($"Saved {entry.Id}  gainDb={entry.GainDb:F1}  durationMs={entry.DurationMs}");
         }
         catch (Exception ex)
         {
@@ -100,6 +94,20 @@ static bool ToggleRecording(EngineHost host, bool recording, string dir)
     }
 
     return false;
+}
+
+// Preview the most recently catalogued phrase to the monitor (default output, never the cable).
+static void PreviewLast(EngineHost host)
+{
+    var last = host.Phrases.Count > 0 ? host.Phrases[^1] : null;
+    if (last is null)
+    {
+        Console.WriteLine("Nothing to preview.");
+        return;
+    }
+
+    var error = host.PreviewEntry(last);
+    Console.WriteLine(error is null ? $"Previewed {last.Id}" : $"Preview refused: {error}");
 }
 
 // A 1-second 660 Hz tone, so [P] sends something audible to the cable.
