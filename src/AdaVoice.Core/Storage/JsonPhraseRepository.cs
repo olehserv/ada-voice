@@ -1,4 +1,3 @@
-using System.Text.Json;
 using AdaVoice.Core.Domain;
 
 namespace AdaVoice.Core.Storage;
@@ -7,17 +6,14 @@ namespace AdaVoice.Core.Storage;
 /// Stores the library as <c>library.json</c> under a data root. Writes go to a temp file and are then
 /// atomically moved over the original, so a crash mid-save can never corrupt the library (design 04
 /// §3). A missing file loads a seeded default (version 1 + an "Uncategorized" category). A file that
-/// cannot be parsed is quarantined (renamed, never destroyed) and a seeded default returned — startup
-/// never crashes and never silently starts empty.
+/// cannot be parsed is quarantined (renamed, never destroyed); if <paramref name="recoverFromBackup"/>
+/// yields a valid library it is restored, otherwise a seeded default is returned — startup never
+/// crashes and never silently starts empty.
 /// </summary>
-public sealed class JsonPhraseRepository(string root) : IPhraseRepository
+/// <param name="recoverFromBackup">Optional: called when <c>library.json</c> is corrupt to fetch a
+/// library from the newest good backup. Null disables recovery (corrupt → seeded default).</param>
+public sealed class JsonPhraseRepository(string root, Func<Library?>? recoverFromBackup = null) : IPhraseRepository
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-    };
-
     public LibraryLoadResult Load()
     {
         var path = AdaVoicePaths.LibraryFile(root);
@@ -36,22 +32,11 @@ public sealed class JsonPhraseRepository(string root) : IPhraseRepository
             return new LibraryLoadResult(Default(), LibraryLoadStatus.ReadError, ex.Message);
         }
 
-        Library? library;
-        try
-        {
-            // Empty/zero-length or whitespace-only (a crash mid-write) is treated as corrupt, not as
-            // an empty library.
-            library = string.IsNullOrWhiteSpace(json) ? null : JsonSerializer.Deserialize<Library>(json, Options);
-        }
-        catch (JsonException ex)
-        {
-            return Quarantine(path, ex.Message);
-        }
-
-        // Valid JSON of the literal `null` also deserializes to null — would otherwise start silently
-        // empty, which design 04 §3 forbids.
+        // TryParse treats empty/whitespace (a crash mid-write), the literal `null`, and malformed JSON
+        // all as "no valid library" — none of these may become a silently-empty library (design 04 §3).
+        var library = LibraryJson.TryParse(json);
         if (library is null)
-            return Quarantine(path, "library.json was empty or contained null");
+            return Quarantine(path, "library.json was empty, null, or could not be parsed");
 
         return new LibraryLoadResult(library, LibraryLoadStatus.Loaded);
     }
@@ -60,8 +45,6 @@ public sealed class JsonPhraseRepository(string root) : IPhraseRepository
     {
         // Preserve the bad file so the operator's data is never destroyed; the stamp keeps repeated
         // failures from overwriting each other.
-        // TODO(BackupService): before falling back to the seeded default, try recovering the newest
-        // daily backup from backups\ (the writer for that format lands in a later storage slice).
         var stamp = DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss'Z'");
         try
         {
@@ -70,6 +53,14 @@ public sealed class JsonPhraseRepository(string root) : IPhraseRepository
         catch
         {
             // Best-effort: if it cannot be moved (e.g. now locked), leave it in place rather than crash.
+        }
+
+        // Try the newest good backup before falling back to an empty library.
+        var recovered = recoverFromBackup?.Invoke();
+        if (recovered is not null)
+        {
+            TrySave(recovered); // restore library.json so the recovery survives a restart (best-effort)
+            return new LibraryLoadResult(recovered, LibraryLoadStatus.RecoveredFromBackup, detail);
         }
 
         return new LibraryLoadResult(Default(), LibraryLoadStatus.Corrupt, detail);
@@ -83,13 +74,26 @@ public sealed class JsonPhraseRepository(string root) : IPhraseRepository
         var tmp = path + ".tmp";
         try
         {
-            File.WriteAllText(tmp, JsonSerializer.Serialize(library, Options));
+            File.WriteAllText(tmp, LibraryJson.Serialize(library));
             File.Move(tmp, path, overwrite: true);
         }
         catch
         {
             TryDelete(tmp);
             throw;
+        }
+    }
+
+    private void TrySave(Library library)
+    {
+        try
+        {
+            Save(library);
+        }
+        catch
+        {
+            // Disk is broken; keep the recovered library in memory for this session. A restart will
+            // degrade to a seeded default — the best we can do without a working disk.
         }
     }
 

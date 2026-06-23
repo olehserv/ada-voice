@@ -18,4 +18,15 @@ public static class AdaVoicePaths
     public static string AudioDir(string root) => Path.Combine(root, "audio");
 
     public static string AudioPath(string root, string fileName) => Path.Combine(AudioDir(root), fileName);
+
+    public static string SettingsFile(string root) => Path.Combine(root, "settings.json");
+
+    public static string BackupsDir(string root) => Path.Combine(root, "backups");
+
+    /// <summary>Daily backup file name prefix. Dates are ISO (<c>yyyy-MM-dd</c>) so the names sort
+    /// lexicographically in chronological order — newest-first is just a string sort.</summary>
+    public const string BackupFilePrefix = "adavoice-backup-";
+
+    public static string BackupFile(string root, DateOnly date) =>
+        Path.Combine(BackupsDir(root), $"{BackupFilePrefix}{date:yyyy-MM-dd}.zip");
 }

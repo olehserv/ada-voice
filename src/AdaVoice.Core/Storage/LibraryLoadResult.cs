@@ -16,6 +16,10 @@ public enum LibraryLoadStatus
     /// returned — the app must surface this, not start silently empty.</summary>
     Corrupt,
 
+    /// <summary>The file was corrupt, but a valid library was restored from the newest daily backup
+    /// (and re-saved so it survives a restart). The app should surface that a recovery happened.</summary>
+    RecoveredFromBackup,
+
     /// <summary>The file existed but could not be read (e.g. a transient lock). A seeded default was
     /// returned and the file was left untouched (not quarantined).</summary>
     ReadError,

@@ -98,6 +98,35 @@ public class JsonPhraseRepositoryTests : IDisposable
         Assert.NotEmpty(QuarantineFiles());
     }
 
+    [Fact]
+    public void Corrupt_library_recovers_from_backup_and_restores_the_file()
+    {
+        WriteLibrary("{ broken");
+        var recovered = new Library();
+        recovered.Phrases.Add(new PhraseEntry { Id = "p-restored", FileName = "p-restored.wav" });
+
+        var result = new JsonPhraseRepository(_root, () => recovered).Load();
+
+        Assert.Equal(LibraryLoadStatus.RecoveredFromBackup, result.Status);
+        Assert.Equal("p-restored", Assert.Single(result.Library.Phrases).Id);
+        Assert.NotEmpty(QuarantineFiles()); // the bad file is still preserved
+
+        // Restored to disk, so a restart keeps it (this load has no recovery delegate).
+        var reloaded = new JsonPhraseRepository(_root).Load();
+        Assert.Equal(LibraryLoadStatus.Loaded, reloaded.Status);
+        Assert.Equal("p-restored", Assert.Single(reloaded.Library.Phrases).Id);
+    }
+
+    [Fact]
+    public void Corrupt_library_with_no_recoverable_backup_stays_corrupt()
+    {
+        WriteLibrary("{ broken");
+
+        var result = new JsonPhraseRepository(_root, () => null).Load();
+
+        Assert.Equal(LibraryLoadStatus.Corrupt, result.Status);
+    }
+
     private void WriteLibrary(string content)
     {
         Directory.CreateDirectory(_root);

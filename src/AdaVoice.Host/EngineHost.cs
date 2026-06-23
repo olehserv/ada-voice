@@ -62,8 +62,9 @@ public sealed class EngineHost : IDisposable
         _controlThread = new Thread(ControlLoop) { Name = "AudioEngineControl", IsBackground = true };
 
         _dataRoot = AdaVoicePaths.DefaultRoot;
+        var backup = new BackupService(_dataRoot);
         _library = new PhraseLibraryService(
-            new JsonPhraseRepository(_dataRoot),
+            new JsonPhraseRepository(_dataRoot, backup.TryReadLatestLibrary),
             name => File.Exists(AdaVoicePaths.AudioPath(_dataRoot, name)));
 
         var detail = _library.LoadDetail is null ? "" : $" — {_library.LoadDetail}";
@@ -71,6 +72,13 @@ public sealed class EngineHost : IDisposable
              $"{_library.BrokenPhraseIds.Count} broken at {_dataRoot}");
         if (_library.LoadStatus == LibraryLoadStatus.Corrupt)
             _log("WARNING: library.json was corrupt and quarantined; started with an empty library (your takes are not lost — see the library.corrupt-*.json file).");
+        else if (_library.LoadStatus == LibraryLoadStatus.RecoveredFromBackup)
+            _log("NOTE: library.json was corrupt and was restored from the newest daily backup (the corrupt file was kept as library.corrupt-*.json).");
+
+        // Daily backup, after the load so it captures a good (or just-recovered) state. Best-effort.
+        var created = backup.EnsureDailyBackup(DateOnly.FromDateTime(DateTime.Now));
+        if (created is not null)
+            _log($"backup: created {Path.GetFileName(created)}");
     }
 
     public EngineState State => _engine.State;
