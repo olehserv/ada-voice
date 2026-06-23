@@ -31,7 +31,7 @@ try
     Console.WriteLine($"Cable: {options.CableName}");
     Console.WriteLine($"Log:   {logPath}");
     Console.WriteLine();
-    Console.WriteLine("Keys: [S] start  [T] stop  [O] OFF AIR  [P] beep  [R] record  [V] preview last  [Q] quit");
+    Console.WriteLine("Keys: [S] start  [T] stop  [O] OFF AIR  [P] beep  [R] record  [V] preview last  [D] delete last  [Q] quit");
 
     var offAir = false;
     var recording = false;
@@ -49,6 +49,7 @@ try
             case ConsoleKey.P: host.Play(Beep()); break;
             case ConsoleKey.R: recording = ToggleRecording(host, recording); break;
             case ConsoleKey.V: PreviewLast(host); break;
+            case ConsoleKey.D: DeleteLast(host); break;
             case ConsoleKey.Q: quit = true; break;
         }
     }
@@ -108,6 +109,22 @@ static void PreviewLast(EngineHost host)
 
     var error = host.PreviewEntry(last);
     Console.WriteLine(error is null ? $"Previewed {last.Id}" : $"Preview refused: {error}");
+}
+
+// Delete the most recently catalogued phrase. The WAV is orphaned (renamed), never destroyed.
+static void DeleteLast(EngineHost host)
+{
+    var last = host.Phrases.Count > 0 ? host.Phrases[^1] : null;
+    if (last is null)
+    {
+        Console.WriteLine("Nothing to delete.");
+        return;
+    }
+
+    var deleted = host.DeleteEntry(last);
+    Console.WriteLine(deleted is null
+        ? "Delete failed — not found."
+        : $"Deleted {deleted.Id} (orphaned as deleted-{deleted.FileName}).");
 }
 
 // A 1-second 660 Hz tone, so [P] sends something audible to the cable.

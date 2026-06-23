@@ -70,6 +70,35 @@ public class PhraseLibraryServiceTests : IDisposable
         Assert.Null(service.LoadDetail);
     }
 
+    [Fact]
+    public void Delete_removes_the_entry_persists_and_orphans_the_wav()
+    {
+        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var entry = service.Add("to delete", "c-default", 100, 0, _ => { });
+
+        (string from, string to)? renamed = null;
+        var deleted = service.Delete(entry.Id, (from, to) => renamed = (from, to));
+
+        Assert.Equal(entry.Id, deleted!.Id);
+        Assert.Equal((entry.FileName, "deleted-" + entry.FileName), renamed); // never destroyed, just renamed
+        Assert.Empty(service.Phrases);
+        Assert.Empty(new PhraseLibraryService(new JsonPhraseRepository(_root)).Phrases); // persisted
+    }
+
+    [Fact]
+    public void Delete_unknown_id_is_a_noop_and_does_not_touch_audio()
+    {
+        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        service.Add("keep", "c-default", 100, 0, _ => { });
+
+        var orphaned = false;
+        var result = service.Delete("p-nope", (_, _) => orphaned = true);
+
+        Assert.Null(result);
+        Assert.False(orphaned);
+        Assert.Single(service.Phrases);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

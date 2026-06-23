@@ -136,6 +136,16 @@ public sealed class EngineHost : IDisposable
         _library.Add(title, DefaultCategoryId, result.DurationMs, result.GainDb,
             fileName => WavFile.Save(AdaVoicePaths.AudioPath(_dataRoot, fileName), result.Samples));
 
+    /// <summary>Delete a phrase: drop the metadata and rename its WAV to <c>deleted-{id}.wav</c> in
+    /// place (never destroyed — design 04 §3). Returns the removed entry, or null if not found.</summary>
+    public PhraseEntry? DeleteEntry(PhraseEntry entry) =>
+        _library.Delete(entry.Id, (current, orphan) =>
+        {
+            var src = AdaVoicePaths.AudioPath(_dataRoot, current);
+            if (File.Exists(src))
+                File.Move(src, AdaVoicePaths.AudioPath(_dataRoot, orphan), overwrite: true);
+        });
+
     /// <summary>Load a catalogued phrase from disk and preview it. Returns an error message, or null
     /// on success.</summary>
     public string? PreviewEntry(PhraseEntry entry)

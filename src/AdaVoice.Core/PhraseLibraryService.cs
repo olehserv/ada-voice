@@ -74,5 +74,27 @@ public sealed class PhraseLibraryService
         return entry;
     }
 
+    /// <summary>
+    /// Delete a phrase by orphaning it: remove the metadata entry, persist, then ask the caller to
+    /// rename its WAV to <c>deleted-{id}.wav</c> in place. Voice recordings are irreplaceable, so the
+    /// file is never destroyed (design 04 §3). Metadata is removed and persisted <b>before</b> the
+    /// rename, so if the rename fails the library stays consistent and the take survives as
+    /// <c>{id}.wav</c>. <paramref name="orphanAudio"/> is called with (current file name, orphan file
+    /// name); file I/O lives with the caller, mirroring <see cref="Add"/>. Returns the removed entry,
+    /// or null if no phrase has that id.
+    /// </summary>
+    public PhraseEntry? Delete(string phraseId, Action<string, string> orphanAudio)
+    {
+        var entry = _library.Phrases.FirstOrDefault(p => p.Id == phraseId);
+        if (entry is null)
+            return null;
+
+        _library.Phrases.Remove(entry);
+        _repository.Save(_library);
+
+        orphanAudio(entry.FileName, "deleted-" + entry.FileName);
+        return entry;
+    }
+
     private static string NewId() => "p-" + Guid.NewGuid().ToString("N")[..8];
 }
