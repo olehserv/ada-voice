@@ -10,18 +10,19 @@ public class JsonPhraseRepositoryTests : IDisposable
     [Fact]
     public void Missing_file_loads_a_seeded_default()
     {
-        var library = new JsonPhraseRepository(_root).Load();
+        var result = new JsonPhraseRepository(_root).Load();
 
-        Assert.Equal(1, library.Version);
-        Assert.Single(library.Categories);
-        Assert.Empty(library.Phrases);
+        Assert.Equal(LibraryLoadStatus.SeededDefault, result.Status);
+        Assert.Equal(1, result.Library.Version);
+        Assert.Single(result.Library.Categories);
+        Assert.Empty(result.Library.Phrases);
     }
 
     [Fact]
     public void Save_then_load_roundtrips_all_fields()
     {
         var repo = new JsonPhraseRepository(_root);
-        var library = repo.Load();
+        var library = repo.Load().Library;
         library.Phrases.Add(new PhraseEntry
         {
             Id = "p-abc12345",
@@ -38,7 +39,8 @@ public class JsonPhraseRepositoryTests : IDisposable
         repo.Save(library);
 
         var reloaded = new JsonPhraseRepository(_root).Load();
-        var p = Assert.Single(reloaded.Phrases);
+        Assert.Equal(LibraryLoadStatus.Loaded, reloaded.Status);
+        var p = Assert.Single(reloaded.Library.Phrases);
         Assert.Equal("p-abc12345", p.Id);
         Assert.Equal("Hello", p.Title);
         Assert.Equal(["opening", "greeting"], p.Tags);
@@ -51,7 +53,7 @@ public class JsonPhraseRepositoryTests : IDisposable
     public void Save_writes_valid_json_and_leaves_no_temp_file()
     {
         var repo = new JsonPhraseRepository(_root);
-        repo.Save(repo.Load());
+        repo.Save(repo.Load().Library);
 
         var libraryFile = AdaVoicePaths.LibraryFile(_root);
         Assert.True(File.Exists(libraryFile));
@@ -59,6 +61,51 @@ public class JsonPhraseRepositoryTests : IDisposable
         // Parses back without error.
         new JsonPhraseRepository(_root).Load();
     }
+
+    [Fact]
+    public void Malformed_json_is_corrupt_and_the_bad_file_is_quarantined()
+    {
+        WriteLibrary("{ this is not valid json");
+
+        var result = new JsonPhraseRepository(_root).Load();
+
+        Assert.Equal(LibraryLoadStatus.Corrupt, result.Status);
+        // Started with a seeded default, NOT an empty library, and did not throw.
+        Assert.Single(result.Library.Categories);
+        Assert.False(File.Exists(AdaVoicePaths.LibraryFile(_root))); // moved aside
+        Assert.NotEmpty(QuarantineFiles());                         // preserved, not destroyed
+    }
+
+    [Fact]
+    public void Empty_file_is_treated_as_corrupt_not_as_an_empty_library()
+    {
+        WriteLibrary("");
+
+        var result = new JsonPhraseRepository(_root).Load();
+
+        Assert.Equal(LibraryLoadStatus.Corrupt, result.Status);
+        Assert.NotEmpty(QuarantineFiles());
+    }
+
+    [Fact]
+    public void Literal_null_is_corrupt_so_we_never_start_silently_empty()
+    {
+        WriteLibrary("null");
+
+        var result = new JsonPhraseRepository(_root).Load();
+
+        Assert.Equal(LibraryLoadStatus.Corrupt, result.Status);
+        Assert.NotEmpty(QuarantineFiles());
+    }
+
+    private void WriteLibrary(string content)
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(AdaVoicePaths.LibraryFile(_root), content);
+    }
+
+    private string[] QuarantineFiles() =>
+        Directory.Exists(_root) ? Directory.GetFiles(_root, "library.corrupt-*.json") : [];
 
     public void Dispose()
     {

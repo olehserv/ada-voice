@@ -62,8 +62,15 @@ public sealed class EngineHost : IDisposable
         _controlThread = new Thread(ControlLoop) { Name = "AudioEngineControl", IsBackground = true };
 
         _dataRoot = AdaVoicePaths.DefaultRoot;
-        _library = new PhraseLibraryService(new JsonPhraseRepository(_dataRoot));
-        _log($"library: {_library.Phrases.Count} phrase(s) at {_dataRoot}");
+        _library = new PhraseLibraryService(
+            new JsonPhraseRepository(_dataRoot),
+            name => File.Exists(AdaVoicePaths.AudioPath(_dataRoot, name)));
+
+        var detail = _library.LoadDetail is null ? "" : $" — {_library.LoadDetail}";
+        _log($"library: {_library.Phrases.Count} phrase(s), status={_library.LoadStatus}{detail}, " +
+             $"{_library.BrokenPhraseIds.Count} broken at {_dataRoot}");
+        if (_library.LoadStatus == LibraryLoadStatus.Corrupt)
+            _log("WARNING: library.json was corrupt and quarantined; started with an empty library (your takes are not lost — see the library.corrupt-*.json file).");
     }
 
     public EngineState State => _engine.State;

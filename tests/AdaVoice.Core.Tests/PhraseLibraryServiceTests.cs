@@ -50,6 +50,26 @@ public class PhraseLibraryServiceTests : IDisposable
         Assert.Equal(1, b.SortOrder);
     }
 
+    [Fact]
+    public void Broken_phrase_ids_reflect_the_audio_exists_predicate()
+    {
+        var seed = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var entry = seed.Add("missing audio", "c-default", 100, 0, _ => { });
+
+        var reloaded = new PhraseLibraryService(new JsonPhraseRepository(_root), audioExists: _ => false);
+
+        Assert.Equal([entry.Id], reloaded.BrokenPhraseIds);
+    }
+
+    [Fact]
+    public void Load_status_is_surfaced_from_the_repository()
+    {
+        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+
+        Assert.Equal(LibraryLoadStatus.SeededDefault, service.LoadStatus);
+        Assert.Null(service.LoadDetail);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

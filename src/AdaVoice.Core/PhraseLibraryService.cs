@@ -13,14 +13,34 @@ public sealed class PhraseLibraryService
     private readonly IPhraseRepository _repository;
     private readonly Library _library;
 
-    public PhraseLibraryService(IPhraseRepository repository)
+    /// <param name="repository">The store the library is loaded from and saved to.</param>
+    /// <param name="audioExists">Tells whether a phrase's WAV (by file name) exists, used to flag
+    /// broken phrases at startup. Injected so the service stays testable without disk; defaults to
+    /// "assume present" so call sites that don't care are unaffected.</param>
+    public PhraseLibraryService(IPhraseRepository repository, Func<string, bool>? audioExists = null)
     {
         _repository = repository;
-        _library = repository.Load();
+
+        var result = repository.Load();
+        _library = result.Library;
+        LoadStatus = result.Status;
+        LoadDetail = result.Detail;
+        BrokenPhraseIds = LibraryValidator.FindBrokenPhraseIds(_library, audioExists ?? (_ => true));
     }
 
     public IReadOnlyList<PhraseEntry> Phrases => _library.Phrases;
     public IReadOnlyList<Category> Categories => _library.Categories;
+
+    /// <summary>How the library was loaded — the host/UI surfaces this so a corrupt file is never
+    /// mistaken for an empty library (design 04 §3).</summary>
+    public LibraryLoadStatus LoadStatus { get; }
+
+    /// <summary>Extra detail for <see cref="LoadStatus"/> when something went wrong (else null).</summary>
+    public string? LoadDetail { get; }
+
+    /// <summary>Ids of phrases whose audio file is missing — to be flagged broken in the UI rather
+    /// than crashing playback. Runtime-only; never persisted.</summary>
+    public IReadOnlyList<string> BrokenPhraseIds { get; }
 
     /// <summary>
     /// Catalogue a newly recorded take and persist the library. The id (and the
