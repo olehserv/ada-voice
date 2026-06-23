@@ -70,12 +70,30 @@ public class WavFileTests
     }
 
     [Fact]
+    public void Save_creates_the_target_directory_if_missing()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "adavoice-mk-" + Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(dir, "audio", "x.wav"); // nested dir does not exist yet
+        try
+        {
+            WavFile.Save(path, TestAudio.Sine(440, 480, 0.5));
+            Assert.True(File.Exists(path));
+        }
+        finally { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
     public void A_failed_save_leaves_no_final_file()
     {
-        var path = Path.Combine(Path.GetTempPath(), "adavoice-no-such-dir-" + Guid.NewGuid().ToString("N"), "x.wav");
-
-        Assert.ThrowsAny<Exception>(() => WavFile.Save(path, TestAudio.Sine(440, 480, 0.5)));
-        Assert.False(File.Exists(path));
+        // Force a failure that survives the auto-mkdir: the parent "directory" is actually a file.
+        var file = Path.GetTempFileName();
+        var path = Path.Combine(file, "x.wav");
+        try
+        {
+            Assert.ThrowsAny<Exception>(() => WavFile.Save(path, TestAudio.Sine(440, 480, 0.5)));
+            Assert.False(File.Exists(path));
+        }
+        finally { File.Delete(file); }
     }
 
     private static string TempWavPath() =>

@@ -26,6 +26,10 @@ public static class WavFile
 
     public static void Save(string path, float[] samples)
     {
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory))
+            Directory.CreateDirectory(directory); // e.g. the audio/ folder on first save
+
         var tmp = path + ".tmp";
         try
         {
