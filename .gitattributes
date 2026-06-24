@@ -1,0 +1,4 @@
+# Normalize line endings: store text files with LF in the repo so commits don't
+# churn between CRLF/LF across machines (which caused spurious whole-file merge
+# conflicts). Binary files are auto-detected and left untouched.
+* text=auto
