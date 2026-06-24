@@ -28,7 +28,7 @@ namespace AdaVoice.Host;
 /// </summary>
 public sealed class EngineHost : IDisposable
 {
-    private const string DefaultCategoryId = "c-default";
+    private const string DefaultCategoryId = Category.DefaultId;
 
     private readonly WasapiAudioOptions _options;
     private readonly RecorderOptions _recorderOptions;

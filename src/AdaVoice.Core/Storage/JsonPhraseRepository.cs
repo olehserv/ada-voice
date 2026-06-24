@@ -100,7 +100,7 @@ public sealed class JsonPhraseRepository(string root, Func<Library?>? recoverFro
     private static Library Default() => new()
     {
         Version = 1,
-        Categories = [new Category { Id = "c-default", Name = "Uncategorized", Color = "#808080", SortOrder = 0 }],
+        Categories = [new Category { Id = Category.DefaultId, Name = "Uncategorized", Color = "#808080", SortOrder = 0 }],
         Phrases = [],
     };
 

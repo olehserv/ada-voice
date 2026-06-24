@@ -107,5 +107,104 @@ public sealed class PhraseLibraryService
         return entry;
     }
 
+    // ---- Categories ----------------------------------------------------------------------------
+
+    /// <summary>Create a category at the end of the list and persist. Throws if the name is blank.</summary>
+    public Category AddCategory(string name, string color)
+    {
+        var trimmed = RequireName(name);
+        var category = new Category
+        {
+            Id = "c-" + Guid.NewGuid().ToString("N")[..8],
+            Name = trimmed,
+            Color = color,
+            SortOrder = _library.Categories.Count,
+        };
+
+        _library.Categories.Add(category);
+        _repository.Save(_library);
+        return category;
+    }
+
+    /// <summary>Rename and recolour a category. Returns the updated category, or null if no category has
+    /// that id. Throws if the new name is blank.</summary>
+    public Category? UpdateCategory(string id, string name, string color)
+    {
+        var index = _library.Categories.FindIndex(c => c.Id == id);
+        if (index < 0)
+            return null;
+
+        var updated = _library.Categories[index] with { Name = RequireName(name), Color = color };
+        _library.Categories[index] = updated;
+        _repository.Save(_library);
+        return updated;
+    }
+
+    /// <summary>Delete a category and move its phrases to Uncategorized (never lose a phrase). Returns
+    /// false if the id is unknown or is the protected default category.</summary>
+    public bool DeleteCategory(string id)
+    {
+        if (id == Category.DefaultId)
+            return false; // Uncategorized is the fallback and cannot be removed.
+
+        var index = _library.Categories.FindIndex(c => c.Id == id);
+        if (index < 0)
+            return false;
+
+        var now = DateTime.UtcNow;
+        for (var i = 0; i < _library.Phrases.Count; i++)
+            if (_library.Phrases[i].CategoryId == id)
+                _library.Phrases[i] = _library.Phrases[i] with { CategoryId = Category.DefaultId, UpdatedAt = now };
+
+        _library.Categories.RemoveAt(index);
+        _repository.Save(_library);
+        return true;
+    }
+
+    // ---- Phrase edits --------------------------------------------------------------------------
+
+    /// <summary>Move a phrase to another category. Returns the updated phrase, or null if the phrase or
+    /// the target category does not exist.</summary>
+    public PhraseEntry? SetPhraseCategory(string phraseId, string categoryId)
+    {
+        if (_library.Categories.All(c => c.Id != categoryId))
+            return null;
+
+        return EditPhrase(phraseId, p => p with { CategoryId = categoryId });
+    }
+
+    /// <summary>Replace a phrase's tags with a normalized set (trimmed, no blanks, de-duplicated
+    /// case-insensitively, order preserved). Returns the updated phrase, or null if not found.</summary>
+    public PhraseEntry? SetPhraseTags(string phraseId, IEnumerable<string> tags)
+    {
+        var normalized = tags
+            .Select(t => t.Trim())
+            .Where(t => t.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return EditPhrase(phraseId, p => p with { Tags = normalized });
+    }
+
+    private PhraseEntry? EditPhrase(string phraseId, Func<PhraseEntry, PhraseEntry> edit)
+    {
+        var index = _library.Phrases.FindIndex(p => p.Id == phraseId);
+        if (index < 0)
+            return null;
+
+        var updated = edit(_library.Phrases[index]) with { UpdatedAt = DateTime.UtcNow };
+        _library.Phrases[index] = updated;
+        _repository.Save(_library);
+        return updated;
+    }
+
+    private static string RequireName(string name)
+    {
+        var trimmed = name?.Trim() ?? "";
+        if (trimmed.Length == 0)
+            throw new ArgumentException("A category name is required.", nameof(name));
+        return trimmed;
+    }
+
     private static string NewId() => "p-" + Guid.NewGuid().ToString("N")[..8];
 }
