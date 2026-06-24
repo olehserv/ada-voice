@@ -40,6 +40,8 @@ public sealed class EngineHost : IDisposable
     private readonly string _dataRoot;
     private readonly PhraseLibraryService _library;
     private readonly LibraryArchiveService _archive;
+    private readonly JsonSettingsRepository _settingsRepository;
+    private Settings _settings;
     private volatile bool _running;
 
     // Recording state (only touched from the UI/driver thread).
@@ -82,7 +84,14 @@ public sealed class EngineHost : IDisposable
         var created = backup.EnsureDailyBackup(DateOnly.FromDateTime(DateTime.Now));
         if (created is not null)
             _log($"backup: created {Path.GetFileName(created)}");
+
+        _settingsRepository = new JsonSettingsRepository(_dataRoot);
+        _settings = _settingsRepository.Load();
+        _log($"monitor: {MonitorDescription()}");
     }
+
+    private string MonitorDescription() =>
+        _settings is { MonitorEnabled: true, MonitorDeviceName: { } name } ? $"'{name}'" : "OS default output";
 
     public EngineState State => _engine.State;
 
@@ -185,21 +194,31 @@ public sealed class EngineHost : IDisposable
         return Preview(WavFile.Load(path), entry.GainDb);
     }
 
+    /// <summary>Choose, save, and report the monitor device previews play to. A null or blank name
+    /// clears the choice (previews go to the OS default output).</summary>
+    public void SetMonitorDevice(string? nameSubstring)
+    {
+        var name = string.IsNullOrWhiteSpace(nameSubstring) ? null : nameSubstring.Trim();
+        _settings = _settings with { MonitorDeviceName = name, MonitorEnabled = name is not null };
+        _settingsRepository.Save(_settings);
+        _log($"monitor: {MonitorDescription()}");
+    }
+
     /// <summary>
-    /// Play samples to the default output (the monitor stand-in), applying <paramref name="gainDb"/>.
-    /// Refuses if the default output is the cable — preview must never reach the call (decision #11).
-    /// Blocks until playback finishes. Returns an error message, or null on success.
+    /// Play samples to the monitor device (the configured output, else the OS default), applying
+    /// <paramref name="gainDb"/>. Refuses if that device is the cable — preview must never reach the
+    /// call (decision #11). Blocks until playback finishes. Returns an error message, or null on success.
     /// </summary>
     public string? Preview(float[] samples, double gainDb)
     {
-        var device = WasapiDevices.DefaultRender();
+        var device = ResolveMonitorDevice();
 
-        // Cardinal rule: never feed the take toward the call. If the OS default output is the cable,
+        // Cardinal rule: never feed the take toward the call. If the monitor resolves to the cable,
         // refuse rather than play.
         if (device.FriendlyName.Contains(_options.CableName, StringComparison.OrdinalIgnoreCase))
         {
             device.Dispose();
-            return "default output is the cable — pick a different playback device to preview";
+            return "the preview output is the cable — pick a different monitor (or default) playback device";
         }
 
         var deviceRate = device.AudioClient.MixFormat.SampleRate;
@@ -224,6 +243,13 @@ public sealed class EngineHost : IDisposable
         render.Stop();
         return null;
     }
+
+    /// <summary>The output previews play to: the configured monitor device, falling back to the OS
+    /// default output if none is set or the chosen one is not currently present.</summary>
+    private MMDevice ResolveMonitorDevice() =>
+        _settings is { MonitorEnabled: true, MonitorDeviceName: { } name }
+            ? WasapiDevices.FindByName(DataFlow.Render, name) ?? WasapiDevices.DefaultRender()
+            : WasapiDevices.DefaultRender();
 
     private bool WaitForState(EngineState target, TimeSpan timeout)
     {

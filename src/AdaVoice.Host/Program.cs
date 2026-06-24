@@ -3,6 +3,7 @@ using AdaVoice.Audio.Playback;
 using AdaVoice.Audio.Wasapi;
 using AdaVoice.Core.Storage;
 using AdaVoice.Host;
+using NAudio.CoreAudioApi;
 using Serilog;
 
 // Relaunch after a crash: the mic-forwarding process must not stay dead (design 03).
@@ -32,7 +33,7 @@ try
     Console.WriteLine($"Cable: {options.CableName}");
     Console.WriteLine($"Log:   {logPath}");
     Console.WriteLine();
-    Console.WriteLine("Keys: [S] start  [T] stop  [O] OFF AIR  [P] beep  [R] record  [V] preview last  [D] delete last  [E] export  [I] import  [Q] quit");
+    Console.WriteLine("Keys: [S] start  [T] stop  [O] OFF AIR  [P] beep  [R] record  [V] preview last  [D] delete last  [E] export  [I] import  [M] monitor  [Q] quit");
 
     var offAir = false;
     var recording = false;
@@ -53,6 +54,7 @@ try
             case ConsoleKey.D: DeleteLast(host); break;
             case ConsoleKey.E: Export(host); break;
             case ConsoleKey.I: Import(host); break;
+            case ConsoleKey.M: SetMonitor(host); break;
             case ConsoleKey.Q: quit = true; break;
         }
     }
@@ -165,6 +167,31 @@ static void Import(EngineHost host)
     Console.WriteLine(result.Success
         ? $"Imported ({mode}): added {result.Added}, skipped {result.Skipped}."
         : $"Import failed: {result.Error}");
+}
+
+// List the active output devices and choose which one previews play to (blank = OS default output).
+static void SetMonitor(EngineHost host)
+{
+    var devices = WasapiDevices.Active(DataFlow.Render).ToList();
+    try
+    {
+        for (var i = 0; i < devices.Count; i++)
+            Console.WriteLine($"  [{i}] {devices[i].FriendlyName}");
+
+        Console.Write("Monitor (number, name substring, or blank for OS default): ");
+        var input = Console.ReadLine()?.Trim();
+
+        var name = input;
+        if (int.TryParse(input, out var index) && index >= 0 && index < devices.Count)
+            name = devices[index].FriendlyName;
+
+        host.SetMonitorDevice(name);
+    }
+    finally
+    {
+        foreach (var device in devices)
+            device.Dispose();
+    }
 }
 
 // A 1-second 660 Hz tone, so [P] sends something audible to the cable.
