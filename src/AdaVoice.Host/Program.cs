@@ -34,7 +34,7 @@ try
     Console.WriteLine($"Cable: {options.CableName}");
     Console.WriteLine($"Log:   {logPath}");
     Console.WriteLine();
-    Console.WriteLine("Keys: [S] start  [T] stop  [O] OFF AIR  [P] beep  [R] record  [V] preview last  [D] delete last  [E] export  [I] import  [M] monitor  [W] wizard  [Q] quit");
+    Console.WriteLine("Keys: [S] start  [T] stop  [O] OFF AIR  [P] beep  [R] record  [V] preview last  [L] play last to call  [D] delete last  [E] export  [I] import  [M] monitor  [W] wizard  [Q] quit");
 
     var offAir = false;
     var recording = false;
@@ -56,6 +56,7 @@ try
             case ConsoleKey.E: Export(host); break;
             case ConsoleKey.I: Import(host); break;
             case ConsoleKey.M: SetMonitor(host); break;
+            case ConsoleKey.L: PlayLastToCall(host); break;
             case ConsoleKey.W: Wizard(host); break;
             case ConsoleKey.Q: quit = true; break;
         }
@@ -116,6 +117,20 @@ static void PreviewLast(EngineHost host)
 
     var error = host.PreviewEntry(last);
     Console.WriteLine(error is null ? $"Previewed {last.Id}" : $"Preview refused: {error}");
+}
+
+// Play the most recently catalogued phrase TO THE CALL (the cable). Needs the engine Live ([S]).
+static void PlayLastToCall(EngineHost host)
+{
+    var last = host.Phrases.Count > 0 ? host.Phrases[^1] : null;
+    if (last is null)
+    {
+        Console.WriteLine("Nothing to play.");
+        return;
+    }
+
+    host.PlayEntry(last);
+    Console.WriteLine($"Playing {last.Id} to the call (must be Live — press S first).");
 }
 
 // Delete the most recently catalogued phrase. The WAV is orphaned (renamed), never destroyed.

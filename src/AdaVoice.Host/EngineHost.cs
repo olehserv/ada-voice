@@ -27,7 +27,7 @@ namespace AdaVoice.Host;
 /// the console <c>Program</c> around it is throwaway. Logging is a plain callback, so this class
 /// depends on no logging library.
 /// </summary>
-public sealed class EngineHost : IDisposable
+public sealed class EngineHost : IDisposable, IPlaybackHost
 {
     private const string DefaultCategoryId = Category.DefaultId;
 
@@ -159,8 +159,40 @@ public sealed class EngineHost : IDisposable
 
     public void Stop() => _engine.Stop();
     public void Play(Phrase phrase) => _engine.Play(phrase);
+    public void StopPhrase() => _engine.StopPhrase();
     public void EnterOffAir() => _engine.EnterOffAir();
     public void ExitOffAir() => _engine.ExitOffAir();
+
+    /// <summary>Raised when the engine state changes. Fires on the engine control thread — a UI
+    /// handler must marshal to its own thread (e.g. the WPF Dispatcher).</summary>
+    public event EventHandler<EngineState>? StateChanged;
+
+    /// <summary>Load a catalogued phrase from disk, apply its loudness-match gain, and play it toward
+    /// the call (the cable). The engine routes Play to the cable only when Live, so this is a no-op
+    /// otherwise. A missing audio file is logged and skipped, never thrown.</summary>
+    public void PlayEntry(PhraseEntry entry)
+    {
+        if (State != EngineState.Live)
+        {
+            // The engine routes Play to the cable only when Live; surface the drop instead of silence.
+            _log($"cannot play {entry.Id}: engine is {State}, not Live — press Start (and be ON AIR)");
+            return;
+        }
+
+        var path = AdaVoicePaths.AudioPath(_dataRoot, entry.FileName);
+        if (!File.Exists(path))
+        {
+            _log($"cannot play {entry.Id}: missing audio file {entry.FileName}");
+            return;
+        }
+
+        var samples = WavFile.Load(path);
+        var gain = RampGain.DbToLinear(entry.GainDb);
+        for (var i = 0; i < samples.Length; i++)
+            samples[i] *= gain;
+
+        Play(new Phrase(entry.Id, samples));
+    }
 
     /// <summary>
     /// Take the engine OFF AIR and start recording the mic on its own capture. Returns false if the
@@ -331,7 +363,12 @@ public sealed class EngineHost : IDisposable
         }
     }
 
-    private void OnEngineEvent(object? sender, EngineEvent e) => _log(Describe(e));
+    private void OnEngineEvent(object? sender, EngineEvent e)
+    {
+        _log(Describe(e));
+        if (e is EngineEvent.StateChanged s)
+            StateChanged?.Invoke(this, s.State);
+    }
 
     private static string Describe(EngineEvent e) => e switch
     {

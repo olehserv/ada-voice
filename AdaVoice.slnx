@@ -4,10 +4,12 @@
     <Project Path="src/AdaVoice.Audio/AdaVoice.Audio.csproj" />
     <Project Path="src/AdaVoice.Core/AdaVoice.Core.csproj" />
     <Project Path="src/AdaVoice.Host/AdaVoice.Host.csproj" />
+    <Project Path="src/AdaVoice.App/AdaVoice.App.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AdaVoice.Audio.Tests/AdaVoice.Audio.Tests.csproj" />
     <Project Path="tests/AdaVoice.Core.Tests/AdaVoice.Core.Tests.csproj" />
+    <Project Path="tests/AdaVoice.App.Tests/AdaVoice.App.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/AudioSeamCheck/AudioSeamCheck.csproj" />
