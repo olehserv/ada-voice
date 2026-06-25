@@ -74,7 +74,7 @@ public sealed class Recorder
         if (trimmed.Length == 0)
             return RecordingResult.NoSignal;
 
-        var referenceRms = RampGain.DbToLinear(_options.ReferenceDbfs);
+        var referenceRms = _options.ReferenceRms ?? RampGain.DbToLinear(_options.ReferenceDbfs);
         var gainDb = LoudnessMatch.ComputeGainDb(trimmed, referenceRms, _options.PeakCeilingDbfs);
         var durationMs = trimmed.Length * 1000 / AudioFormats.SampleRate;
         var peakDbfs = 20 * Math.Log10(Math.Max(Loudness.Peak(trimmed), 1e-9));

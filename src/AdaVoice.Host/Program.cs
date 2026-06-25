@@ -1,5 +1,6 @@
 using AdaVoice.Audio;
 using AdaVoice.Audio.Playback;
+using AdaVoice.Audio.Setup;
 using AdaVoice.Audio.Wasapi;
 using AdaVoice.Core.Storage;
 using AdaVoice.Host;
@@ -33,7 +34,7 @@ try
     Console.WriteLine($"Cable: {options.CableName}");
     Console.WriteLine($"Log:   {logPath}");
     Console.WriteLine();
-    Console.WriteLine("Keys: [S] start  [T] stop  [O] OFF AIR  [P] beep  [R] record  [V] preview last  [D] delete last  [E] export  [I] import  [M] monitor  [Q] quit");
+    Console.WriteLine("Keys: [S] start  [T] stop  [O] OFF AIR  [P] beep  [R] record  [V] preview last  [D] delete last  [E] export  [I] import  [M] monitor  [W] wizard  [Q] quit");
 
     var offAir = false;
     var recording = false;
@@ -55,6 +56,7 @@ try
             case ConsoleKey.E: Export(host); break;
             case ConsoleKey.I: Import(host); break;
             case ConsoleKey.M: SetMonitor(host); break;
+            case ConsoleKey.W: Wizard(host); break;
             case ConsoleKey.Q: quit = true; break;
         }
     }
@@ -192,6 +194,27 @@ static void SetMonitor(EngineHost host)
         foreach (var device in devices)
             device.Dispose();
     }
+}
+
+// Setup wizard (functional core): run the environment checks, then optionally calibrate the mic.
+static void Wizard(EngineHost host)
+{
+    Console.WriteLine("Environment checks:");
+    foreach (var check in host.RunEnvironmentChecks())
+        Console.WriteLine($"  [{(check.Status == CheckStatus.Pass ? "OK" : "!!")}] {check.Name}: {check.Detail}");
+
+    Console.Write("Calibrate the mic now? Speak normally for 5s. [y/N] ");
+    if (Console.ReadKey(intercept: true).Key != ConsoleKey.Y)
+    {
+        Console.WriteLine();
+        return;
+    }
+
+    Console.WriteLine("\nRecording 5s — speak normally…");
+    var result = host.Calibrate();
+    Console.WriteLine(result.Ok
+        ? $"Voice level captured ✓ (reference RMS {result.MicReferenceRms:F4})."
+        : $"Calibration: {result.Message}");
 }
 
 // A 1-second 660 Hz tone, so [P] sends something audible to the cable.

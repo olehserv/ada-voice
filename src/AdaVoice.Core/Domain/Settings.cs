@@ -21,4 +21,10 @@ public sealed record Settings
 
     /// <summary>How long the duck and un-duck ramps take, in milliseconds. Design 04 §1 default 50.</summary>
     public int DuckRampMs { get; init; } = 50;
+
+    /// <summary>The setup wizard's voice-calibration result: the live-mic reference as a <b>linear</b>
+    /// RMS, which the recorder loudness-matches takes to (decision #13). Null means uncalibrated — the
+    /// recorder uses its dBFS stand-in. Null (not 0) on purpose: a 0 reference would make every take
+    /// silent.</summary>
+    public double? MicReferenceRms { get; init; }
 }

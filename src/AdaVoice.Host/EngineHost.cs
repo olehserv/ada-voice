@@ -5,6 +5,7 @@ using AdaVoice.Audio.Dsp;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Playback;
 using AdaVoice.Audio.Recording;
+using AdaVoice.Audio.Setup;
 using AdaVoice.Audio.Storage;
 using AdaVoice.Audio.Wasapi;
 using AdaVoice.Core;
@@ -31,7 +32,7 @@ public sealed class EngineHost : IDisposable
     private const string DefaultCategoryId = Category.DefaultId;
 
     private readonly WasapiAudioOptions _options;
-    private readonly RecorderOptions _recorderOptions;
+    private RecorderOptions _recorderOptions; // re-set when calibration changes the mic reference
     private readonly Action<string> _log;
     private readonly WasapiDeviceFactory _factory;
     private readonly WasapiDeviceMonitor _monitor;
@@ -58,6 +59,8 @@ public sealed class EngineHost : IDisposable
         _dataRoot = AdaVoicePaths.DefaultRoot;
         _settingsRepository = new JsonSettingsRepository(_dataRoot);
         _settings = _settingsRepository.Load();
+        // The wizard-calibrated mic reference (if any) drives the recorder's loudness-match.
+        _recorderOptions = _recorderOptions with { ReferenceRms = _settings.MicReferenceRms };
 
         var clock = new SystemEngineClock();
         _factory = new WasapiDeviceFactory(options);
@@ -100,6 +103,40 @@ public sealed class EngineHost : IDisposable
         DuckGain = RampGain.DbToLinear(_settings.MicDuckDb),
         DuckRampMs = _settings.DuckRampMs,
     };
+
+    /// <summary>Run the setup environment checks against the live audio devices (cable present + at
+    /// 48 kHz, default output is not the cable, a mic is present).</summary>
+    public IReadOnlyList<EnvironmentCheck> RunEnvironmentChecks() =>
+        new EnvironmentChecks(new WasapiEnvironmentProbe()).Run(_options.CableName, _options.MicName);
+
+    /// <summary>Voice-calibration step: record <paramref name="seconds"/> of the mic, measure the
+    /// reference level, and on success persist it so the recorder loudness-matches future takes to it
+    /// (no restart needed). Returns the result, including a too-quiet retry message.</summary>
+    public CalibrationResult Calibrate(int seconds = 5)
+    {
+        var capture = _factory.CreateCapture(DeviceRole.Mic);
+        try
+        {
+            var recorder = new Recorder(capture, _recorderOptions);
+            recorder.Start();
+            Thread.Sleep(TimeSpan.FromSeconds(seconds));
+            var take = recorder.Stop();
+
+            var result = VoiceCalibration.FromTrimmedSamples(take.Samples);
+            if (result.Ok)
+            {
+                _settings = _settings with { MicReferenceRms = result.MicReferenceRms };
+                _settingsRepository.Save(_settings);
+                _recorderOptions = _recorderOptions with { ReferenceRms = _settings.MicReferenceRms };
+            }
+
+            return result;
+        }
+        finally
+        {
+            capture.Dispose();
+        }
+    }
 
     public EngineState State => _engine.State;
 

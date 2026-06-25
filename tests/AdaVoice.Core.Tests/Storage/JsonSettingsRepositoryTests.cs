@@ -29,6 +29,16 @@ public class JsonSettingsRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void Mic_reference_defaults_to_null_and_roundtrips()
+    {
+        Assert.Null(new JsonSettingsRepository(_root).Load().MicReferenceRms); // uncalibrated
+
+        new JsonSettingsRepository(_root).Save(new Settings { MicReferenceRms = 0.0834 });
+
+        Assert.Equal(0.0834, new JsonSettingsRepository(_root).Load().MicReferenceRms);
+    }
+
+    [Fact]
     public void Save_then_load_roundtrips_the_monitor_choice()
     {
         var repo = new JsonSettingsRepository(_root);

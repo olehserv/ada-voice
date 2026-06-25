@@ -40,6 +40,16 @@ public class LoudnessMatchTests
         Assert.Equal(0, LoudnessMatch.ComputeGainDb(new float[1000], ReferenceRms));
     }
 
+    [Theory]
+    [InlineData(0)]   // uncalibrated reference: must not drive the gain to -inf (every phrase silent)
+    [InlineData(-1)]  // a hand-edited bad value: must not produce NaN
+    public void Nonpositive_reference_gets_no_gain(double badReference)
+    {
+        var take = TestAudio.Sine(440, 48_000, 0.2);
+
+        Assert.Equal(0, LoudnessMatch.ComputeGainDb(take, badReference));
+    }
+
     private static float[] ApplyGain(float[] samples, double gainDb)
     {
         var g = RampGain.DbToLinear(gainDb);

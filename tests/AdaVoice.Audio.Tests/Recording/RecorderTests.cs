@@ -26,6 +26,23 @@ public class RecorderTests
     }
 
     [Fact]
+    public void Uses_an_explicit_reference_rms_over_the_dbfs_default()
+    {
+        // A 0.5-amplitude sine has RMS 0.5/sqrt(2). Setting the reference to that RMS means no change
+        // (~0 dB), distinct from the -20 dBFS default which would attenuate by ~-11 dB. Proves the
+        // wizard-calibrated reference is used instead of the stand-in.
+        var tone = TestAudio.Sine(440, 48_000 / 5, amplitude: 0.5);
+        var capture = FileCaptureDevice.FromFloat(tone);
+        var recorder = new Recorder(capture, new RecorderOptions { ReferenceRms = 0.5 / Math.Sqrt(2) });
+
+        recorder.Start();
+        while (capture.PumpMilliseconds(50)) { }
+        var result = recorder.Stop();
+
+        Assert.True(Math.Abs(result.GainDb) < 1.0, $"gain {result.GainDb} should be near 0 dB for a matched reference");
+    }
+
+    [Fact]
     public void Resamples_and_downmixes_a_441k_stereo_source_to_48k_mono()
     {
         // 500 ms of 44.1 kHz STEREO. A byte-copy (no convert) would yield ~924 ms; correct
