@@ -16,6 +16,10 @@ public interface IPlaybackHost
     /// <summary>Fires on the engine control thread; a UI handler must marshal to its own thread.</summary>
     event EventHandler<EngineState>? StateChanged;
 
+    /// <summary>The phrase now playing (its id), or null when playback stops. For the playing glow.
+    /// Fires off the UI thread; a handler must marshal.</summary>
+    event EventHandler<string?>? PlayingPhraseChanged;
+
     void Start();
     void Stop();
     void StopPhrase();

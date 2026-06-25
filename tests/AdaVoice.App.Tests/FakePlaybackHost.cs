@@ -20,6 +20,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost
     }
 
     public event EventHandler<EngineState>? StateChanged;
+    public event EventHandler<string?>? PlayingPhraseChanged;
 
     public List<string> Calls { get; } = [];
     public PhraseEntry? PlayedEntry { get; private set; }
@@ -48,6 +49,8 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost
         State = state;
         StateChanged?.Invoke(this, state);
     }
+
+    public void RaisePlayingPhraseChanged(string? id) => PlayingPhraseChanged?.Invoke(this, id);
 
     // ---- IRecorderHost ----
     public bool TryStartRecording()

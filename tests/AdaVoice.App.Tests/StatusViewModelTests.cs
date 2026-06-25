@@ -30,4 +30,14 @@ public class StatusViewModelTests
         Assert.Equal(EngineState.Live, vm.State);
         Assert.Equal("LIVE", vm.StateLabel);
     }
+
+    [Theory]
+    [InlineData(EngineState.Live, true)]
+    [InlineData(EngineState.Stopped, false)]
+    [InlineData(EngineState.OffAir, false)]
+    [InlineData(EngineState.Degraded, false)]
+    public void Is_live_only_when_live(EngineState state, bool expected)
+    {
+        Assert.Equal(expected, new StatusViewModel(new FakePlaybackHost { State = state }).IsLive);
+    }
 }

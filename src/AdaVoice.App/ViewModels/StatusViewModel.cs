@@ -17,6 +17,7 @@ public partial class StatusViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StateLabel))]
     [NotifyPropertyChangedFor(nameof(IsOffAir))]
+    [NotifyPropertyChangedFor(nameof(IsLive))]
     private EngineState _state;
 
     public StatusViewModel(IPlaybackHost host, Action<Action>? onUiThread = null)
@@ -37,6 +38,9 @@ public partial class StatusViewModel : ObservableObject, IDisposable
 
     /// <summary>True while recording: the call feed is paused. The view shows an OFF AIR banner.</summary>
     public bool IsOffAir => State == EngineState.OffAir;
+
+    /// <summary>True only when Live — phrases can play, so the board's phrase buttons are enabled.</summary>
+    public bool IsLive => State == EngineState.Live;
 
     private void OnStateChanged(object? sender, EngineState state) => _onUiThread(() => State = state);
 

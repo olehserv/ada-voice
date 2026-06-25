@@ -346,6 +346,7 @@ public sealed class AudioEngine : IDisposable
         _mixer.AddMixerInput(_passthrough.Output);
 
         _player = new PhrasePlayer(_mixer, _passthrough, _playerOptions);
+        _player.ActivePhraseChanged += OnActivePhraseChanged;
         _gate = new CableGate(_mixer, _clock);
 
         _cableRender = _factory.CreateRender(DeviceRole.Cable);
@@ -372,6 +373,9 @@ public sealed class AudioEngine : IDisposable
     private void OnDrift(object? sender, DriftEventArgs e)
         => Raise(new EngineEvent.DriftLogged(e.Kind));
 
+    private void OnActivePhraseChanged(object? sender, string? phraseId)
+        => Raise(new EngineEvent.PhraseChanged(phraseId));
+
     private void SetState(EngineState state, string? error = null)
     {
         State = state;
@@ -393,6 +397,10 @@ public sealed class AudioEngine : IDisposable
         StopAlarm(); // never leave the alarm beeping after the engine stops
         DisposeMicChain();
         DisposeCable();
+
+        // Tearing down mid-playback ends the phrase; tell the UI so its playing glow clears.
+        if (_player?.ActivePhraseId is not null)
+            Raise(new EngineEvent.PhraseChanged(null));
 
         _player?.Dispose();
         _player = null;

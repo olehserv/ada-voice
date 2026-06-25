@@ -16,6 +16,7 @@ public partial class BoardViewModel : ObservableObject
 {
     private readonly IPlaybackHost _playback;
     private readonly IRecorderHost _recorder;
+    private readonly Action<Action> _onUiThread;
 
     [ObservableProperty]
     private bool _isRecording;
@@ -30,20 +31,24 @@ public partial class BoardViewModel : ObservableObject
     [ObservableProperty]
     private string? _notice;
 
-    public BoardViewModel(IPlaybackHost playback, IRecorderHost recorder, StatusViewModel status)
+    public BoardViewModel(IPlaybackHost playback, IRecorderHost recorder, StatusViewModel status,
+        Action<Action>? onUiThread = null)
     {
         _playback = playback;
         _recorder = recorder;
+        _onUiThread = onUiThread ?? (action => action()); // default: inline (unit tests)
         Status = status;
-        Phrases = new ObservableCollection<PhraseEntry>(_playback.Phrases);
+        Phrases = new ObservableCollection<PhraseItemViewModel>(
+            _playback.Phrases.Select(e => new PhraseItemViewModel(e)));
+        _playback.PlayingPhraseChanged += OnPlayingPhraseChanged;
     }
 
     public StatusViewModel Status { get; }
 
-    /// <summary>The catalogued phrases shown as buttons. An ObservableCollection so the UI updates when
-    /// a phrase is added (a plain List + OnPropertyChanged does not refresh an ItemsControl). The
-    /// library list stays the persistence source of truth; this mirrors it for the UI.</summary>
-    public ObservableCollection<PhraseEntry> Phrases { get; }
+    /// <summary>The phrase buttons. An ObservableCollection so the UI updates when one is added; each
+    /// item carries its own UI state (e.g. the playing glow). The library list stays the source of
+    /// truth; this mirrors it for the UI.</summary>
+    public ObservableCollection<PhraseItemViewModel> Phrases { get; }
 
     /// <summary>True when a just-recorded take is waiting to be named/saved.</summary>
     public bool HasPendingTake => PendingTake is not null;
@@ -51,14 +56,23 @@ public partial class BoardViewModel : ObservableObject
     // ---- Playback -------------------------------------------------------------------------------
 
     [RelayCommand]
-    private void Play(PhraseEntry? entry)
+    private void Play(PhraseItemViewModel? item)
     {
-        if (entry is not null)
-            _playback.PlayEntry(entry);
+        if (item is not null)
+            _playback.PlayEntry(item.Entry);
     }
 
     [RelayCommand]
     private void Stop() => _playback.StopPhrase();
+
+    /// <summary>Reflect the engine's currently-playing phrase as the per-item glow. Fires off the UI
+    /// thread, so marshal before touching the bound items.</summary>
+    private void OnPlayingPhraseChanged(object? sender, string? playingId) =>
+        _onUiThread(() =>
+        {
+            foreach (var item in Phrases)
+                item.IsPlaying = playingId is not null && item.Entry.Id == playingId;
+        });
 
     [RelayCommand]
     private void StartEngine() => _playback.Start();
@@ -121,7 +135,7 @@ public partial class BoardViewModel : ObservableObject
         var entry = _recorder.SaveTake(take, NewTitle);
         PendingTake = null;
         Notice = $"Saved \"{entry.Title}\".";
-        Phrases.Add(entry); // CollectionChanged -> the new phrase button appears immediately
+        Phrases.Add(new PhraseItemViewModel(entry)); // appears on the board immediately
     }
 
     [RelayCommand]

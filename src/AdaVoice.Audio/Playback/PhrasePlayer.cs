@@ -54,6 +54,10 @@ public sealed class PhrasePlayer : IDisposable
         get { lock (_sync) { return _active?.Id; } }
     }
 
+    /// <summary>Raised when the active phrase changes: a phrase id when one starts, null when the
+    /// active phrase ends. Always raised outside the lock (the mixer raises end on its render thread).</summary>
+    public event EventHandler<string?>? ActivePhraseChanged;
+
     public void Play(Phrase phrase)
     {
         PhraseSampleProvider provider;
@@ -78,6 +82,7 @@ public sealed class PhrasePlayer : IDisposable
         toStop?.Stop(_options.StopFadeMs);
         _mixer.AddMixerInput(provider);
         _mic.Duck(_options.DuckGain, _options.DuckRampMs);
+        ActivePhraseChanged?.Invoke(this, provider.Id);
     }
 
     /// <summary>Stop the current phrase with a short fade-out. The mic un-ducks when it ends.</summary>
@@ -102,7 +107,10 @@ public sealed class PhrasePlayer : IDisposable
         }
 
         if (wasActive)
+        {
             _mic.Duck(1f, _options.DuckRampMs);
+            ActivePhraseChanged?.Invoke(this, null);
+        }
     }
 
     public void Dispose() => _mixer.MixerInputEnded -= OnMixerInputEnded;

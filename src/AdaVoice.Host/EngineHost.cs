@@ -167,6 +167,10 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost
     /// handler must marshal to its own thread (e.g. the WPF Dispatcher).</summary>
     public event EventHandler<EngineState>? StateChanged;
 
+    /// <summary>Raised with the playing phrase's id (null when playback stops). Fires off the UI
+    /// thread — a UI handler must marshal.</summary>
+    public event EventHandler<string?>? PlayingPhraseChanged;
+
     /// <summary>Load a catalogued phrase from disk, apply its loudness-match gain, and play it toward
     /// the call (the cable). The engine routes Play to the cable only when Live, so this is a no-op
     /// otherwise. A missing audio file is logged and skipped, never thrown.</summary>
@@ -365,6 +369,15 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost
 
     private void OnEngineEvent(object? sender, EngineEvent e)
     {
+        // PhraseChanged can fire on the audio render thread (under the mixer lock) on a natural end —
+        // re-raise it without logging, so no file I/O ever touches the audio path. The BeginInvoke the
+        // UI handler does is lightweight. State/drift/rebuild events fire on the control thread and log.
+        if (e is EngineEvent.PhraseChanged p)
+        {
+            PlayingPhraseChanged?.Invoke(this, p.PhraseId);
+            return;
+        }
+
         _log(Describe(e));
         if (e is EngineEvent.StateChanged s)
             StateChanged?.Invoke(this, s.State);

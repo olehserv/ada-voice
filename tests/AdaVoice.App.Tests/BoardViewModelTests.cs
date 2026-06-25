@@ -23,13 +23,41 @@ public class BoardViewModelTests
     [Fact]
     public void Play_command_plays_that_phrase_to_the_call()
     {
-        var host = new FakePlaybackHost();
-        var entry = new PhraseEntry { Id = "p-1", FileName = "p-1.wav" };
+        var host = new FakePlaybackHost { Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav" }] };
+        var board = NewBoard(host);
+        var item = board.Phrases[0];
 
-        NewBoard(host).PlayCommand.Execute(entry);
+        board.PlayCommand.Execute(item);
 
         Assert.Equal("PlayEntry", Assert.Single(host.Calls));
-        Assert.Same(entry, host.PlayedEntry);
+        Assert.Same(item.Entry, host.PlayedEntry);
+    }
+
+    [Fact]
+    public void Playing_phrase_changed_highlights_only_that_item()
+    {
+        var host = new FakePlaybackHost
+        {
+            Phrases = [new PhraseEntry { Id = "p-1" }, new PhraseEntry { Id = "p-2" }],
+        };
+        var board = NewBoard(host);
+
+        host.RaisePlayingPhraseChanged("p-2");
+
+        Assert.False(board.Phrases[0].IsPlaying);
+        Assert.True(board.Phrases[1].IsPlaying);
+    }
+
+    [Fact]
+    public void Playing_phrase_null_clears_every_highlight()
+    {
+        var host = new FakePlaybackHost { Phrases = [new PhraseEntry { Id = "p-1" }] };
+        var board = NewBoard(host);
+        host.RaisePlayingPhraseChanged("p-1");
+
+        host.RaisePlayingPhraseChanged(null);
+
+        Assert.All(board.Phrases, i => Assert.False(i.IsPlaying));
     }
 
     [Fact]
@@ -125,7 +153,7 @@ public class BoardViewModelTests
         Assert.Contains("SaveTake", host.Calls);
         Assert.Equal("Greeting", host.SavedTitle);
         Assert.False(board.HasPendingTake);
-        Assert.Contains(board.Phrases, p => p.Title == "Greeting"); // appears on the board
+        Assert.Contains(board.Phrases, i => i.Title == "Greeting"); // appears on the board
     }
 
     [Fact]

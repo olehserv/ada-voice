@@ -51,8 +51,21 @@
                         <Button MinWidth="150" MinHeight="96" Margin="4"
                                 Background="{StaticResource Surface.Raised}"
                                 Foreground="{StaticResource Text.Primary}"
+                                BorderBrush="{StaticResource Accent}"
                                 Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                CommandParameter="{Binding}">
+                                CommandParameter="{Binding}"
+                                IsEnabled="{Binding DataContext.Status.IsLive, RelativeSource={RelativeSource AncestorType=Window}}">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="BorderThickness" Value="0" />
+                                    <Style.Triggers>
+                                        <!-- Accent ring while this phrase is playing -->
+                                        <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                            <Setter Property="BorderThickness" Value="2" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
                             <StackPanel Margin="8">
                                 <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="16"
                                            TextWrapping="Wrap" MaxWidth="170" />
