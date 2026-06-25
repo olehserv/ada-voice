@@ -116,6 +116,14 @@ validation of missing files. Then the setup wizard (calibrates `micReferenceRms`
   hardware run.
 - Cold-start auto-retry into Degraded (a failed `Start` currently just stays Stopped, error surfaced).
 - Doc task: create `spike/PHASE0-RESULTS.md` with the measured Phase 0 numbers.
+- **UI/UX pass for the WPF Board (deferred on purpose).** The Phase 3 Board (`src/AdaVoice.App`) is a
+  functional walking-skeleton — it plays phrases to the call, has a big STOP, an engine-state line, and
+  is Topmost — built with plain WPF + the [design 09](docs/design/09-design-system.md) dark tokens. The
+  engine-control buttons are still unstyled WPF defaults, and layout/spacing/typography are minimal. A
+  real UI/UX pass is needed later: adopt WPF-UI (Fluent chrome), the Full/Docked layouts, proper button
+  styling, and the [design 05 §2](docs/design/05-ui-design.md) interaction states. _(User confirmed
+  2026-06-25: keep it simple for now, polish the UI/UX later. Verified the skeleton renders and plays a
+  take on the target machine.)_
 
 ## Open questions
 

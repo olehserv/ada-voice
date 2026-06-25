@@ -7,15 +7,28 @@
         TextElement.Foreground="{StaticResource Text.Primary}"
         FontFamily="Segoe UI Variable, Segoe UI" FontSize="13">
 
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </Window.Resources>
+
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
+        <!-- OFF AIR banner: shown while recording (the call feed is paused) -->
+        <Border Grid.Row="0" Background="{StaticResource Status.OffAir}" CornerRadius="4" Padding="12,6"
+                Margin="0,0,0,8" Visibility="{Binding Status.IsOffAir, Converter={StaticResource BoolToVis}}">
+            <TextBlock Text="OFF AIR — recording (the call cannot hear you)" Foreground="#1F1F1F"
+                       FontWeight="SemiBold" HorizontalAlignment="Center" />
+        </Border>
+
         <!-- Status bar: engine state + engine controls -->
-        <Border Grid.Row="0" Background="{StaticResource Surface.Raised}" CornerRadius="4" Padding="12,8">
+        <Border Grid.Row="1" Background="{StaticResource Surface.Raised}" CornerRadius="4" Padding="12,8">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="{Binding Status.StateLabel}" FontWeight="SemiBold" FontSize="14"
                            VerticalAlignment="Center" MinWidth="90" />
@@ -26,7 +39,7 @@
         </Border>
 
         <!-- Phrase buttons: click plays the phrase to the call -->
-        <ScrollViewer Grid.Row="1" Margin="0,12" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="2" Margin="0,12" VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Phrases}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -52,8 +65,55 @@
             </ItemsControl>
         </ScrollViewer>
 
+        <!-- Record area -->
+        <Border Grid.Row="3" Background="{StaticResource Surface.Raised}" CornerRadius="4" Padding="12,8"
+                Margin="0,0,0,12">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <!-- Idle: offer to record (hidden while recording or while a take is pending) -->
+                    <Button Content="● Record" Command="{Binding StartRecordingCommand}" Padding="12,4">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsRecording}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding HasPendingTake}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <!-- Recording -->
+                    <StackPanel Orientation="Horizontal"
+                                Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="Recording…" VerticalAlignment="Center" FontWeight="SemiBold" />
+                        <Button Content="Stop" Command="{Binding StopRecordingCommand}" Margin="12,0,0,0" Padding="12,4" />
+                    </StackPanel>
+
+                    <!-- A take is waiting to be saved -->
+                    <StackPanel Orientation="Horizontal"
+                                Visibility="{Binding HasPendingTake, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding PendingTake.DurationMs, StringFormat='{}{0} ms'}"
+                                   VerticalAlignment="Center" Foreground="{StaticResource Text.Secondary}" />
+                        <TextBox Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" Width="160"
+                                 Margin="8,0,0,0" VerticalAlignment="Center" />
+                        <Button Content="Preview" Command="{Binding PreviewTakeCommand}" Margin="8,0,0,0" Padding="10,4" />
+                        <Button Content="Save" Command="{Binding SaveTakeCommand}" Margin="8,0,0,0" Padding="10,4" />
+                        <Button Content="Discard" Command="{Binding DiscardTakeCommand}" Margin="8,0,0,0" Padding="10,4" />
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock Text="{Binding Notice}" Foreground="{StaticResource Text.Secondary}"
+                           Margin="0,6,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
         <!-- Big STOP -->
-        <Button Grid.Row="2" Content="STOP" Command="{Binding StopCommand}"
+        <Button Grid.Row="4" Content="STOP" Command="{Binding StopCommand}"
                 Height="56" FontSize="20" FontWeight="Bold"
                 Background="{StaticResource Status.Degraded}" Foreground="#1F1F1F" BorderThickness="0" />
     </Grid>

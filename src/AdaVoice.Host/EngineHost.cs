@@ -27,7 +27,7 @@ namespace AdaVoice.Host;
 /// the console <c>Program</c> around it is throwaway. Logging is a plain callback, so this class
 /// depends on no logging library.
 /// </summary>
-public sealed class EngineHost : IDisposable, IPlaybackHost
+public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost
 {
     private const string DefaultCategoryId = Category.DefaultId;
 

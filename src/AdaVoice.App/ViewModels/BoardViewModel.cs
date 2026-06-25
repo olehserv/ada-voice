@@ -1,4 +1,5 @@
 using AdaVoice.Audio.Engine;
+using AdaVoice.Audio.Recording;
 using AdaVoice.Core.Domain;
 using AdaVoice.Host;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -7,51 +8,122 @@ using CommunityToolkit.Mvvm.Input;
 namespace AdaVoice.App.ViewModels;
 
 /// <summary>
-/// The Board: shows the phrases and triggers playback to the call. Talks only to <see cref="IPlaybackHost"/>,
-/// so it is unit-testable with a fake host.
+/// The Board: shows the phrases, plays them to the call, and records new ones. Talks only to the host
+/// seams (<see cref="IPlaybackHost"/> / <see cref="IRecorderHost"/>), so it is unit-testable with a fake.
 /// </summary>
 public partial class BoardViewModel : ObservableObject
 {
-    private readonly IPlaybackHost _host;
+    private readonly IPlaybackHost _playback;
+    private readonly IRecorderHost _recorder;
 
-    public BoardViewModel(IPlaybackHost host, StatusViewModel status)
+    [ObservableProperty]
+    private bool _isRecording;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPendingTake))]
+    private RecordingResult? _pendingTake;
+
+    [ObservableProperty]
+    private string _newTitle = "";
+
+    [ObservableProperty]
+    private string? _notice;
+
+    public BoardViewModel(IPlaybackHost playback, IRecorderHost recorder, StatusViewModel status)
     {
-        _host = host;
+        _playback = playback;
+        _recorder = recorder;
         Status = status;
     }
 
     public StatusViewModel Status { get; }
 
-    /// <summary>The catalogued phrases shown as buttons (loaded once at startup).</summary>
-    public IReadOnlyList<PhraseEntry> Phrases => _host.Phrases;
+    /// <summary>The catalogued phrases shown as buttons. Refreshed after a save.</summary>
+    public IReadOnlyList<PhraseEntry> Phrases => _playback.Phrases;
 
-    /// <summary>Play a phrase to the call (the cable). Needs the engine Live.</summary>
+    /// <summary>True when a just-recorded take is waiting to be named/saved.</summary>
+    public bool HasPendingTake => PendingTake is not null;
+
+    // ---- Playback -------------------------------------------------------------------------------
+
     [RelayCommand]
     private void Play(PhraseEntry? entry)
     {
         if (entry is not null)
-            _host.PlayEntry(entry);
+            _playback.PlayEntry(entry);
     }
 
-    /// <summary>Stop the phrase currently playing (the big STOP).</summary>
     [RelayCommand]
-    private void Stop() => _host.StopPhrase();
+    private void Stop() => _playback.StopPhrase();
 
-    /// <summary>Go Live: mic to the cable, phrases can play.</summary>
     [RelayCommand]
-    private void StartEngine() => _host.Start();
+    private void StartEngine() => _playback.Start();
 
-    /// <summary>Stop the engine entirely.</summary>
     [RelayCommand]
-    private void StopEngine() => _host.Stop();
+    private void StopEngine() => _playback.Stop();
 
-    /// <summary>Toggle OFF AIR (the call feed is paused while OFF AIR).</summary>
     [RelayCommand]
     private void ToggleOffAir()
     {
-        if (_host.State == EngineState.OffAir)
-            _host.ExitOffAir();
+        if (_playback.State == EngineState.OffAir)
+            _playback.ExitOffAir();
         else
-            _host.EnterOffAir();
+            _playback.EnterOffAir();
+    }
+
+    // ---- Recording ------------------------------------------------------------------------------
+
+    [RelayCommand]
+    private void StartRecording()
+    {
+        Notice = null;
+        if (_recorder.TryStartRecording())
+            IsRecording = true;
+        else
+            Notice = "Press Start to go Live before recording.";
+    }
+
+    [RelayCommand]
+    private void StopRecording()
+    {
+        IsRecording = false;
+        var take = _recorder.StopRecording();
+        if (take is { HasSignal: true })
+        {
+            PendingTake = take;
+            NewTitle = $"Take {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+            Notice = null;
+        }
+        else
+        {
+            PendingTake = null;
+            Notice = "No signal — nothing recorded.";
+        }
+    }
+
+    [RelayCommand]
+    private void PreviewTake()
+    {
+        if (PendingTake is { } take)
+            Notice = _recorder.Preview(take.Samples, take.GainDb) ?? "Previewing…";
+    }
+
+    [RelayCommand]
+    private void SaveTake()
+    {
+        if (PendingTake is not { } take)
+            return;
+
+        var entry = _recorder.SaveTake(take, NewTitle);
+        PendingTake = null;
+        Notice = $"Saved \"{entry.Title}\".";
+        OnPropertyChanged(nameof(Phrases)); // the new phrase button appears
+    }
+
+    [RelayCommand]
+    private void DiscardTake()
+    {
+        PendingTake = null;
+        Notice = "Take discarded.";
     }
 }

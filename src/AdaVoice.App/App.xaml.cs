@@ -29,7 +29,7 @@ public partial class App : Application
 
         // BeginInvoke (async) so a state change raised on the engine control thread never blocks it on the UI.
         var status = new StatusViewModel(_host, action => Dispatcher.BeginInvoke(action));
-        var board = new BoardViewModel(_host, status);
+        var board = new BoardViewModel(_host, _host, status);
 
         new MainWindow { DataContext = board }.Show();
     }
