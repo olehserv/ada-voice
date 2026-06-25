@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Recording;
 using AdaVoice.Core.Domain;
@@ -34,12 +35,15 @@ public partial class BoardViewModel : ObservableObject
         _playback = playback;
         _recorder = recorder;
         Status = status;
+        Phrases = new ObservableCollection<PhraseEntry>(_playback.Phrases);
     }
 
     public StatusViewModel Status { get; }
 
-    /// <summary>The catalogued phrases shown as buttons. Refreshed after a save.</summary>
-    public IReadOnlyList<PhraseEntry> Phrases => _playback.Phrases;
+    /// <summary>The catalogued phrases shown as buttons. An ObservableCollection so the UI updates when
+    /// a phrase is added (a plain List + OnPropertyChanged does not refresh an ItemsControl). The
+    /// library list stays the persistence source of truth; this mirrors it for the UI.</summary>
+    public ObservableCollection<PhraseEntry> Phrases { get; }
 
     /// <summary>True when a just-recorded take is waiting to be named/saved.</summary>
     public bool HasPendingTake => PendingTake is not null;
@@ -117,7 +121,7 @@ public partial class BoardViewModel : ObservableObject
         var entry = _recorder.SaveTake(take, NewTitle);
         PendingTake = null;
         Notice = $"Saved \"{entry.Title}\".";
-        OnPropertyChanged(nameof(Phrases)); // the new phrase button appears
+        Phrases.Add(entry); // CollectionChanged -> the new phrase button appears immediately
     }
 
     [RelayCommand]
