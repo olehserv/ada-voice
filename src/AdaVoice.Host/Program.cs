@@ -177,17 +177,19 @@ static void SetMonitor(EngineHost host)
     var devices = WasapiDevices.Active(DataFlow.Render).ToList();
     try
     {
+        Console.WriteLine($"Current monitor: {host.MonitorDescription()}");
+        Console.WriteLine("Output devices:");
         for (var i = 0; i < devices.Count; i++)
             Console.WriteLine($"  [{i}] {devices[i].FriendlyName}");
 
-        Console.Write("Monitor (number, name substring, or blank for OS default): ");
+        Console.Write("Choose a monitor — number, name, or blank for OS default, then Enter: ");
         var input = Console.ReadLine()?.Trim();
 
         var name = input;
         if (int.TryParse(input, out var index) && index >= 0 && index < devices.Count)
             name = devices[index].FriendlyName;
 
-        host.SetMonitorDevice(name);
+        host.SetMonitorDevice(name); // prints "monitor set to ..." via the host log
     }
     finally
     {

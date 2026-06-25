@@ -95,7 +95,9 @@ public sealed class EngineHost : IDisposable
         _log($"monitor: {MonitorDescription()}; ducking: {_settings.MicDuckDb:F0} dB over {_settings.DuckRampMs} ms");
     }
 
-    private string MonitorDescription() =>
+    /// <summary>Human-readable name of the device previews play to: the configured monitor, or the OS
+    /// default output when none is set.</summary>
+    public string MonitorDescription() =>
         _settings is { MonitorEnabled: true, MonitorDeviceName: { } name } ? $"'{name}'" : "OS default output";
 
     private PhrasePlayerOptions PlayerOptionsFromSettings() => new()
@@ -246,7 +248,7 @@ public sealed class EngineHost : IDisposable
         var name = string.IsNullOrWhiteSpace(nameSubstring) ? null : nameSubstring.Trim();
         _settings = _settings with { MonitorDeviceName = name, MonitorEnabled = name is not null };
         _settingsRepository.Save(_settings);
-        _log($"monitor: {MonitorDescription()}");
+        _log($"monitor set to {MonitorDescription()}");
     }
 
     /// <summary>
@@ -265,6 +267,8 @@ public sealed class EngineHost : IDisposable
             device.Dispose();
             return "the preview output is the cable — pick a different monitor (or default) playback device";
         }
+
+        _log($"preview → {device.FriendlyName}"); // so the operator can see which device it played to
 
         var deviceRate = device.AudioClient.MixFormat.SampleRate;
         ISampleProvider source = new PhraseSampleProvider(samples, AudioFormats.Engine, "preview");
