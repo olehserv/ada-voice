@@ -54,17 +54,21 @@ public sealed class EngineHost : IDisposable
         _recorderOptions = recorderOptions ?? new RecorderOptions();
         _log = log ?? (_ => { });
 
+        // Settings load first: the engine's duck level/ramp are fixed when the phrase player is built.
+        _dataRoot = AdaVoicePaths.DefaultRoot;
+        _settingsRepository = new JsonSettingsRepository(_dataRoot);
+        _settings = _settingsRepository.Load();
+
         var clock = new SystemEngineClock();
         _factory = new WasapiDeviceFactory(options);
         _monitor = new WasapiDeviceMonitor();
-        _engine = new AudioEngine(_factory, clock);
+        _engine = new AudioEngine(_factory, clock, PlayerOptionsFromSettings());
 
         _engine.Events += OnEngineEvent;
         _monitor.DeviceChanged += OnDeviceChanged;
 
         _controlThread = new Thread(ControlLoop) { Name = "AudioEngineControl", IsBackground = true };
 
-        _dataRoot = AdaVoicePaths.DefaultRoot;
         var backup = new BackupService(_dataRoot);
         var repository = new JsonPhraseRepository(_dataRoot, backup.TryReadLatestLibrary);
         _library = new PhraseLibraryService(
@@ -85,13 +89,17 @@ public sealed class EngineHost : IDisposable
         if (created is not null)
             _log($"backup: created {Path.GetFileName(created)}");
 
-        _settingsRepository = new JsonSettingsRepository(_dataRoot);
-        _settings = _settingsRepository.Load();
-        _log($"monitor: {MonitorDescription()}");
+        _log($"monitor: {MonitorDescription()}; ducking: {_settings.MicDuckDb:F0} dB over {_settings.DuckRampMs} ms");
     }
 
     private string MonitorDescription() =>
         _settings is { MonitorEnabled: true, MonitorDeviceName: { } name } ? $"'{name}'" : "OS default output";
+
+    private PhrasePlayerOptions PlayerOptionsFromSettings() => new()
+    {
+        DuckGain = RampGain.DbToLinear(_settings.MicDuckDb),
+        DuckRampMs = _settings.DuckRampMs,
+    };
 
     public EngineState State => _engine.State;
 

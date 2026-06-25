@@ -14,6 +14,18 @@ public class JsonSettingsRepositoryTests : IDisposable
 
         Assert.Null(settings.MonitorDeviceName);
         Assert.True(settings.MonitorEnabled);
+        Assert.Equal(-12, settings.MicDuckDb);
+        Assert.Equal(50, settings.DuckRampMs);
+    }
+
+    [Fact]
+    public void Save_then_load_roundtrips_the_duck_settings()
+    {
+        new JsonSettingsRepository(_root).Save(new Settings { MicDuckDb = -18, DuckRampMs = 80 });
+
+        var reloaded = new JsonSettingsRepository(_root).Load();
+        Assert.Equal(-18, reloaded.MicDuckDb);
+        Assert.Equal(80, reloaded.DuckRampMs);
     }
 
     [Fact]
