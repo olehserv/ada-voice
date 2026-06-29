@@ -8,7 +8,7 @@ namespace AdaVoice.App.Tests;
 public class BoardViewModelTests
 {
     private static BoardViewModel NewBoard(FakePlaybackHost host) =>
-        new(host, host, new StatusViewModel(host));
+        new(host, host, new StatusViewModel(host), new SettingsViewModel(new FakeSettingsHost()));
 
     private static RecordingResult Take() => new(new float[10], GainDb: -3, DurationMs: 1000, PeakDbfs: -6);
 

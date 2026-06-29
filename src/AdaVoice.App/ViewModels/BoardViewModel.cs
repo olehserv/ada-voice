@@ -32,18 +32,22 @@ public partial class BoardViewModel : ObservableObject
     private string? _notice;
 
     public BoardViewModel(IPlaybackHost playback, IRecorderHost recorder, StatusViewModel status,
-        Action<Action>? onUiThread = null)
+        SettingsViewModel settings, Action<Action>? onUiThread = null)
     {
         _playback = playback;
         _recorder = recorder;
         _onUiThread = onUiThread ?? (action => action()); // default: inline (unit tests)
         Status = status;
+        Settings = settings;
         Phrases = new ObservableCollection<PhraseItemViewModel>(
             _playback.Phrases.Select(e => new PhraseItemViewModel(e)));
         _playback.PlayingPhraseChanged += OnPlayingPhraseChanged;
     }
 
     public StatusViewModel Status { get; }
+
+    /// <summary>The inline settings (the duck-level slider) bound from the status bar.</summary>
+    public SettingsViewModel Settings { get; }
 
     /// <summary>The phrase buttons. An ObservableCollection so the UI updates when one is added; each
     /// item carries its own UI state (e.g. the playing glow). The library list stays the source of

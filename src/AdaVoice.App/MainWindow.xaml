@@ -27,14 +27,30 @@
                        FontWeight="SemiBold" HorizontalAlignment="Center" />
         </Border>
 
-        <!-- Status bar: engine state + engine controls -->
+        <!-- Status bar: engine state + engine controls, then the live mic-duck slider -->
         <Border Grid.Row="1" Background="{StaticResource Surface.Raised}" CornerRadius="4" Padding="12,8">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="{Binding Status.StateLabel}" FontWeight="SemiBold" FontSize="14"
-                           VerticalAlignment="Center" MinWidth="90" />
-                <Button Content="Start" Command="{Binding StartEngineCommand}" Margin="8,0,0,0" Padding="12,4" />
-                <Button Content="Stop engine" Command="{Binding StopEngineCommand}" Margin="8,0,0,0" Padding="12,4" />
-                <Button Content="OFF AIR" Command="{Binding ToggleOffAirCommand}" Margin="8,0,0,0" Padding="12,4" />
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding Status.StateLabel}" FontWeight="SemiBold" FontSize="14"
+                               VerticalAlignment="Center" MinWidth="90" />
+                    <Button Content="Start" Command="{Binding StartEngineCommand}" Margin="8,0,0,0" Padding="12,4" />
+                    <Button Content="Stop engine" Command="{Binding StopEngineCommand}" Margin="8,0,0,0" Padding="12,4" />
+                    <Button Content="OFF AIR" Command="{Binding ToggleOffAirCommand}" Margin="8,0,0,0" Padding="12,4" />
+                </StackPanel>
+
+                <!-- Mic duck: how much the live voice drops while a phrase plays. Applies live;
+                     the chosen value is saved when the drag ends (DragCompleted/LostFocus). -->
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBlock Text="Mic duck" VerticalAlignment="Center"
+                               Foreground="{StaticResource Text.Secondary}" />
+                    <Slider x:Name="DuckSlider" Width="170" Margin="8,0" VerticalAlignment="Center"
+                            Minimum="-40" Maximum="0" SmallChange="1"
+                            IsSnapToTickEnabled="True" TickFrequency="1"
+                            Value="{Binding Settings.MicDuckDb, Mode=TwoWay}"
+                            Thumb.DragCompleted="DuckSlider_DragCompleted"
+                            LostFocus="DuckSlider_Committed" />
+                    <TextBlock Text="{Binding Settings.DuckLabel}" VerticalAlignment="Center" MinWidth="48" />
+                </StackPanel>
             </StackPanel>
         </Border>
 
