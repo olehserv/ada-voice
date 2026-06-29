@@ -75,6 +75,38 @@ public class PhrasePlayerTests
     }
 
     [Fact]
+    public void SetDuck_while_a_phrase_plays_applies_the_new_gain_live()
+    {
+        var spy = new DuckSpy();
+        var mixer = NewMixer();
+        using var player = new PhrasePlayer(mixer, spy);
+
+        player.Play(new Phrase("a", Enumerable.Repeat(0.5f, 48_000).ToArray())); // long: stays active
+        var callsBefore = spy.Calls.Count;
+
+        player.SetDuck(0.1f, 20);
+
+        Assert.True(spy.Calls.Count > callsBefore); // applied live, mid-phrase
+        Assert.Equal(0.1f, spy.LastGain);
+        Assert.Equal(20, spy.Calls[^1].RampMs);
+    }
+
+    [Fact]
+    public void SetDuck_while_idle_does_not_duck_but_the_next_play_uses_it()
+    {
+        var spy = new DuckSpy();
+        var mixer = NewMixer();
+        using var player = new PhrasePlayer(mixer, spy);
+
+        player.SetDuck(0.2f, 30);
+        Assert.Empty(spy.Calls); // nothing playing -> the mic is not touched
+
+        player.Play(new Phrase("a", TestAudio.Sine(440, 300)));
+        Assert.Equal(0.2f, spy.LastGain); // the new gain is used on the next play
+        Assert.Equal(30, spy.Calls[^1].RampMs);
+    }
+
+    [Fact]
     public void Stop_fades_out_and_un_ducks()
     {
         var spy = new DuckSpy();

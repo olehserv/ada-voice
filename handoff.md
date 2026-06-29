@@ -8,7 +8,7 @@ back up. It answers one question: *where are we right now?*
   the strategy (see [roadmap](docs/roadmaps/mvp-roadmap.md)), or the decision record
   (canonical table in [design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
 
-_Last updated: 2026-06-22._
+_Last updated: 2026-06-29._
 
 ---
 
@@ -22,6 +22,26 @@ monitor.** Next real step: run it on the target machine (checklist below), then 
 
 ## Done
 
+- ✅ **Operator pilot prepared (2026-06-29)** — [`docs/plans/operator-pilot.md`](docs/plans/operator-pilot.md):
+  a functional-smoke pilot script (record fresh live, real test call). The supervised pilot passed
+  (user: "tested everything, works awesome").
+- ✅ **Duck slider + WPF-UI polish — on branch `feat/duck-slider-wpfui-polish` (not yet merged), 2026-06-29.**
+  - Live mic-duck slider: `PhrasePlayer.SetDuck` + `EngineCommand.SetDuckLevel` (engine re-applies the
+    level after a Stop/Start rebuild) → `ISettingsHost` on `EngineHost` (apply-live vs save split) →
+    `SettingsViewModel` + a snapped −40..0 dB slider in the status bar (saves on drag-end).
+  - WPF-UI 4.3.0 Fluent dark theme adopted: `ui:Button` appearances (STOP=Danger, Record=Primary),
+    shared `PhraseButtonStyle`, finished tokens (type scale, spacing, radius; Segoe UI Variable),
+    first-run welcome `ui:Card`, and a save toast (`Snackbar`). 167 unit tests green; app smoke-launches.
+  - **Verified (automated):** duck DSP/engine logic, settings save/reload round-trip
+    (`MicDuckDb`), VM apply/commit, and the app parses + launches.
+  - **Still TODO on this work:**
+    - *Plain run (no cable/call):* confirm the slider UI wiring — dragging it changes the value,
+      saves on release, and the value reloads on restart (`settings.json` `micDuckDb`). The pieces
+      are tested, but the two-way binding + drag→Commit code-behind only run in the real app.
+    - *Hardware run (cable + call):* the **audible** duck change at the far end.
+  - **FluentWindow chrome — done (2026-06-29):** `ui:FluentWindow` + compact `ui:TitleBar`, solid
+    design-09 background (no Mica). Smoke-launched; **Topmost preserved** (verified via WS_EX_TOPMOST).
+  - **Merge** `feat/duck-slider-wpfui-polish` into `main` once the plain-run UI check passes.
 - ✅ **Design phase** — 9 docs in [`docs/design/`](docs/design/README.md), eng review + design
   review both CLEARED (2026-06-10).
 - ✅ **Canonical decisions** — 24 entries locked ([design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).

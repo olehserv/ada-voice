@@ -1,17 +1,30 @@
-<Window x:Class="AdaVoice.App.MainWindow"
+<ui:FluentWindow x:Class="AdaVoice.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="AdaVoice" Topmost="True"
         Width="480" Height="640" MinWidth="420" MinHeight="560"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="None"
+        WindowCornerPreference="Round"
         Background="{StaticResource Surface.Window}"
         TextElement.Foreground="{StaticResource Text.Primary}"
-        FontFamily="Segoe UI Variable, Segoe UI" FontSize="13">
+        FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </Window.Resources>
 
-    <Grid Margin="12">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Fluent title bar (compact tool: no maximize) -->
+        <ui:TitleBar Grid.Row="0" Title="AdaVoice" ShowMaximize="False" CanMaximize="False" />
+
+        <Grid Grid.Row="1" Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -21,25 +34,46 @@
         </Grid.RowDefinitions>
 
         <!-- OFF AIR banner: shown while recording (the call feed is paused) -->
-        <Border Grid.Row="0" Background="{StaticResource Status.OffAir}" CornerRadius="4" Padding="12,6"
-                Margin="0,0,0,8" Visibility="{Binding Status.IsOffAir, Converter={StaticResource BoolToVis}}">
+        <Border Grid.Row="0" Background="{StaticResource Status.OffAir}" CornerRadius="{StaticResource Radius.Control}"
+                Padding="12,6" Margin="0,0,0,8"
+                Visibility="{Binding Status.IsOffAir, Converter={StaticResource BoolToVis}}">
             <TextBlock Text="OFF AIR — recording (the call cannot hear you)" Foreground="#1F1F1F"
                        FontWeight="SemiBold" HorizontalAlignment="Center" />
         </Border>
 
-        <!-- Status bar: engine state + engine controls -->
-        <Border Grid.Row="1" Background="{StaticResource Surface.Raised}" CornerRadius="4" Padding="12,8">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="{Binding Status.StateLabel}" FontWeight="SemiBold" FontSize="14"
-                           VerticalAlignment="Center" MinWidth="90" />
-                <Button Content="Start" Command="{Binding StartEngineCommand}" Margin="8,0,0,0" Padding="12,4" />
-                <Button Content="Stop engine" Command="{Binding StopEngineCommand}" Margin="8,0,0,0" Padding="12,4" />
-                <Button Content="OFF AIR" Command="{Binding ToggleOffAirCommand}" Margin="8,0,0,0" Padding="12,4" />
+        <!-- Status bar: engine state + engine controls, then the live mic-duck slider -->
+        <Border Grid.Row="1" Background="{StaticResource Surface.Raised}" CornerRadius="{StaticResource Radius.Control}"
+                Padding="{StaticResource Pad.Control}">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding Status.StateLabel}" FontWeight="SemiBold"
+                               FontSize="{StaticResource FontSize.SectionTitle}"
+                               VerticalAlignment="Center" MinWidth="90" />
+                    <ui:Button Content="Start" Appearance="Secondary" Command="{Binding StartEngineCommand}" Margin="8,0,0,0" />
+                    <ui:Button Content="Stop engine" Appearance="Secondary" Command="{Binding StopEngineCommand}" Margin="8,0,0,0" />
+                    <ui:Button Content="OFF AIR" Appearance="Secondary" Command="{Binding ToggleOffAirCommand}" Margin="8,0,0,0" />
+                </StackPanel>
+
+                <!-- Mic duck: how much the live voice drops while a phrase plays. Applies live;
+                     the chosen value is saved when the drag ends (DragCompleted/LostFocus). -->
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBlock Text="Mic duck" VerticalAlignment="Center"
+                               Foreground="{StaticResource Text.Secondary}" />
+                    <Slider x:Name="DuckSlider" Width="170" Margin="8,0" VerticalAlignment="Center"
+                            Minimum="-40" Maximum="0" SmallChange="1"
+                            IsSnapToTickEnabled="True" TickFrequency="1"
+                            Value="{Binding Settings.MicDuckDb, Mode=TwoWay}"
+                            Thumb.DragCompleted="DuckSlider_DragCompleted"
+                            LostFocus="DuckSlider_Committed" />
+                    <TextBlock Text="{Binding Settings.DuckLabel}" VerticalAlignment="Center" MinWidth="48" />
+                </StackPanel>
             </StackPanel>
         </Border>
 
-        <!-- Phrase buttons: click plays the phrase to the call -->
-        <ScrollViewer Grid.Row="2" Margin="0,12" VerticalScrollBarVisibility="Auto">
+        <!-- Phrase buttons, or a first-run welcome when the board is empty -->
+        <Grid Grid.Row="2" Margin="0,12">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      Visibility="{Binding HasPhrases, Converter={StaticResource BoolToVis}}">
             <ItemsControl ItemsSource="{Binding Phrases}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -48,63 +82,54 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Button MinWidth="150" MinHeight="96" Margin="4"
-                                Background="{StaticResource Surface.Raised}"
-                                Foreground="{StaticResource Text.Primary}"
-                                BorderBrush="{StaticResource Accent}"
-                                Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                CommandParameter="{Binding}"
-                                IsEnabled="{Binding DataContext.Status.IsLive, RelativeSource={RelativeSource AncestorType=Window}}">
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Setter Property="BorderThickness" Value="0" />
-                                    <Style.Triggers>
-                                        <!-- Accent ring while this phrase is playing -->
-                                        <DataTrigger Binding="{Binding IsPlaying}" Value="True">
-                                            <Setter Property="BorderThickness" Value="2" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <StackPanel Margin="8">
-                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="16"
+                        <ui:Button Style="{StaticResource PhraseButtonStyle}"
+                                   Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                   CommandParameter="{Binding}"
+                                   IsEnabled="{Binding DataContext.Status.IsLive, RelativeSource={RelativeSource AncestorType=Window}}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                           FontSize="{StaticResource FontSize.SectionTitle}"
                                            TextWrapping="Wrap" MaxWidth="170" />
-                                <TextBlock Text="{Binding DurationMs, StringFormat='{}{0} ms'}" FontSize="12"
+                                <TextBlock Text="{Binding DurationMs, StringFormat='{}{0} ms'}"
+                                           FontSize="{StaticResource FontSize.Label}"
                                            Foreground="{StaticResource Text.Secondary}" Margin="0,6,0,0" />
                             </StackPanel>
-                        </Button>
+                        </ui:Button>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
 
+        <!-- First run: nudge the operator to record their first phrase -->
+        <ui:Card VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24" MaxWidth="320"
+                 Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+                <TextBlock Text="Your phrase board is empty" HorizontalAlignment="Center"
+                           FontSize="{StaticResource FontSize.SectionTitle}" FontWeight="SemiBold" />
+                <TextBlock Text="Record your first phrase — it takes about 30 seconds."
+                           Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap"
+                           TextAlignment="Center" Margin="0,8,0,16" />
+                <ui:Button Content="Record" Appearance="Primary" HorizontalAlignment="Center"
+                           Command="{Binding StartRecordingCommand}" />
+            </StackPanel>
+        </ui:Card>
+        </Grid>
+
         <!-- Record area -->
-        <Border Grid.Row="3" Background="{StaticResource Surface.Raised}" CornerRadius="4" Padding="12,8"
-                Margin="0,0,0,12">
+        <Border Grid.Row="3" Background="{StaticResource Surface.Raised}" CornerRadius="{StaticResource Radius.Control}"
+                Padding="{StaticResource Pad.Control}" Margin="0,0,0,12">
             <StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <!-- Idle: offer to record (hidden while recording or while a take is pending) -->
-                    <Button Content="● Record" Command="{Binding StartRecordingCommand}" Padding="12,4">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Visibility" Value="Visible" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsRecording}" Value="True">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding HasPendingTake}" Value="True">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                    <ui:Button Content="Record" Appearance="Primary"
+                               Command="{Binding StartRecordingCommand}"
+                               Visibility="{Binding ShowRecordButton, Converter={StaticResource BoolToVis}}" />
 
                     <!-- Recording -->
                     <StackPanel Orientation="Horizontal"
                                 Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="Recording…" VerticalAlignment="Center" FontWeight="SemiBold" />
-                        <Button Content="Stop" Command="{Binding StopRecordingCommand}" Margin="12,0,0,0" Padding="12,4" />
+                        <ui:Button Content="Stop" Appearance="Secondary" Command="{Binding StopRecordingCommand}" Margin="12,0,0,0" />
                     </StackPanel>
 
                     <!-- A take is waiting to be saved -->
@@ -114,9 +139,9 @@
                                    VerticalAlignment="Center" Foreground="{StaticResource Text.Secondary}" />
                         <TextBox Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" Width="160"
                                  Margin="8,0,0,0" VerticalAlignment="Center" />
-                        <Button Content="Preview" Command="{Binding PreviewTakeCommand}" Margin="8,0,0,0" Padding="10,4" />
-                        <Button Content="Save" Command="{Binding SaveTakeCommand}" Margin="8,0,0,0" Padding="10,4" />
-                        <Button Content="Discard" Command="{Binding DiscardTakeCommand}" Margin="8,0,0,0" Padding="10,4" />
+                        <ui:Button Content="Preview" Appearance="Secondary" Command="{Binding PreviewTakeCommand}" Margin="8,0,0,0" />
+                        <ui:Button Content="Save" Appearance="Secondary" Command="{Binding SaveTakeCommand}" Margin="8,0,0,0" />
+                        <ui:Button Content="Discard" Appearance="Secondary" Command="{Binding DiscardTakeCommand}" Margin="8,0,0,0" />
                     </StackPanel>
                 </StackPanel>
 
@@ -126,8 +151,12 @@
         </Border>
 
         <!-- Big STOP -->
-        <Button Grid.Row="4" Content="STOP" Command="{Binding StopCommand}"
-                Height="56" FontSize="20" FontWeight="Bold"
-                Background="{StaticResource Status.Degraded}" Foreground="#1F1F1F" BorderThickness="0" />
+        <ui:Button Grid.Row="4" Content="STOP" Appearance="Danger" Command="{Binding StopCommand}"
+                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                   Height="56" FontSize="{StaticResource FontSize.Title}" FontWeight="Bold" />
+        </Grid>
+
+        <!-- Toasts float above the board -->
+        <ui:SnackbarPresenter Grid.Row="1" x:Name="RootSnackbar" />
     </Grid>
-</Window>
+</ui:FluentWindow>

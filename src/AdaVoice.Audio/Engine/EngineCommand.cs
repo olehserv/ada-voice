@@ -13,6 +13,10 @@ public abstract record EngineCommand
     public sealed record EnterOffAir : EngineCommand;
     public sealed record ExitOffAir : EngineCommand;
 
+    /// <summary>Change the live-mic duck level used while a phrase plays (e.g. from a settings slider).
+    /// <paramref name="Gain"/> is linear (1 = no duck); <paramref name="RampMs"/> is the ramp time.</summary>
+    public sealed record SetDuckLevel(float Gain, int RampMs) : EngineCommand;
+
     /// <summary>A device was added, removed, or set as default (from the device monitor).</summary>
     public sealed record DeviceChanged(DeviceRole Role, DeviceChangeKind Kind) : EngineCommand;
 

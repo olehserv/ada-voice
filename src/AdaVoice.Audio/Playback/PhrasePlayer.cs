@@ -40,11 +40,18 @@ public sealed class PhrasePlayer : IDisposable
     private readonly Lock _sync = new();
     private PhraseSampleProvider? _active;
 
+    // The current duck target. Seeded from the options, but mutable so a settings slider can change
+    // the duck level live (via SetDuck). Guarded by _sync together with _active.
+    private float _duckGain;
+    private int _duckRampMs;
+
     public PhrasePlayer(MixingSampleProvider mixer, IMicDuck mic, PhrasePlayerOptions? options = null)
     {
         _mixer = mixer;
         _mic = mic;
         _options = options ?? new PhrasePlayerOptions();
+        _duckGain = _options.DuckGain;
+        _duckRampMs = _options.DuckRampMs;
         _mixer.MixerInputEnded += OnMixerInputEnded;
     }
 
@@ -62,6 +69,8 @@ public sealed class PhrasePlayer : IDisposable
     {
         PhraseSampleProvider provider;
         PhraseSampleProvider? toStop = null;
+        float duckGain;
+        int duckRampMs;
 
         lock (_sync)
         {
@@ -77,11 +86,13 @@ public sealed class PhrasePlayer : IDisposable
 
             provider = new PhraseSampleProvider(phrase.Samples, _mixer.WaveFormat, phrase.Id);
             _active = provider;
+            duckGain = _duckGain;
+            duckRampMs = _duckRampMs;
         }
 
         toStop?.Stop(_options.StopFadeMs);
         _mixer.AddMixerInput(provider);
-        _mic.Duck(_options.DuckGain, _options.DuckRampMs);
+        _mic.Duck(duckGain, duckRampMs);
         ActivePhraseChanged?.Invoke(this, provider.Id);
     }
 
@@ -92,6 +103,26 @@ public sealed class PhrasePlayer : IDisposable
         lock (_sync) { active = _active; }
 
         active?.Stop(_options.StopFadeMs);
+    }
+
+    /// <summary>
+    /// Change the duck level used while a phrase plays. Takes effect on the next <see cref="Play"/>,
+    /// and immediately if a phrase is playing right now (so a settings slider feels live). The mic is
+    /// not touched while idle — it must stay at full gain when no phrase is playing.
+    /// </summary>
+    public void SetDuck(float gain, int rampMs)
+    {
+        bool playing;
+        lock (_sync)
+        {
+            _duckGain = gain;
+            _duckRampMs = rampMs;
+            playing = _active is not null;
+        }
+
+        // Apply outside the lock, mirroring Play's lock order (never hold _sync while touching the mic).
+        if (playing)
+            _mic.Duck(gain, rampMs);
     }
 
     private void OnMixerInputEnded(object? sender, SampleProviderEventArgs e)

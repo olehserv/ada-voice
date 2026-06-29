@@ -22,6 +22,9 @@
     <!-- WPF UI: MVVM helpers (ObservableObject, RelayCommand) -->
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
 
+    <!-- WPF-UI: Fluent (Windows 11) theme + controls for the Board (design 09) -->
+    <PackageVersion Include="WPF-UI" Version="4.3.0" />
+
     <!-- Test stack -->
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

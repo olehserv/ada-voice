@@ -19,10 +19,12 @@ public partial class BoardViewModel : ObservableObject
     private readonly Action<Action> _onUiThread;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowRecordButton))]
     private bool _isRecording;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPendingTake))]
+    [NotifyPropertyChangedFor(nameof(ShowRecordButton))]
     private RecordingResult? _pendingTake;
 
     [ObservableProperty]
@@ -32,18 +34,30 @@ public partial class BoardViewModel : ObservableObject
     private string? _notice;
 
     public BoardViewModel(IPlaybackHost playback, IRecorderHost recorder, StatusViewModel status,
-        Action<Action>? onUiThread = null)
+        SettingsViewModel settings, Action<Action>? onUiThread = null)
     {
         _playback = playback;
         _recorder = recorder;
         _onUiThread = onUiThread ?? (action => action()); // default: inline (unit tests)
         Status = status;
+        Settings = settings;
         Phrases = new ObservableCollection<PhraseItemViewModel>(
             _playback.Phrases.Select(e => new PhraseItemViewModel(e)));
+        Phrases.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(IsEmpty));
+            OnPropertyChanged(nameof(HasPhrases));
+        };
         _playback.PlayingPhraseChanged += OnPlayingPhraseChanged;
     }
 
+    /// <summary>Raised after a take is saved, with its title — the view shows a "Saved" toast.</summary>
+    public event EventHandler<string>? Saved;
+
     public StatusViewModel Status { get; }
+
+    /// <summary>The inline settings (the duck-level slider) bound from the status bar.</summary>
+    public SettingsViewModel Settings { get; }
 
     /// <summary>The phrase buttons. An ObservableCollection so the UI updates when one is added; each
     /// item carries its own UI state (e.g. the playing glow). The library list stays the source of
@@ -52,6 +66,15 @@ public partial class BoardViewModel : ObservableObject
 
     /// <summary>True when a just-recorded take is waiting to be named/saved.</summary>
     public bool HasPendingTake => PendingTake is not null;
+
+    /// <summary>The idle "Record" button shows only when not recording and no take is pending.</summary>
+    public bool ShowRecordButton => !IsRecording && !HasPendingTake;
+
+    /// <summary>True when the board has no phrases — the view shows a first-run welcome card.</summary>
+    public bool IsEmpty => Phrases.Count == 0;
+
+    /// <summary>Inverse of <see cref="IsEmpty"/>, so the phrase grid can bind its visibility directly.</summary>
+    public bool HasPhrases => !IsEmpty;
 
     // ---- Playback -------------------------------------------------------------------------------
 
@@ -134,8 +157,9 @@ public partial class BoardViewModel : ObservableObject
 
         var entry = _recorder.SaveTake(take, NewTitle);
         PendingTake = null;
-        Notice = $"Saved \"{entry.Title}\".";
+        Notice = null; // the "Saved" feedback is now a toast (see Saved)
         Phrases.Add(new PhraseItemViewModel(entry)); // appears on the board immediately
+        Saved?.Invoke(this, entry.Title);
     }
 
     [RelayCommand]

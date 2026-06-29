@@ -27,7 +27,7 @@ namespace AdaVoice.Host;
 /// the console <c>Program</c> around it is throwaway. Logging is a plain callback, so this class
 /// depends on no logging library.
 /// </summary>
-public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost
+public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISettingsHost
 {
     private const string DefaultCategoryId = Category.DefaultId;
 
@@ -276,6 +276,22 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost
 
         return Preview(WavFile.Load(path), entry.GainDb);
     }
+
+    // ---- ISettingsHost --------------------------------------------------------------------------
+
+    /// <summary>The current mic-duck level in dB.</summary>
+    public double MicDuckDb => _settings.MicDuckDb;
+
+    /// <summary>Apply a new duck level live (engine + in-memory settings) without writing to disk.</summary>
+    public void SetMicDuckDb(double db)
+    {
+        db = Math.Clamp(db, -40, 0);
+        _settings = _settings with { MicDuckDb = db };
+        _engine.SetDuckLevel(RampGain.DbToLinear((float)db), _settings.DuckRampMs);
+    }
+
+    /// <summary>Persist the current settings to disk (call when a slider drag finishes).</summary>
+    public void SaveSettings() => _settingsRepository.Save(_settings);
 
     /// <summary>Choose, save, and report the monitor device previews play to. A null or blank name
     /// clears the choice (previews go to the OS default output).</summary>
