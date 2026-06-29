@@ -453,6 +453,46 @@ public class AudioEngineTests
         Assert.Equal(2, factory.CableCreateCount);
     }
 
+    [Fact]
+    public void SetDuckLevel_takes_effect_and_survives_a_stop_start_rebuild()
+    {
+        var (engine, factory, _, _) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+
+        // Full mute when ducking, so the cable shows only the (ducked) mic under a silent phrase.
+        engine.SetDuckLevel(0f, rampMs: 10);
+        engine.DrainPending();
+
+        AssertMicFullyDuckedUnderSilentPhrase(engine, factory);
+
+        // Stop + Start rebuilds the graph (a new PhrasePlayer from the original options). The chosen
+        // duck level must be re-applied, not reset to the -12 dB default.
+        engine.Stop();
+        engine.DrainPending();
+        engine.Start();
+        engine.DrainPending();
+
+        AssertMicFullyDuckedUnderSilentPhrase(engine, factory);
+    }
+
+    // Plays a silent phrase (so the only cable audio is the mic), pushes a mic tone, and asserts the
+    // steady-state tail is silent — i.e. the mic was ducked to zero. The ramp settles well before the tail.
+    private static void AssertMicFullyDuckedUnderSilentPhrase(AudioEngine engine, FakeDeviceFactory factory)
+    {
+        engine.Play(new Phrase("silent", new float[48_000]));
+        engine.DrainPending();
+
+        factory.LastMic!.Push(TestAudio.Sine(440, 4800));
+        factory.LastCable!.Pull(4800);
+
+        var tail = factory.LastCable!.Captured.Skip(2400);
+        Assert.All(tail, s => Assert.True(Math.Abs(s) < 1e-4f, $"expected ducked silence, got {s}"));
+
+        engine.StopPhrase();
+        engine.DrainPending();
+    }
+
     // Mirrors AudioEngine.StallThresholdMs; kept here so the watchdog test reads clearly.
     private const int StallMs = 500;
 

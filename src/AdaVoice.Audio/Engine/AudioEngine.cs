@@ -28,8 +28,14 @@ public sealed class AudioEngine : IDisposable
 
     private readonly IAudioDeviceFactory _factory;
     private readonly IEngineClock _clock;
-    private readonly PhrasePlayerOptions? _playerOptions;
+    private readonly PhrasePlayerOptions _playerOptions;
     private readonly BlockingCollection<EngineCommand> _queue = new();
+
+    // The current duck level. Seeded from the options but mutable (SetDuckLevel), so a settings slider
+    // can change it live. Held here, not only on the player, so it survives a Stop/Start that rebuilds
+    // the player from the options.
+    private float _duckGain;
+    private int _duckRampMs;
 
     // Live graph (null when Stopped).
     private IAudioCaptureDevice? _capture;
@@ -52,7 +58,9 @@ public sealed class AudioEngine : IDisposable
     {
         _factory = factory;
         _clock = clock;
-        _playerOptions = playerOptions;
+        _playerOptions = playerOptions ?? new PhrasePlayerOptions();
+        _duckGain = _playerOptions.DuckGain;
+        _duckRampMs = _playerOptions.DuckRampMs;
     }
 
     /// <summary>The current state. Updated on the control thread; safe to read for display.</summary>
@@ -68,6 +76,7 @@ public sealed class AudioEngine : IDisposable
     public void StopPhrase() => Post(new EngineCommand.StopPhrase());
     public void EnterOffAir() => Post(new EngineCommand.EnterOffAir());
     public void ExitOffAir() => Post(new EngineCommand.ExitOffAir());
+    public void SetDuckLevel(float gain, int rampMs) => Post(new EngineCommand.SetDuckLevel(gain, rampMs));
 
     public void Post(EngineCommand command)
     {
@@ -105,6 +114,7 @@ public sealed class AudioEngine : IDisposable
             case EngineCommand.Stop: HandleStop(); break;
             case EngineCommand.EnterOffAir: HandleEnterOffAir(); break;
             case EngineCommand.ExitOffAir: HandleExitOffAir(); break;
+            case EngineCommand.SetDuckLevel d: HandleSetDuckLevel(d.Gain, d.RampMs); break;
             case EngineCommand.Play play: HandlePlay(play.Phrase); break;
             case EngineCommand.StopPhrase: HandleStopPhrase(); break;
             case EngineCommand.StreamFaulted f: HandleStreamFaulted(f.Role, f.Error); break;
@@ -316,6 +326,15 @@ public sealed class AudioEngine : IDisposable
         _player!.Stop();
     }
 
+    private void HandleSetDuckLevel(float gain, int rampMs)
+    {
+        // Remember it so a later Stop/Start (which rebuilds the player from the options) keeps this
+        // level, and apply it to the player now if the graph is up (no-op when Stopped).
+        _duckGain = gain;
+        _duckRampMs = rampMs;
+        _player?.SetDuck(gain, rampMs);
+    }
+
     private void HandleEnterOffAir()
     {
         if (State != EngineState.Live)
@@ -346,6 +365,7 @@ public sealed class AudioEngine : IDisposable
         _mixer.AddMixerInput(_passthrough.Output);
 
         _player = new PhrasePlayer(_mixer, _passthrough, _playerOptions);
+        _player.SetDuck(_duckGain, _duckRampMs); // keep a slider-set level across a Stop/Start rebuild
         _player.ActivePhraseChanged += OnActivePhraseChanged;
         _gate = new CableGate(_mixer, _clock);
 
