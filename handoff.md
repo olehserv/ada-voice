@@ -39,7 +39,9 @@ monitor.** Next real step: run it on the target machine (checklist below), then 
       saves on release, and the value reloads on restart (`settings.json` `micDuckDb`). The pieces
       are tested, but the two-way binding + drag→Commit code-behind only run in the real app.
     - *Hardware run (cable + call):* the **audible** duck change at the far end.
-    - Decide on **FluentWindow chrome** (deferred — risk to Topmost) and merge the branch.
+  - **FluentWindow chrome — done (2026-06-29):** `ui:FluentWindow` + compact `ui:TitleBar`, solid
+    design-09 background (no Mica). Smoke-launched; **Topmost preserved** (verified via WS_EX_TOPMOST).
+  - **Merge** `feat/duck-slider-wpfui-polish` into `main` once the plain-run UI check passes.
 - ✅ **Design phase** — 9 docs in [`docs/design/`](docs/design/README.md), eng review + design
   review both CLEARED (2026-06-10).
 - ✅ **Canonical decisions** — 24 entries locked ([design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
