@@ -330,7 +330,7 @@ git commit -m "feat(app): Win32 global-hotkey registrar (RegisterHotKey + WM_HOT
 **Interfaces:**
 - Consumes: `HotkeyService`, `Win32HotkeyRegistrar` (Tasks 1–2); `BoardViewModel.StopCommand` (existing); `RootSnackbar` (existing in `MainWindow.xaml`).
 
-- [ ] **Step 1: Add the hotkey setup to the window**
+- [x] **Step 1: Add the hotkey setup to the window**
 
 Modify `src/AdaVoice.App/MainWindow.xaml.cs`. Add these usings at the top (alongside the existing ones):
 
@@ -381,12 +381,12 @@ Add a field inside the class and extend `OnLoaded`, plus a stop handler. The cla
 
 (`Snackbar` and `ControlAppearance` are already imported via the existing `using Wpf.Ui.Controls;`.)
 
-- [ ] **Step 2: Build and run the full test suite**
+- [x] **Step 2: Build and run the full test suite**
 
 Run: `dotnet test --nologo`
 Expected: all suites PASS (Core, Audio, App — App includes the 4 new hotkey tests).
 
-- [ ] **Step 3: Runtime smoke — confirm registration at launch**
+- [x] **Step 3: Runtime smoke — confirm registration at launch**
 
 Run: `dotnet run --project src/AdaVoice.App` (or launch the built exe), let it open, then close it.
 Check the newest log under `src/AdaVoice.App/bin/Debug/net10.0-windows/logs/adavoice-*.log`:
@@ -397,7 +397,7 @@ Expected: a line `Stop hotkey registered: Pause` (or `Ctrl+F12`).
 Start the engine, play a phrase, click into **Chrome** so the app is not focused, press **`Pause`**:
 Expected: the phrase stops (10 ms fade); the live mic keeps working. This is the core requirement and can only be checked by a real keypress.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/AdaVoice.App/MainWindow.xaml.cs
