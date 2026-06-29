@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="WPF-UI" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Sinks.File" />
   </ItemGroup>

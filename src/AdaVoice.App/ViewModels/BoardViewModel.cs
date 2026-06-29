@@ -19,10 +19,12 @@ public partial class BoardViewModel : ObservableObject
     private readonly Action<Action> _onUiThread;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowRecordButton))]
     private bool _isRecording;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPendingTake))]
+    [NotifyPropertyChangedFor(nameof(ShowRecordButton))]
     private RecordingResult? _pendingTake;
 
     [ObservableProperty]
@@ -56,6 +58,9 @@ public partial class BoardViewModel : ObservableObject
 
     /// <summary>True when a just-recorded take is waiting to be named/saved.</summary>
     public bool HasPendingTake => PendingTake is not null;
+
+    /// <summary>The idle "Record" button shows only when not recording and no take is pending.</summary>
+    public bool ShowRecordButton => !IsRecording && !HasPendingTake;
 
     // ---- Playback -------------------------------------------------------------------------------
 
