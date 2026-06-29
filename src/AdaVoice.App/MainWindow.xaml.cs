@@ -36,6 +36,8 @@ public partial class MainWindow : FluentWindow
         if (_hotkeys.Register())
         {
             Log.Information("Stop hotkey registered: {Key}", _hotkeys.ActiveHotkey);
+            HotkeyHint.Text = $"Or press {_hotkeys.ActiveHotkey} to stop from any window";
+            HotkeyHint.Visibility = Visibility.Visible;
         }
         else
         {

@@ -150,10 +150,17 @@
             </StackPanel>
         </Border>
 
-        <!-- Big STOP -->
-        <ui:Button Grid.Row="4" Content="STOP" Appearance="Danger" Command="{Binding StopCommand}"
-                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                   Height="56" FontSize="{StaticResource FontSize.Title}" FontWeight="Bold" />
+        <!-- Big STOP, with a hint of the global stop hotkey just below it.
+             HotkeyHint text + visibility are set in code-behind once the key is registered. -->
+        <StackPanel Grid.Row="4">
+            <ui:Button Content="STOP" Appearance="Danger" Command="{Binding StopCommand}"
+                       HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                       Height="56" FontSize="{StaticResource FontSize.Title}" FontWeight="Bold" />
+            <TextBlock x:Name="HotkeyHint" HorizontalAlignment="Center" Margin="0,6,0,0"
+                       Visibility="Collapsed"
+                       Foreground="{StaticResource Text.Secondary}"
+                       FontSize="{StaticResource FontSize.Label}" />
+        </StackPanel>
         </Grid>
 
         <!-- Toasts float above the board -->

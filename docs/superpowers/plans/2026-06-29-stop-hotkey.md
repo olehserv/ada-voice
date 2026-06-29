@@ -392,7 +392,7 @@ Run: `dotnet run --project src/AdaVoice.App` (or launch the built exe), let it o
 Check the newest log under `src/AdaVoice.App/bin/Debug/net10.0-windows/logs/adavoice-*.log`:
 Expected: a line `Stop hotkey registered: Pause` (or `Ctrl+F12`).
 
-- [ ] **Step 4: Manual end-to-end (operator/dev, needs the real app)**
+- [x] **Step 4: Manual end-to-end (operator/dev, needs the real app)**
 
 Start the engine, play a phrase, click into **Chrome** so the app is not focused, press **`Pause`**:
 Expected: the phrase stops (10 ms fade); the live mic keeps working. This is the core requirement and can only be checked by a real keypress.
