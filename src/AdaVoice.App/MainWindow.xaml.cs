@@ -1,12 +1,17 @@
 using System.Windows;
 using System.Windows.Controls.Primitives;
+using System.Windows.Interop;
+using AdaVoice.App.Services;
 using AdaVoice.App.ViewModels;
+using Serilog;
 using Wpf.Ui.Controls;
 
 namespace AdaVoice.App;
 
 public partial class MainWindow : FluentWindow
 {
+    private HotkeyService? _hotkeys;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -17,6 +22,34 @@ public partial class MainWindow : FluentWindow
     {
         if (DataContext is BoardViewModel board)
             board.Saved += OnPhraseSaved;
+
+        SetUpStopHotkey();
+        Closed += (_, _) => _hotkeys?.Dispose();
+    }
+
+    private void SetUpStopHotkey()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        _hotkeys = new HotkeyService(new Win32HotkeyRegistrar(hwnd));
+        _hotkeys.StopRequested += (_, _) => (DataContext as BoardViewModel)?.StopCommand.Execute(null);
+
+        if (_hotkeys.Register())
+        {
+            Log.Information("Stop hotkey registered: {Key}", _hotkeys.ActiveHotkey);
+            HotkeyHint.Text = $"Or press {_hotkeys.ActiveHotkey} to stop from any window";
+            HotkeyHint.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            Log.Warning("Stop hotkey unavailable: Pause and Ctrl+F12 are both taken");
+            new Snackbar(RootSnackbar)
+            {
+                Title = "Stop hotkey unavailable",
+                Content = "Use the on-screen STOP button.",
+                Appearance = ControlAppearance.Caution,
+                Timeout = TimeSpan.FromSeconds(5),
+            }.Show();
+        }
     }
 
     // Fires on the UI thread (SaveTake runs from a command), so showing the toast here is safe.
