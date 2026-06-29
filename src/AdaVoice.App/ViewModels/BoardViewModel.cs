@@ -43,8 +43,16 @@ public partial class BoardViewModel : ObservableObject
         Settings = settings;
         Phrases = new ObservableCollection<PhraseItemViewModel>(
             _playback.Phrases.Select(e => new PhraseItemViewModel(e)));
+        Phrases.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(IsEmpty));
+            OnPropertyChanged(nameof(HasPhrases));
+        };
         _playback.PlayingPhraseChanged += OnPlayingPhraseChanged;
     }
+
+    /// <summary>Raised after a take is saved, with its title — the view shows a "Saved" toast.</summary>
+    public event EventHandler<string>? Saved;
 
     public StatusViewModel Status { get; }
 
@@ -61,6 +69,12 @@ public partial class BoardViewModel : ObservableObject
 
     /// <summary>The idle "Record" button shows only when not recording and no take is pending.</summary>
     public bool ShowRecordButton => !IsRecording && !HasPendingTake;
+
+    /// <summary>True when the board has no phrases — the view shows a first-run welcome card.</summary>
+    public bool IsEmpty => Phrases.Count == 0;
+
+    /// <summary>Inverse of <see cref="IsEmpty"/>, so the phrase grid can bind its visibility directly.</summary>
+    public bool HasPhrases => !IsEmpty;
 
     // ---- Playback -------------------------------------------------------------------------------
 
@@ -143,8 +157,9 @@ public partial class BoardViewModel : ObservableObject
 
         var entry = _recorder.SaveTake(take, NewTitle);
         PendingTake = null;
-        Notice = $"Saved \"{entry.Title}\".";
+        Notice = null; // the "Saved" feedback is now a toast (see Saved)
         Phrases.Add(new PhraseItemViewModel(entry)); // appears on the board immediately
+        Saved?.Invoke(this, entry.Title);
     }
 
     [RelayCommand]

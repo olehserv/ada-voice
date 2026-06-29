@@ -12,7 +12,8 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </Window.Resources>
 
-    <Grid Margin="12">
+    <Grid>
+        <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -58,8 +59,10 @@
             </StackPanel>
         </Border>
 
-        <!-- Phrase buttons: click plays the phrase to the call -->
-        <ScrollViewer Grid.Row="2" Margin="0,12" VerticalScrollBarVisibility="Auto">
+        <!-- Phrase buttons, or a first-run welcome when the board is empty -->
+        <Grid Grid.Row="2" Margin="0,12">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      Visibility="{Binding HasPhrases, Converter={StaticResource BoolToVis}}">
             <ItemsControl ItemsSource="{Binding Phrases}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -85,6 +88,21 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+
+        <!-- First run: nudge the operator to record their first phrase -->
+        <ui:Card VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24" MaxWidth="320"
+                 Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+                <TextBlock Text="Your phrase board is empty" HorizontalAlignment="Center"
+                           FontSize="{StaticResource FontSize.SectionTitle}" FontWeight="SemiBold" />
+                <TextBlock Text="Record your first phrase — it takes about 30 seconds."
+                           Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap"
+                           TextAlignment="Center" Margin="0,8,0,16" />
+                <ui:Button Content="Record" Appearance="Primary" HorizontalAlignment="Center"
+                           Command="{Binding StartRecordingCommand}" />
+            </StackPanel>
+        </ui:Card>
+        </Grid>
 
         <!-- Record area -->
         <Border Grid.Row="3" Background="{StaticResource Surface.Raised}" CornerRadius="{StaticResource Radius.Control}"
@@ -125,5 +143,9 @@
         <ui:Button Grid.Row="4" Content="STOP" Appearance="Danger" Command="{Binding StopCommand}"
                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                    Height="56" FontSize="{StaticResource FontSize.Title}" FontWeight="Bold" />
+        </Grid>
+
+        <!-- Toasts float above the board -->
+        <ui:SnackbarPresenter x:Name="RootSnackbar" />
     </Grid>
 </Window>

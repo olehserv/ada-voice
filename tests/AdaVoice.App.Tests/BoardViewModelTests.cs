@@ -157,6 +157,46 @@ public class BoardViewModelTests
     }
 
     [Fact]
+    public void IsEmpty_reflects_whether_the_board_has_phrases()
+    {
+        Assert.True(NewBoard(new FakePlaybackHost()).IsEmpty);
+        Assert.False(NewBoard(new FakePlaybackHost { Phrases = [new PhraseEntry { Id = "p-1" }] }).IsEmpty);
+    }
+
+    [Fact]
+    public void Saving_the_first_take_clears_the_empty_state_and_notifies()
+    {
+        var host = new FakePlaybackHost { NextStopResult = Take() };
+        var board = NewBoard(host);
+        board.StopRecordingCommand.Execute(null);
+        Assert.True(board.IsEmpty);
+
+        var changed = new List<string?>();
+        board.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        board.SaveTakeCommand.Execute(null);
+
+        Assert.False(board.IsEmpty);
+        Assert.Contains(nameof(BoardViewModel.IsEmpty), changed);
+    }
+
+    [Fact]
+    public void Saving_a_take_raises_the_Saved_event_with_the_title()
+    {
+        var host = new FakePlaybackHost { NextStopResult = Take() };
+        var board = NewBoard(host);
+        board.StopRecordingCommand.Execute(null);
+        board.NewTitle = "Hello";
+
+        string? saved = null;
+        board.Saved += (_, title) => saved = title;
+
+        board.SaveTakeCommand.Execute(null);
+
+        Assert.Equal("Hello", saved);
+    }
+
+    [Fact]
     public void Discard_take_clears_it_without_saving()
     {
         var host = new FakePlaybackHost { NextStopResult = Take() };
