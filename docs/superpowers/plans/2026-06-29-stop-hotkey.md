@@ -238,7 +238,7 @@ git commit -m "feat(app): stop-hotkey policy core (Pause -> Ctrl+F12 fallback) +
 
 This task is Win32 interop that cannot run in CI; it is verified by the runtime smoke check in Task 3. Right-sized as its own task because it is a self-contained, reviewable unit.
 
-- [ ] **Step 1: Implement the registrar**
+- [x] **Step 1: Implement the registrar**
 
 Create `src/AdaVoice.App/Services/Win32HotkeyRegistrar.cs`:
 
@@ -308,12 +308,12 @@ public sealed class Win32HotkeyRegistrar : IHotkeyRegistrar
 }
 ```
 
-- [ ] **Step 2: Build to verify it compiles**
+- [x] **Step 2: Build to verify it compiles**
 
 Run: `dotnet build src/AdaVoice.App --nologo`
 Expected: `Build succeeded.`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/AdaVoice.App/Services/Win32HotkeyRegistrar.cs
