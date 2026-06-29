@@ -32,8 +32,14 @@ monitor.** Next real step: run it on the target machine (checklist below), then 
   - WPF-UI 4.3.0 Fluent dark theme adopted: `ui:Button` appearances (STOP=Danger, Record=Primary),
     shared `PhraseButtonStyle`, finished tokens (type scale, spacing, radius; Segoe UI Variable),
     first-run welcome `ui:Card`, and a save toast (`Snackbar`). 167 unit tests green; app smoke-launches.
-  - **Still TODO on this work:** hardware run (the slider's audible duck + persistence need the real
-    cable + a call); decide on **FluentWindow chrome** (deferred — risk to Topmost) and merge.
+  - **Verified (automated):** duck DSP/engine logic, settings save/reload round-trip
+    (`MicDuckDb`), VM apply/commit, and the app parses + launches.
+  - **Still TODO on this work:**
+    - *Plain run (no cable/call):* confirm the slider UI wiring — dragging it changes the value,
+      saves on release, and the value reloads on restart (`settings.json` `micDuckDb`). The pieces
+      are tested, but the two-way binding + drag→Commit code-behind only run in the real app.
+    - *Hardware run (cable + call):* the **audible** duck change at the far end.
+    - Decide on **FluentWindow chrome** (deferred — risk to Topmost) and merge the branch.
 - ✅ **Design phase** — 9 docs in [`docs/design/`](docs/design/README.md), eng review + design
   review both CLEARED (2026-06-10).
 - ✅ **Canonical decisions** — 24 entries locked ([design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
