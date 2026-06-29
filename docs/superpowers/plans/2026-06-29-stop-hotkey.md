@@ -33,7 +33,7 @@
   - `public interface IHotkeyRegistrar : IDisposable { bool TryRegister(HotkeyDef def); event EventHandler? Pressed; }`
   - `public sealed class HotkeyService(IHotkeyRegistrar registrar) : IDisposable` with `bool Register()`, `string? ActiveHotkey { get; }`, `event EventHandler? StopRequested`.
 
-- [ ] **Step 1: Write the seam + value types (no logic yet)**
+- [x] **Step 1: Write the seam + value types (no logic yet)**
 
 Create `src/AdaVoice.App/Services/HotkeyDef.cs`:
 
@@ -62,7 +62,7 @@ public interface IHotkeyRegistrar : IDisposable
 }
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Create `tests/AdaVoice.App.Tests/FakeHotkeyRegistrar.cs`:
 
@@ -150,12 +150,12 @@ public class HotkeyServiceTests
 }
 ```
 
-- [ ] **Step 3: Run the tests to verify they fail**
+- [x] **Step 3: Run the tests to verify they fail**
 
 Run: `dotnet test tests/AdaVoice.App.Tests --filter FullyQualifiedName~HotkeyServiceTests`
 Expected: FAIL to compile — `HotkeyService` does not exist.
 
-- [ ] **Step 4: Implement `HotkeyService`**
+- [x] **Step 4: Implement `HotkeyService`**
 
 Create `src/AdaVoice.App/Services/HotkeyService.cs`:
 
@@ -213,12 +213,12 @@ public sealed class HotkeyService : IDisposable
 }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `dotnet test tests/AdaVoice.App.Tests --filter FullyQualifiedName~HotkeyServiceTests`
 Expected: PASS (4 tests).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/AdaVoice.App/Services tests/AdaVoice.App.Tests/FakeHotkeyRegistrar.cs tests/AdaVoice.App.Tests/HotkeyServiceTests.cs
