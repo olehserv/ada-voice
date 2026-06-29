@@ -8,7 +8,7 @@ back up. It answers one question: *where are we right now?*
   the strategy (see [roadmap](docs/roadmaps/mvp-roadmap.md)), or the decision record
   (canonical table in [design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
 
-_Last updated: 2026-06-22._
+_Last updated: 2026-06-29._
 
 ---
 
@@ -22,6 +22,18 @@ monitor.** Next real step: run it on the target machine (checklist below), then 
 
 ## Done
 
+- ✅ **Operator pilot prepared (2026-06-29)** — [`docs/plans/operator-pilot.md`](docs/plans/operator-pilot.md):
+  a functional-smoke pilot script (record fresh live, real test call). The supervised pilot passed
+  (user: "tested everything, works awesome").
+- ✅ **Duck slider + WPF-UI polish — on branch `feat/duck-slider-wpfui-polish` (not yet merged), 2026-06-29.**
+  - Live mic-duck slider: `PhrasePlayer.SetDuck` + `EngineCommand.SetDuckLevel` (engine re-applies the
+    level after a Stop/Start rebuild) → `ISettingsHost` on `EngineHost` (apply-live vs save split) →
+    `SettingsViewModel` + a snapped −40..0 dB slider in the status bar (saves on drag-end).
+  - WPF-UI 4.3.0 Fluent dark theme adopted: `ui:Button` appearances (STOP=Danger, Record=Primary),
+    shared `PhraseButtonStyle`, finished tokens (type scale, spacing, radius; Segoe UI Variable),
+    first-run welcome `ui:Card`, and a save toast (`Snackbar`). 167 unit tests green; app smoke-launches.
+  - **Still TODO on this work:** hardware run (the slider's audible duck + persistence need the real
+    cable + a call); decide on **FluentWindow chrome** (deferred — risk to Topmost) and merge.
 - ✅ **Design phase** — 9 docs in [`docs/design/`](docs/design/README.md), eng review + design
   review both CLEARED (2026-06-10).
 - ✅ **Canonical decisions** — 24 entries locked ([design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
