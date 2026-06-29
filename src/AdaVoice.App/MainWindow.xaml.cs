@@ -5,7 +5,7 @@ using Wpf.Ui.Controls;
 
 namespace AdaVoice.App;
 
-public partial class MainWindow : Window
+public partial class MainWindow : FluentWindow
 {
     public MainWindow()
     {

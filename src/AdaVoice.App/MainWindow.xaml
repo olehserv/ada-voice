@@ -1,9 +1,12 @@
-<Window x:Class="AdaVoice.App.MainWindow"
+<ui:FluentWindow x:Class="AdaVoice.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="AdaVoice" Topmost="True"
         Width="480" Height="640" MinWidth="420" MinHeight="560"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="None"
+        WindowCornerPreference="Round"
         Background="{StaticResource Surface.Window}"
         TextElement.Foreground="{StaticResource Text.Primary}"
         FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
@@ -13,7 +16,15 @@
     </Window.Resources>
 
     <Grid>
-        <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Fluent title bar (compact tool: no maximize) -->
+        <ui:TitleBar Grid.Row="0" Title="AdaVoice" ShowMaximize="False" CanMaximize="False" />
+
+        <Grid Grid.Row="1" Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -146,6 +157,6 @@
         </Grid>
 
         <!-- Toasts float above the board -->
-        <ui:SnackbarPresenter x:Name="RootSnackbar" />
+        <ui:SnackbarPresenter Grid.Row="1" x:Name="RootSnackbar" />
     </Grid>
-</Window>
+</ui:FluentWindow>
