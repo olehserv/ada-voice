@@ -263,6 +263,28 @@ public class BoardViewModelTests
     }
 
     [Fact]
+    public void Editing_a_phrase_out_of_the_active_filter_hides_it_from_the_view()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-1", Name = "Greetings" }],
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = "c-1" }],
+        };
+        var board = NewBoard(host, showEditDialog: edit =>
+        {
+            edit.SelectedCategoryId = Category.DefaultId; // move it out of "Greetings"
+            return true;
+        });
+        board.SelectedCategoryFilter = board.CategoryFilterOptions.First(c => c.Id == "c-1");
+        Assert.Single(VisibleTitles(board));
+
+        board.EditCommand.Execute(board.Phrases[0]);
+
+        Assert.Empty(VisibleTitles(board)); // moved out of the filtered view
+        Assert.True(board.NoMatches);
+    }
+
+    [Fact]
     public void Edit_command_cancelled_changes_nothing()
     {
         var host = new FakePlaybackHost

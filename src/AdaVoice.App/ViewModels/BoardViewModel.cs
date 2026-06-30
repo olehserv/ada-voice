@@ -197,7 +197,12 @@ public partial class BoardViewModel : ObservableObject
             return; // cancelled
 
         if (edit.Save() is { } updated)
+        {
             item.Update(updated);
+            // Update swaps the entry in place (no CollectionChanged), so re-run the filter — a rename or
+            // category change can move the item in or out of the current search/category view.
+            RefreshFilter();
+        }
     }
 
     /// <summary>Delete a phrase after confirmation: orphan its WAV, drop it from the board, and toast.</summary>
