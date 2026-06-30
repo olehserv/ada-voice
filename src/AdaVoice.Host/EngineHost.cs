@@ -154,6 +154,10 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     public PhraseEntry? SetPhraseCategory(string phraseId, string categoryId) => _library.SetPhraseCategory(phraseId, categoryId);
     public PhraseEntry? SetPhraseTags(string phraseId, IEnumerable<string> tags) => _library.SetPhraseTags(phraseId, tags);
 
+    public Category AddCategory(string name, string color) => _library.AddCategory(name, color);
+    public Category? UpdateCategory(string id, string name, string color) => _library.UpdateCategory(id, name, color);
+    public bool DeleteCategory(string id) => _library.DeleteCategory(id);
+
     public void Start()
     {
         if (!_running)

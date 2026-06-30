@@ -36,7 +36,8 @@ public partial class App : Application
             _host, _host, _host, status, settings,
             action => Dispatcher.BeginInvoke(action),
             confirmDelete: window.ConfirmDelete,
-            showEditDialog: window.ShowEditDialog);
+            showEditDialog: window.ShowEditDialog,
+            showManageCategories: window.ShowManageCategories);
 
         window.DataContext = board;
         window.Show();

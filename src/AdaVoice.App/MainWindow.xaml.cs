@@ -44,6 +44,10 @@ public partial class MainWindow : FluentWindow
     public bool ShowEditDialog(PhraseEditViewModel edit) =>
         new PhraseEditDialog { DataContext = edit, Owner = this }.ShowDialog() == true;
 
+    /// <summary>Show the modal category manager (changes persist live, so nothing is returned).</summary>
+    public void ShowManageCategories(CategoriesViewModel categories) =>
+        new ManageCategoriesDialog { DataContext = categories, Owner = this }.ShowDialog();
+
     private void SetUpStopHotkey()
     {
         var hwnd = new WindowInteropHelper(this).Handle;

@@ -23,6 +23,7 @@ public partial class BoardViewModel : ObservableObject
     private readonly ILibraryHost _library;
     private readonly Func<PhraseItemViewModel, bool> _confirmDelete;
     private readonly Func<PhraseEditViewModel, bool> _showEditDialog;
+    private readonly Action<CategoriesViewModel> _showManageCategories;
     private readonly Action<Action> _onUiThread;
 
     [ObservableProperty]
@@ -51,7 +52,8 @@ public partial class BoardViewModel : ObservableObject
     public BoardViewModel(IPlaybackHost playback, IRecorderHost recorder, ILibraryHost library,
         StatusViewModel status, SettingsViewModel settings, Action<Action>? onUiThread = null,
         Func<PhraseItemViewModel, bool>? confirmDelete = null,
-        Func<PhraseEditViewModel, bool>? showEditDialog = null)
+        Func<PhraseEditViewModel, bool>? showEditDialog = null,
+        Action<CategoriesViewModel>? showManageCategories = null)
     {
         _playback = playback;
         _recorder = recorder;
@@ -59,6 +61,7 @@ public partial class BoardViewModel : ObservableObject
         _onUiThread = onUiThread ?? (action => action()); // default: inline (unit tests)
         _confirmDelete = confirmDelete ?? (_ => true);     // default: confirm (unit tests)
         _showEditDialog = showEditDialog ?? (_ => false);  // default: cancel (unit tests opt in)
+        _showManageCategories = showManageCategories ?? (_ => { }); // default: no-op (unit tests)
         Status = status;
         Settings = settings;
         var broken = library.BrokenPhraseIds.ToHashSet();
@@ -111,8 +114,9 @@ public partial class BoardViewModel : ObservableObject
     /// <summary>The filtered, ordered view of <see cref="Phrases"/> the grid binds to.</summary>
     public ICollectionView PhrasesView { get; }
 
-    /// <summary>"All categories" followed by the real categories — the filter dropdown's items.</summary>
-    public IReadOnlyList<Category> CategoryFilterOptions { get; }
+    /// <summary>"All categories" followed by the real categories — the filter dropdown's items. Rebuilt
+    /// after the category manager runs, since categories may have been added/renamed/deleted.</summary>
+    public IReadOnlyList<Category> CategoryFilterOptions { get; private set; }
 
     /// <summary>True when the board has no phrases at all — the view shows a first-run welcome card.</summary>
     public bool IsEmpty => Phrases.Count == 0;
@@ -142,6 +146,18 @@ public partial class BoardViewModel : ObservableObject
         var term = search.Trim();
         return entry.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
             || entry.Tags.Any(t => t.Contains(term, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>Open the category manager; when it closes, rebuild the filter dropdown (categories may
+    /// have changed) and reset the filter to "All".</summary>
+    [RelayCommand]
+    private void ManageCategories()
+    {
+        _showManageCategories(new CategoriesViewModel(_library));
+
+        CategoryFilterOptions = [AllCategories, .. _library.Categories];
+        OnPropertyChanged(nameof(CategoryFilterOptions));
+        SelectedCategoryFilter = AllCategories; // also refreshes the filter
     }
 
     partial void OnSearchTextChanged(string value) => RefreshFilter();

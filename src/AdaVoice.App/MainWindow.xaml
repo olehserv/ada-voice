@@ -83,6 +83,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <ui:TextBox Grid.Column="0" PlaceholderText="Search title or tags…"
                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
@@ -90,6 +91,9 @@
                       ItemsSource="{Binding CategoryFilterOptions}"
                       SelectedItem="{Binding SelectedCategoryFilter}"
                       DisplayMemberPath="Name" />
+            <ui:Button Grid.Column="2" Margin="8,0,0,0" Appearance="Secondary"
+                       Content="Categories…" Command="{Binding ManageCategoriesCommand}"
+                       ToolTip="Add, rename, or delete categories" />
         </Grid>
 
         <Grid Grid.Row="1">

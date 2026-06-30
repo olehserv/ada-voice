@@ -34,4 +34,15 @@ public interface ILibraryHost
     /// <summary>Delete a phrase by orphaning its WAV (never destroyed). Returns the removed entry, or
     /// null if the id is unknown.</summary>
     PhraseEntry? DeleteEntry(PhraseEntry entry);
+
+    /// <summary>Create a category. Throws if the name is blank.</summary>
+    Category AddCategory(string name, string color);
+
+    /// <summary>Rename/recolour a category. Returns the updated category, or null if the id is unknown.
+    /// Throws if the name is blank.</summary>
+    Category? UpdateCategory(string id, string name, string color);
+
+    /// <summary>Delete a category (its phrases fall back to Uncategorized). Returns false if the id is
+    /// unknown or is the protected default category.</summary>
+    bool DeleteCategory(string id);
 }

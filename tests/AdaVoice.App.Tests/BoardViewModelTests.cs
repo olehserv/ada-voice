@@ -10,9 +10,11 @@ public class BoardViewModelTests
     private static BoardViewModel NewBoard(
         FakePlaybackHost host,
         Func<PhraseItemViewModel, bool>? confirmDelete = null,
-        Func<PhraseEditViewModel, bool>? showEditDialog = null) =>
+        Func<PhraseEditViewModel, bool>? showEditDialog = null,
+        Action<CategoriesViewModel>? showManageCategories = null) =>
         new(host, host, host, new StatusViewModel(host), new SettingsViewModel(new FakeSettingsHost()),
-            confirmDelete: confirmDelete, showEditDialog: showEditDialog);
+            confirmDelete: confirmDelete, showEditDialog: showEditDialog,
+            showManageCategories: showManageCategories);
 
     private static RecordingResult Take() => new(new float[10], GainDb: -3, DurationMs: 1000, PeakDbfs: -6);
 
@@ -374,5 +376,22 @@ public class BoardViewModelTests
         var firstRun = NewBoard(new FakePlaybackHost());
         Assert.True(firstRun.IsEmpty);     // first-run welcome
         Assert.False(firstRun.NoMatches);  // not a "no matches" result
+    }
+
+    [Fact]
+    public void Manage_categories_opens_the_manager_then_rebuilds_the_filter_options()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = Category.DefaultId, Name = "Uncategorized" }],
+        };
+        // The "dialog" adds a category, like the user would.
+        var board = NewBoard(host, showManageCategories: vm => { vm.NewName = "Greetings"; vm.AddCommand.Execute(null); });
+
+        board.ManageCategoriesCommand.Execute(null);
+
+        // "All categories" sentinel + Uncategorized + the new one.
+        Assert.Contains(board.CategoryFilterOptions, c => c.Name == "Greetings");
+        Assert.Same(BoardViewModel.AllCategories, board.SelectedCategoryFilter); // reset to All
     }
 }

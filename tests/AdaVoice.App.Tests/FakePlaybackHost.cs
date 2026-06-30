@@ -91,6 +91,36 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
         return updated;
     }
 
+    public Category AddCategory(string name, string color)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("blank", nameof(name));
+
+        var category = new Category { Id = "c-" + (Categories.Count + 1), Name = name.Trim(), Color = color };
+        Categories = [.. Categories, category];
+        return category;
+    }
+
+    public Category? UpdateCategory(string id, string name, string color)
+    {
+        var existing = Categories.FirstOrDefault(c => c.Id == id);
+        if (existing is null)
+            return null;
+
+        var updated = existing with { Name = name.Trim(), Color = color };
+        Categories = Categories.Select(c => c.Id == id ? updated : c).ToList();
+        return updated;
+    }
+
+    public bool DeleteCategory(string id)
+    {
+        if (id == Category.DefaultId || Categories.All(c => c.Id != id))
+            return false;
+
+        Categories = Categories.Where(c => c.Id != id).ToList();
+        return true;
+    }
+
     // ---- IRecorderHost ----
     public bool TryStartRecording()
     {
