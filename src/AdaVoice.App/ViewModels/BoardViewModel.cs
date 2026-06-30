@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Recording;
-using AdaVoice.Core.Domain;
 using AdaVoice.Host;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -9,13 +8,18 @@ using CommunityToolkit.Mvvm.Input;
 namespace AdaVoice.App.ViewModels;
 
 /// <summary>
-/// The Board: shows the phrases, plays them to the call, and records new ones. Talks only to the host
-/// seams (<see cref="IPlaybackHost"/> / <see cref="IRecorderHost"/>), so it is unit-testable with a fake.
+/// The Board: shows the phrases, plays them to the call, records new ones, and edits/deletes them. Talks
+/// only to the host seams (<see cref="IPlaybackHost"/> / <see cref="IRecorderHost"/> /
+/// <see cref="ILibraryHost"/>), so it is unit-testable with a fake. Editing and deleting use injected
+/// dialog callbacks so the view-model needs no XAML to test.
 /// </summary>
 public partial class BoardViewModel : ObservableObject
 {
     private readonly IPlaybackHost _playback;
     private readonly IRecorderHost _recorder;
+    private readonly ILibraryHost _library;
+    private readonly Func<PhraseItemViewModel, bool> _confirmDelete;
+    private readonly Func<PhraseEditViewModel, bool> _showEditDialog;
     private readonly Action<Action> _onUiThread;
 
     [ObservableProperty]
@@ -33,16 +37,22 @@ public partial class BoardViewModel : ObservableObject
     [ObservableProperty]
     private string? _notice;
 
-    public BoardViewModel(IPlaybackHost playback, IRecorderHost recorder, StatusViewModel status,
-        SettingsViewModel settings, Action<Action>? onUiThread = null)
+    public BoardViewModel(IPlaybackHost playback, IRecorderHost recorder, ILibraryHost library,
+        StatusViewModel status, SettingsViewModel settings, Action<Action>? onUiThread = null,
+        Func<PhraseItemViewModel, bool>? confirmDelete = null,
+        Func<PhraseEditViewModel, bool>? showEditDialog = null)
     {
         _playback = playback;
         _recorder = recorder;
+        _library = library;
         _onUiThread = onUiThread ?? (action => action()); // default: inline (unit tests)
+        _confirmDelete = confirmDelete ?? (_ => true);     // default: confirm (unit tests)
+        _showEditDialog = showEditDialog ?? (_ => false);  // default: cancel (unit tests opt in)
         Status = status;
         Settings = settings;
+        var broken = library.BrokenPhraseIds.ToHashSet();
         Phrases = new ObservableCollection<PhraseItemViewModel>(
-            _playback.Phrases.Select(e => new PhraseItemViewModel(e)));
+            _library.Phrases.Select(e => new PhraseItemViewModel(e) { IsBroken = broken.Contains(e.Id) }));
         Phrases.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(IsEmpty));
@@ -53,6 +63,9 @@ public partial class BoardViewModel : ObservableObject
 
     /// <summary>Raised after a take is saved, with its title — the view shows a "Saved" toast.</summary>
     public event EventHandler<string>? Saved;
+
+    /// <summary>Raised after a phrase is deleted, with its title — the view shows a "Deleted" toast.</summary>
+    public event EventHandler<string>? Deleted;
 
     public StatusViewModel Status { get; }
 
@@ -87,6 +100,37 @@ public partial class BoardViewModel : ObservableObject
 
     [RelayCommand]
     private void Stop() => _playback.StopPhrase();
+
+    // ---- Edit / delete --------------------------------------------------------------------------
+
+    /// <summary>Open the edit dialog for a phrase; on commit, write the changes and refresh the item in
+    /// place (the wrapped entry is immutable, so the VM must be told to re-read).</summary>
+    [RelayCommand]
+    private void Edit(PhraseItemViewModel? item)
+    {
+        if (item is null)
+            return;
+
+        var edit = new PhraseEditViewModel(_library, item.Entry);
+        if (!_showEditDialog(edit))
+            return; // cancelled
+
+        if (edit.Save() is { } updated)
+            item.Update(updated);
+    }
+
+    /// <summary>Delete a phrase after confirmation: orphan its WAV, drop it from the board, and toast.</summary>
+    [RelayCommand]
+    private void Delete(PhraseItemViewModel? item)
+    {
+        if (item is null || !_confirmDelete(item))
+            return;
+
+        var title = item.Title;
+        _library.DeleteEntry(item.Entry);
+        Phrases.Remove(item);
+        Deleted?.Invoke(this, title);
+    }
 
     /// <summary>Reflect the engine's currently-playing phrase as the per-item glow. Fires off the UI
     /// thread, so marshal before touching the bound items.</summary>

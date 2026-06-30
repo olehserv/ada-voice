@@ -5,9 +5,10 @@ using AdaVoice.Host;
 
 namespace AdaVoice.App.Tests;
 
-/// <summary>A test double for both host seams: records the calls the view-models make, can raise state
-/// changes, and grows its phrase list when a take is saved.</summary>
-internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost
+/// <summary>A test double for the host seams: records the calls the view-models make, can raise state
+/// changes, and grows its phrase list when a take is saved. Mirrors the real <c>EngineHost</c>, which
+/// implements every seam on one object.</summary>
+internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryHost
 {
     private List<PhraseEntry> _phrases = [];
 
@@ -18,6 +19,11 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost
         get => _phrases;
         set => _phrases = value.ToList();
     }
+
+    // ---- ILibraryHost knobs the tests configure or inspect ----
+    public IReadOnlyList<Category> Categories { get; set; } = [];
+    public IReadOnlyList<string> BrokenPhraseIds { get; set; } = [];
+    public List<PhraseEntry> Deleted { get; } = [];
 
     public event EventHandler<EngineState>? StateChanged;
     public event EventHandler<string?>? PlayingPhraseChanged;
@@ -51,6 +57,39 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost
     }
 
     public void RaisePlayingPhraseChanged(string? id) => PlayingPhraseChanged?.Invoke(this, id);
+
+    // ---- ILibraryHost ----
+    public PhraseEntry? SetPhraseTitle(string phraseId, string title) =>
+        Edit(phraseId, p => p with { Title = title.Trim() });
+
+    public PhraseEntry? SetPhraseCategory(string phraseId, string categoryId) =>
+        Edit(phraseId, p => p with { CategoryId = categoryId });
+
+    public PhraseEntry? SetPhraseTags(string phraseId, IEnumerable<string> tags) =>
+        Edit(phraseId, p => p with { Tags = tags.Select(t => t.Trim()).Where(t => t.Length > 0).ToArray() });
+
+    public PhraseEntry? DeleteEntry(PhraseEntry entry)
+    {
+        Calls.Add("DeleteEntry");
+        var existing = _phrases.FirstOrDefault(p => p.Id == entry.Id);
+        if (existing is null)
+            return null;
+
+        _phrases.Remove(existing);
+        Deleted.Add(existing);
+        return existing;
+    }
+
+    private PhraseEntry? Edit(string phraseId, Func<PhraseEntry, PhraseEntry> edit)
+    {
+        var index = _phrases.FindIndex(p => p.Id == phraseId);
+        if (index < 0)
+            return null;
+
+        var updated = edit(_phrases[index]);
+        _phrases[index] = updated;
+        return updated;
+    }
 
     // ---- IRecorderHost ----
     public bool TryStartRecording()

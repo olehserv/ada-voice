@@ -7,8 +7,12 @@ namespace AdaVoice.App.Tests;
 
 public class BoardViewModelTests
 {
-    private static BoardViewModel NewBoard(FakePlaybackHost host) =>
-        new(host, host, new StatusViewModel(host), new SettingsViewModel(new FakeSettingsHost()));
+    private static BoardViewModel NewBoard(
+        FakePlaybackHost host,
+        Func<PhraseItemViewModel, bool>? confirmDelete = null,
+        Func<PhraseEditViewModel, bool>? showEditDialog = null) =>
+        new(host, host, host, new StatusViewModel(host), new SettingsViewModel(new FakeSettingsHost()),
+            confirmDelete: confirmDelete, showEditDialog: showEditDialog);
 
     private static RecordingResult Take() => new(new float[10], GainDb: -3, DurationMs: 1000, PeakDbfs: -6);
 
@@ -221,5 +225,82 @@ public class BoardViewModelTests
 
         Assert.Contains("Preview", host.Calls);
         Assert.Same(take.Samples, host.PreviewedSamples);
+    }
+
+    // ---- Edit / delete -----------------------------------------------------------------------
+
+    [Fact]
+    public void Broken_phrases_are_flagged_from_the_host()
+    {
+        var host = new FakePlaybackHost
+        {
+            Phrases = [new PhraseEntry { Id = "p-1" }, new PhraseEntry { Id = "p-2" }],
+            BrokenPhraseIds = ["p-2"],
+        };
+        var board = NewBoard(host);
+
+        Assert.False(board.Phrases[0].IsBroken);
+        Assert.True(board.Phrases[1].IsBroken);
+    }
+
+    [Fact]
+    public void Edit_command_updates_the_item_in_place_when_the_dialog_commits()
+    {
+        var host = new FakePlaybackHost
+        {
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Old", CategoryId = Category.DefaultId }],
+        };
+        // The dialog edits the view-model, then "commits" (returns true).
+        var board = NewBoard(host, showEditDialog: edit => { edit.Title = "New"; return true; });
+        var item = board.Phrases[0];
+
+        board.EditCommand.Execute(item);
+
+        Assert.Equal("New", item.Title);              // same item, refreshed (the immutability trap)
+        Assert.Equal("New", host.Phrases[0].Title);   // persisted through the seam
+    }
+
+    [Fact]
+    public void Edit_command_cancelled_changes_nothing()
+    {
+        var host = new FakePlaybackHost
+        {
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Old", CategoryId = Category.DefaultId }],
+        };
+        var board = NewBoard(host, showEditDialog: edit => { edit.Title = "New"; return false; });
+        var item = board.Phrases[0];
+
+        board.EditCommand.Execute(item);
+
+        Assert.Equal("Old", item.Title);
+        Assert.Equal("Old", host.Phrases[0].Title);
+    }
+
+    [Fact]
+    public void Delete_command_orphans_removes_and_raises_Deleted_when_confirmed()
+    {
+        var host = new FakePlaybackHost { Phrases = [new PhraseEntry { Id = "p-1", Title = "Bye" }] };
+        var board = NewBoard(host, confirmDelete: _ => true);
+        var item = board.Phrases[0];
+        string? deleted = null;
+        board.Deleted += (_, title) => deleted = title;
+
+        board.DeleteCommand.Execute(item);
+
+        Assert.Empty(board.Phrases);
+        Assert.Equal("p-1", Assert.Single(host.Deleted).Id);
+        Assert.Equal("Bye", deleted);
+    }
+
+    [Fact]
+    public void Delete_command_does_nothing_when_not_confirmed()
+    {
+        var host = new FakePlaybackHost { Phrases = [new PhraseEntry { Id = "p-1" }] };
+        var board = NewBoard(host, confirmDelete: _ => false);
+
+        board.DeleteCommand.Execute(board.Phrases[0]);
+
+        Assert.Single(board.Phrases);
+        Assert.Empty(host.Deleted);
     }
 }

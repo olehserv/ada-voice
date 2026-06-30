@@ -27,7 +27,7 @@ namespace AdaVoice.Host;
 /// the console <c>Program</c> around it is throwaway. Logging is a plain callback, so this class
 /// depends on no logging library.
 /// </summary>
-public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISettingsHost
+public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISettingsHost, ILibraryHost
 {
     private const string DefaultCategoryId = Category.DefaultId;
 
@@ -144,6 +144,15 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
 
     /// <summary>The catalogued phrases, in stored order.</summary>
     public IReadOnlyList<PhraseEntry> Phrases => _library.Phrases;
+
+    // ---- ILibraryHost (the library read-model + edits the Board makes) --------------------------
+
+    public IReadOnlyList<Category> Categories => _library.Categories;
+    public IReadOnlyList<string> BrokenPhraseIds => _library.BrokenPhraseIds;
+
+    public PhraseEntry? SetPhraseTitle(string phraseId, string title) => _library.SetPhraseTitle(phraseId, title);
+    public PhraseEntry? SetPhraseCategory(string phraseId, string categoryId) => _library.SetPhraseCategory(phraseId, categoryId);
+    public PhraseEntry? SetPhraseTags(string phraseId, IEnumerable<string> tags) => _library.SetPhraseTags(phraseId, tags);
 
     public void Start()
     {

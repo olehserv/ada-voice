@@ -21,11 +21,28 @@ public partial class MainWindow : FluentWindow
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (DataContext is BoardViewModel board)
+        {
             board.Saved += OnPhraseSaved;
+            board.Deleted += OnPhraseDeleted;
+        }
 
         SetUpStopHotkey();
         Closed += (_, _) => _hotkeys?.Dispose();
     }
+
+    /// <summary>Confirm a delete (the board calls this before orphaning the WAV). Synchronous so it fits
+    /// the view-model's <c>Func&lt;_, bool&gt;</c> callback.</summary>
+    public bool ConfirmDelete(PhraseItemViewModel item) =>
+        System.Windows.MessageBox.Show(
+            this,
+            $"Delete “{item.Title}”?\n\nThe recording is kept as a backup and can be recovered.",
+            "Delete phrase",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.Yes;
+
+    /// <summary>Show the modal edit form; returns true if the user pressed Save.</summary>
+    public bool ShowEditDialog(PhraseEditViewModel edit) =>
+        new PhraseEditDialog { DataContext = edit, Owner = this }.ShowDialog() == true;
 
     private void SetUpStopHotkey()
     {
@@ -59,6 +76,15 @@ public partial class MainWindow : FluentWindow
             Title = "Saved",
             Content = title,
             Appearance = ControlAppearance.Success,
+            Timeout = TimeSpan.FromSeconds(3),
+        }.Show();
+
+    private void OnPhraseDeleted(object? sender, string title) =>
+        new Snackbar(RootSnackbar)
+        {
+            Title = "Deleted",
+            Content = title,
+            Appearance = ControlAppearance.Caution,
             Timeout = TimeSpan.FromSeconds(3),
         }.Show();
 

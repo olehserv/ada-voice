@@ -82,10 +82,34 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <ui:Button Style="{StaticResource PhraseButtonStyle}"
+                        <!-- Tag carries the board VM so the context-menu items (outside the visual tree)
+                             can reach EditCommand/DeleteCommand; CommandParameter is the phrase item. -->
+                        <ui:Button CommandParameter="{Binding}"
                                    Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                   CommandParameter="{Binding}"
-                                   IsEnabled="{Binding DataContext.Status.IsLive, RelativeSource={RelativeSource AncestorType=Window}}">
+                                   Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                            <ui:Button.Style>
+                                <Style TargetType="ui:Button" BasedOn="{StaticResource PhraseButtonStyle}">
+                                    <!-- Playable only while Live; a broken phrase (missing audio) is disabled and dimmed. -->
+                                    <Setter Property="IsEnabled"
+                                            Value="{Binding DataContext.Status.IsLive, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsBroken}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                            <Setter Property="Opacity" Value="0.5" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:Button.Style>
+                            <ui:Button.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Edit…"
+                                              Command="{Binding PlacementTarget.Tag.EditCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                              CommandParameter="{Binding}" />
+                                    <MenuItem Header="Delete"
+                                              Command="{Binding PlacementTarget.Tag.DeleteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                              CommandParameter="{Binding}" />
+                                </ContextMenu>
+                            </ui:Button.ContextMenu>
                             <StackPanel>
                                 <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
                                            FontSize="{StaticResource FontSize.SectionTitle}"
@@ -93,6 +117,9 @@
                                 <TextBlock Text="{Binding DurationMs, StringFormat='{}{0} ms'}"
                                            FontSize="{StaticResource FontSize.Label}"
                                            Foreground="{StaticResource Text.Secondary}" Margin="0,6,0,0" />
+                                <TextBlock Text="⚠ audio missing" FontSize="{StaticResource FontSize.Label}"
+                                           Foreground="{StaticResource Status.OffAir}" Margin="0,4,0,0"
+                                           Visibility="{Binding IsBroken, Converter={StaticResource BoolToVis}}" />
                             </StackPanel>
                         </ui:Button>
                     </DataTemplate>

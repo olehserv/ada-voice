@@ -11,7 +11,6 @@ namespace AdaVoice.Host;
 public interface IPlaybackHost
 {
     EngineState State { get; }
-    IReadOnlyList<PhraseEntry> Phrases { get; }
 
     /// <summary>Fires on the engine control thread; a UI handler must marshal to its own thread.</summary>
     event EventHandler<EngineState>? StateChanged;

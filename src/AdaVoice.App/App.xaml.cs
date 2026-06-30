@@ -30,9 +30,16 @@ public partial class App : Application
         // BeginInvoke (async) so a state change raised on the engine control thread never blocks it on the UI.
         var status = new StatusViewModel(_host, action => Dispatcher.BeginInvoke(action));
         var settings = new SettingsViewModel(_host);
-        var board = new BoardViewModel(_host, _host, status, settings, action => Dispatcher.BeginInvoke(action));
 
-        new MainWindow { DataContext = board }.Show();
+        var window = new MainWindow();
+        var board = new BoardViewModel(
+            _host, _host, _host, status, settings,
+            action => Dispatcher.BeginInvoke(action),
+            confirmDelete: window.ConfirmDelete,
+            showEditDialog: window.ShowEditDialog);
+
+        window.DataContext = board;
+        window.Show();
     }
 
     protected override void OnExit(ExitEventArgs e)
