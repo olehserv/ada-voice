@@ -1,6 +1,9 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Windows.Data;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Recording;
+using AdaVoice.Core.Domain;
 using AdaVoice.Host;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -37,6 +40,14 @@ public partial class BoardViewModel : ObservableObject
     [ObservableProperty]
     private string? _notice;
 
+    /// <summary>Live title/tag search. Empty matches everything.</summary>
+    [ObservableProperty]
+    private string _searchText = "";
+
+    /// <summary>The category to show, or the "All categories" sentinel for no category filter.</summary>
+    [ObservableProperty]
+    private Category _selectedCategoryFilter;
+
     public BoardViewModel(IPlaybackHost playback, IRecorderHost recorder, ILibraryHost library,
         StatusViewModel status, SettingsViewModel settings, Action<Action>? onUiThread = null,
         Func<PhraseItemViewModel, bool>? confirmDelete = null,
@@ -53,13 +64,27 @@ public partial class BoardViewModel : ObservableObject
         var broken = library.BrokenPhraseIds.ToHashSet();
         Phrases = new ObservableCollection<PhraseItemViewModel>(
             _library.Phrases.Select(e => new PhraseItemViewModel(e) { IsBroken = broken.Contains(e.Id) }));
+
+        // "All categories" + the real categories drive the filter dropdown; default to All.
+        CategoryFilterOptions = [AllCategories, .. library.Categories];
+        _selectedCategoryFilter = AllCategories;
+
+        // A filtered view over the same collection — the grid binds to this, not to Phrases directly.
+        PhrasesView = CollectionViewSource.GetDefaultView(Phrases);
+        PhrasesView.Filter = o => o is PhraseItemViewModel p && Matches(p.Entry, SearchText, EffectiveCategoryId);
+
         Phrases.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(IsEmpty));
             OnPropertyChanged(nameof(HasPhrases));
+            OnPropertyChanged(nameof(NoMatches));
+            OnPropertyChanged(nameof(HasMatches));
         };
         _playback.PlayingPhraseChanged += OnPlayingPhraseChanged;
     }
+
+    /// <summary>Sentinel "show every category" option for the filter dropdown (blank id = no filter).</summary>
+    public static readonly Category AllCategories = new() { Id = "", Name = "All categories" };
 
     /// <summary>Raised after a take is saved, with its title — the view shows a "Saved" toast.</summary>
     public event EventHandler<string>? Saved;
@@ -83,11 +108,51 @@ public partial class BoardViewModel : ObservableObject
     /// <summary>The idle "Record" button shows only when not recording and no take is pending.</summary>
     public bool ShowRecordButton => !IsRecording && !HasPendingTake;
 
-    /// <summary>True when the board has no phrases — the view shows a first-run welcome card.</summary>
+    /// <summary>The filtered, ordered view of <see cref="Phrases"/> the grid binds to.</summary>
+    public ICollectionView PhrasesView { get; }
+
+    /// <summary>"All categories" followed by the real categories — the filter dropdown's items.</summary>
+    public IReadOnlyList<Category> CategoryFilterOptions { get; }
+
+    /// <summary>True when the board has no phrases at all — the view shows a first-run welcome card.</summary>
     public bool IsEmpty => Phrases.Count == 0;
 
-    /// <summary>Inverse of <see cref="IsEmpty"/>, so the phrase grid can bind its visibility directly.</summary>
+    /// <summary>Inverse of <see cref="IsEmpty"/>.</summary>
     public bool HasPhrases => !IsEmpty;
+
+    /// <summary>Phrases exist but the current search/filter hides them all — a distinct "no matches"
+    /// state, separate from the first-run welcome (<see cref="IsEmpty"/>).</summary>
+    public bool NoMatches => HasPhrases && PhrasesView.IsEmpty;
+
+    /// <summary>At least one phrase is visible under the current filter — the grid binds to this.</summary>
+    public bool HasMatches => HasPhrases && !PhrasesView.IsEmpty;
+
+    private string? EffectiveCategoryId =>
+        string.IsNullOrEmpty(SelectedCategoryFilter?.Id) ? null : SelectedCategoryFilter.Id;
+
+    /// <summary>A phrase matches when its category passes the filter and the search text appears in its
+    /// title or any tag. Pure, so it is unit-testable without WPF.</summary>
+    private static bool Matches(PhraseEntry entry, string? search, string? categoryId)
+    {
+        if (categoryId is not null && entry.CategoryId != categoryId)
+            return false;
+        if (string.IsNullOrWhiteSpace(search))
+            return true;
+
+        var term = search.Trim();
+        return entry.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || entry.Tags.Any(t => t.Contains(term, StringComparison.OrdinalIgnoreCase));
+    }
+
+    partial void OnSearchTextChanged(string value) => RefreshFilter();
+    partial void OnSelectedCategoryFilterChanged(Category value) => RefreshFilter();
+
+    private void RefreshFilter()
+    {
+        PhrasesView.Refresh();
+        OnPropertyChanged(nameof(NoMatches));
+        OnPropertyChanged(nameof(HasMatches));
+    }
 
     // ---- Playback -------------------------------------------------------------------------------
 

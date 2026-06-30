@@ -303,4 +303,76 @@ public class BoardViewModelTests
         Assert.Single(board.Phrases);
         Assert.Empty(host.Deleted);
     }
+
+    // ---- Search / filter ---------------------------------------------------------------------
+
+    private static IEnumerable<string> VisibleTitles(BoardViewModel board) =>
+        board.PhrasesView.Cast<PhraseItemViewModel>().Select(i => i.Title);
+
+    [Fact]
+    public void Search_filters_by_title_case_insensitively()
+    {
+        var host = new FakePlaybackHost
+        {
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hello" }, new PhraseEntry { Id = "p-2", Title = "Goodbye" }],
+        };
+        var board = NewBoard(host);
+
+        board.SearchText = "hell";
+
+        Assert.Equal(["Hello"], VisibleTitles(board));
+        Assert.False(board.NoMatches);
+    }
+
+    [Fact]
+    public void Search_also_matches_tags()
+    {
+        var host = new FakePlaybackHost
+        {
+            Phrases =
+            [
+                new PhraseEntry { Id = "p-1", Title = "A", Tags = ["greeting"] },
+                new PhraseEntry { Id = "p-2", Title = "B", Tags = ["closing"] },
+            ],
+        };
+        var board = NewBoard(host);
+
+        board.SearchText = "greet";
+
+        Assert.Equal(["A"], VisibleTitles(board));
+    }
+
+    [Fact]
+    public void Category_filter_limits_to_the_chosen_category()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-1", Name = "Greetings" }],
+            Phrases =
+            [
+                new PhraseEntry { Id = "p-1", Title = "A", CategoryId = "c-1" },
+                new PhraseEntry { Id = "p-2", Title = "B", CategoryId = Category.DefaultId },
+            ],
+        };
+        var board = NewBoard(host);
+
+        board.SelectedCategoryFilter = board.CategoryFilterOptions.First(c => c.Id == "c-1");
+
+        Assert.Equal(["A"], VisibleTitles(board));
+    }
+
+    [Fact]
+    public void No_matches_state_is_distinct_from_first_run_empty()
+    {
+        var board = NewBoard(new FakePlaybackHost { Phrases = [new PhraseEntry { Id = "p-1", Title = "Hello" }] });
+        board.SearchText = "zzz";
+
+        Assert.True(board.NoMatches);  // phrases exist, none match
+        Assert.False(board.IsEmpty);   // not the first-run welcome
+        Assert.False(board.HasMatches);
+
+        var firstRun = NewBoard(new FakePlaybackHost());
+        Assert.True(firstRun.IsEmpty);     // first-run welcome
+        Assert.False(firstRun.NoMatches);  // not a "no matches" result
+    }
 }

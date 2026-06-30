@@ -70,11 +70,32 @@
             </StackPanel>
         </Border>
 
-        <!-- Phrase buttons, or a first-run welcome when the board is empty -->
+        <!-- Search + category filter, then the phrase buttons / welcome / no-match states -->
         <Grid Grid.Row="2" Margin="0,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Search box + category filter — hidden until the board has at least one phrase -->
+        <Grid Grid.Row="0" Margin="0,0,0,8"
+              Visibility="{Binding HasPhrases, Converter={StaticResource BoolToVis}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ui:TextBox Grid.Column="0" PlaceholderText="Search title or tags…"
+                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+            <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="150" VerticalAlignment="Center"
+                      ItemsSource="{Binding CategoryFilterOptions}"
+                      SelectedItem="{Binding SelectedCategoryFilter}"
+                      DisplayMemberPath="Name" />
+        </Grid>
+
+        <Grid Grid.Row="1">
         <ScrollViewer VerticalScrollBarVisibility="Auto"
-                      Visibility="{Binding HasPhrases, Converter={StaticResource BoolToVis}}">
-            <ItemsControl ItemsSource="{Binding Phrases}">
+                      Visibility="{Binding HasMatches, Converter={StaticResource BoolToVis}}">
+            <ItemsControl ItemsSource="{Binding PhrasesView}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel />
@@ -140,6 +161,19 @@
                            Command="{Binding StartRecordingCommand}" />
             </StackPanel>
         </ui:Card>
+
+        <!-- Phrases exist, but the current search/filter hides them all (distinct from first-run) -->
+        <ui:Card VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24" MaxWidth="320"
+                 Visibility="{Binding NoMatches, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+                <TextBlock Text="No phrases match" HorizontalAlignment="Center"
+                           FontSize="{StaticResource FontSize.SectionTitle}" FontWeight="SemiBold" />
+                <TextBlock Text="Try a different search or category."
+                           Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap"
+                           TextAlignment="Center" Margin="0,8,0,0" />
+            </StackPanel>
+        </ui:Card>
+        </Grid>
         </Grid>
 
         <!-- Record area -->
