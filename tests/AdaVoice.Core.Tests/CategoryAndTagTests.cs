@@ -88,6 +88,35 @@ public class CategoryAndTagTests : IDisposable
     }
 
     [Fact]
+    public void SetPhraseTitle_renames_persists_and_bumps_updated_at()
+    {
+        var service = NewService();
+        var phrase = service.Add("Old title", Category.DefaultId, 100, 0, _ => { });
+
+        var renamed = service.SetPhraseTitle(phrase.Id, "  New title  ");
+
+        Assert.Equal("New title", renamed!.Title);                       // trimmed
+        Assert.Equal(phrase.CreatedAt, renamed.CreatedAt);               // edit preserves CreatedAt
+        Assert.True(renamed.UpdatedAt >= phrase.UpdatedAt);              // bumped
+        Assert.Equal("New title", Assert.Single(NewService().Phrases).Title); // persisted
+    }
+
+    [Fact]
+    public void SetPhraseTitle_unknown_returns_null()
+    {
+        Assert.Null(NewService().SetPhraseTitle("p-nope", "X"));
+    }
+
+    [Fact]
+    public void SetPhraseTitle_blank_throws()
+    {
+        var service = NewService();
+        var phrase = service.Add("Old", Category.DefaultId, 100, 0, _ => { });
+
+        Assert.Throws<ArgumentException>(() => service.SetPhraseTitle(phrase.Id, "   "));
+    }
+
+    [Fact]
     public void SetPhraseTags_normalizes_persists_and_rejects_unknown()
     {
         var service = NewService();

@@ -163,6 +163,14 @@ public sealed class PhraseLibraryService
 
     // ---- Phrase edits --------------------------------------------------------------------------
 
+    /// <summary>Rename a phrase. Returns the updated phrase, or null if no phrase has that id. Throws if
+    /// the new title is blank.</summary>
+    public PhraseEntry? SetPhraseTitle(string phraseId, string title)
+    {
+        var trimmed = RequireTitle(title);
+        return EditPhrase(phraseId, p => p with { Title = trimmed });
+    }
+
     /// <summary>Move a phrase to another category. Returns the updated phrase, or null if the phrase or
     /// the target category does not exist.</summary>
     public PhraseEntry? SetPhraseCategory(string phraseId, string categoryId)
@@ -203,6 +211,14 @@ public sealed class PhraseLibraryService
         var trimmed = name?.Trim() ?? "";
         if (trimmed.Length == 0)
             throw new ArgumentException("A category name is required.", nameof(name));
+        return trimmed;
+    }
+
+    private static string RequireTitle(string title)
+    {
+        var trimmed = title?.Trim() ?? "";
+        if (trimmed.Length == 0)
+            throw new ArgumentException("A phrase title is required.", nameof(title));
         return trimmed;
     }
 
