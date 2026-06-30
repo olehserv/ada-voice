@@ -8,40 +8,58 @@ back up. It answers one question: *where are we right now?*
   the strategy (see [roadmap](docs/roadmaps/mvp-roadmap.md)), or the decision record
   (canonical table in [design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
 
-_Last updated: 2026-06-29._
+_Last updated: 2026-07-01._
 
 ---
 
 ## Status in one line
 
-**Design complete and reviewed. Phase 0 go/no-go gate PASSED. Phase 1 engine runs live end-to-end
-(engine core + WASAPI factory/monitor + `SystemEngineClock` + console host); the Recorder records →
-trims → loudness-matches → catalogues a take into `library.json`, and preview plays it to the
-monitor.** Next real step: run it on the target machine (checklist below), then the rest of storage
-(categories/delete/backups/settings) and the setup wizard, then the WPF UI.
+**Design complete and reviewed. Phase 0 go/no-go gate PASSED. Phase 1 engine + Recorder + storage +
+preview run live end-to-end AND verified on the target machine. Phase 2 storage (categories/tags,
+delete-as-orphan, daily backups, export/import, `settings.json`, validation/recovery) is built and
+tested. The WPF Board now manages the library: play/record + edit/delete/search/category-filter +
+a category manager (branch `feat/board-library-ui`, code-complete + unit-verified — interactive
+smoke pending).** Next real step: the setup-wizard UI (the checks/calibration logic already exists),
+then the full WPF UI/UX pass + localization (UA/PL/EN).
 
 ## Done
 
-- ✅ **Operator pilot prepared (2026-06-29)** — [`docs/plans/operator-pilot.md`](docs/plans/operator-pilot.md):
-  a functional-smoke pilot script (record fresh live, real test call). The supervised pilot passed
-  (user: "tested everything, works awesome").
-- ✅ **Duck slider + WPF-UI polish — on branch `feat/duck-slider-wpfui-polish` (not yet merged), 2026-06-29.**
+- ✅ **Board library UI — branch `feat/board-library-ui` (2026-07-01, code-complete; interactive smoke
+  pending).** Surfaced the already-built library features in the WPF Board. New `ILibraryHost` seam (the
+  library read-model + edits; `Phrases` moved off `IPlaybackHost`). The Board gained: right-click
+  **Edit…** (modal dialog — rename, move category, edit tags; item refreshes in place via
+  `PhraseItemViewModel.Update`) and **Delete** (confirm → orphan WAV → toast); a live **search** box
+  (title/tags) + **category filter** over an `ICollectionView`, with a distinct "no matches" state vs the
+  first-run welcome; broken-phrase flag (dimmed + badge); a **"Categories…"** manager
+  (add/rename/recolour/delete, default protected). One Core addition (`SetPhraseTitle`). 52 App + 52 Core
+  tests green; app smoke-launches. **Not yet runtime-verified:** the dialogs opening and the
+  edit/delete/manage round-trips (need real clicks — see Next action).
+- ✅ **Phase 2 storage — built + tested (pre-2026-07-01; the handoff had under-recorded this).** Category
+  CRUD + phrase categorization + tags, delete-by-orphan, daily backups + recover-from-backup,
+  library export/import, `JsonSettingsRepository`, corrupt-library quarantine + broken-phrase flagging,
+  kill-9 atomic-write test. All in `AdaVoice.Core` behind `IPhraseRepository`; covered by Core tests.
+- ✅ **Hardware run of the full loop — PASSED (2026-07-01).** The engine + Recorder + storage + preview
+  were run end-to-end on the target machine (`S` Live → `P` beep → `O`/`O` OFF AIR → unplug/replug the
+  cable → `R` record → `V` preview → restart-reload). User confirmed everything works fine. This closes
+  the standing "tested against fakes, never run on hardware" gap that hung over the engine, Recorder,
+  storage, and preview slices below.
+- ✅ **Global stop hotkey — merged to `main` (2026-07-01).** `Pause` with `Ctrl+F12` fallback via Win32
+  `RegisterHotKey` behind an `IHotkeyRegistrar` seam; `HotkeyService` owns the policy (4 unit tests),
+  `MainWindow` wires `StopRequested` → `StopCommand` (stops the current phrase only, never the engine).
+  On-screen hint shows the active hotkey under the STOP button. Manual end-to-end verified (Pause stops
+  the phrase while Chrome is focused). Plan: [`docs/superpowers/plans/2026-06-29-stop-hotkey.md`](docs/superpowers/plans/2026-06-29-stop-hotkey.md).
+- ✅ **Duck slider + WPF-UI polish — merged to `main` (2026-07-01).**
   - Live mic-duck slider: `PhrasePlayer.SetDuck` + `EngineCommand.SetDuckLevel` (engine re-applies the
     level after a Stop/Start rebuild) → `ISettingsHost` on `EngineHost` (apply-live vs save split) →
     `SettingsViewModel` + a snapped −40..0 dB slider in the status bar (saves on drag-end).
   - WPF-UI 4.3.0 Fluent dark theme adopted: `ui:Button` appearances (STOP=Danger, Record=Primary),
     shared `PhraseButtonStyle`, finished tokens (type scale, spacing, radius; Segoe UI Variable),
-    first-run welcome `ui:Card`, and a save toast (`Snackbar`). 167 unit tests green; app smoke-launches.
-  - **Verified (automated):** duck DSP/engine logic, settings save/reload round-trip
-    (`MicDuckDb`), VM apply/commit, and the app parses + launches.
-  - **Still TODO on this work:**
-    - *Plain run (no cable/call):* confirm the slider UI wiring — dragging it changes the value,
-      saves on release, and the value reloads on restart (`settings.json` `micDuckDb`). The pieces
-      are tested, but the two-way binding + drag→Commit code-behind only run in the real app.
-    - *Hardware run (cable + call):* the **audible** duck change at the far end.
-  - **FluentWindow chrome — done (2026-06-29):** `ui:FluentWindow` + compact `ui:TitleBar`, solid
-    design-09 background (no Mica). Smoke-launched; **Topmost preserved** (verified via WS_EX_TOPMOST).
-  - **Merge** `feat/duck-slider-wpfui-polish` into `main` once the plain-run UI check passes.
+    first-run welcome `ui:Card`, and a save toast (`Snackbar`). 167 unit tests green.
+  - **FluentWindow chrome:** `ui:FluentWindow` + compact `ui:TitleBar`, solid design-09 background
+    (no Mica). **Topmost preserved** (verified via WS_EX_TOPMOST).
+- ✅ **Operator pilot prepared (2026-06-29)** — [`docs/plans/operator-pilot.md`](docs/plans/operator-pilot.md):
+  a functional-smoke pilot script (record fresh live, real test call). The supervised pilot passed
+  (user: "tested everything, works awesome").
 - ✅ **Design phase** — 9 docs in [`docs/design/`](docs/design/README.md), eng review + design
   review both CLEARED (2026-06-10).
 - ✅ **Canonical decisions** — 24 entries locked ([design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
@@ -85,8 +103,7 @@ monitor.** Next real step: run it on the target machine (checklist below), then 
   pragmatic v1) and disposes in a safe order. `Program` adds Serilog rolling-file logging,
   `RegisterApplicationRestart`, and keyboard controls. Also a core fix: a failed `Start` now stays
   Stopped with the error surfaced instead of crashing the (new) control thread, and `Post` ignores
-  a disposed queue. 54 unit tests green; full solution builds clean. **Not yet run on hardware** —
-  see Next action.
+  a disposed queue. 54 unit tests green; full solution builds clean. **Verified on hardware 2026-07-01.**
 - ✅ **Recorder core — complete (2026-06-23)** — DSP (`Loudness` RMS/peak, `SilenceTrim`
   −45 dBFS/150 ms, `LoudnessMatch.ComputeGainDb` with −3 dBFS ceiling), `WavFile.Save` (float →
   16-bit PCM, atomic temp→final), and `Recorder` (record from a capture device → engine-format via a
@@ -94,39 +111,43 @@ monitor.** Next real step: run it on the target machine (checklist below), then 
   loudness-match). Wired into the host on `[R]` (OFF AIR → record → save WAV under `recordings/`).
   72 unit tests green incl. a 44.1 kHz-stereo resample test; a capture-thread race in the Recorder
   was found and fixed (lock). **Saved takes are the raw trimmed audio; `gainDb` is metadata that
-  will be applied once playback + library land.** **Not yet run on hardware.**
+  will be applied once playback + library land.** **Verified on hardware 2026-07-01.**
 - ✅ **Storage + preview (thin vertical) — complete (2026-06-23)** — new `AdaVoice.Core` project
   (net10.0, no audio dep): `Library`/`PhraseEntry`/`Category` domain, `IPhraseRepository` +
   `JsonPhraseRepository` (System.Text.Json, atomic tmp→rename, seeded default), `PhraseLibraryService`
   (WAV-first `Add`). `WavFile.Load` added (and `Save` now creates its dir). Host catalogues a take
   into `%LOCALAPPDATA%\AdaVoice\library.json` + `audio\p-….wav` on `[R]`, and `[V]` previews the last
   phrase to the default output (monitor stand-in) with `gainDb` applied — **refusing if the default
-  output is the cable** (cardinal rule). 80 unit tests green. **Not yet run on hardware.**
+  output is the cable** (cardinal rule). 80 unit tests green. **Verified on hardware 2026-07-01.**
 - ✅ **Doc structure cleanup** (2026-06-13) — removed the original brief (`1_DESIGN.md`) and
   `TODOS.md`; moved the design system into [`docs/design/09-design-system.md`](docs/design/09-design-system.md);
   added planning docs under [`docs/plans/`](docs/plans/).
 
 ## In progress / interrupted
 
-- _Nothing actively in progress._ The project is paused inside Phase 1: engine + Recorder + storage +
-  preview run in code but have not been run on the target machine; the rest of storage and the wizard
-  are next.
+- **`feat/board-library-ui` — code-complete, not yet merged.** Edit/delete/search/category-filter +
+  category manager all build and unit-test green, but the **interactive smoke is pending** (the dialogs
+  and the on-disk edit/delete round-trips can only be checked by real clicks — see Next action). Merge
+  after the smoke passes.
 
 ## Next action
 
-**1) Run the full loop on the target machine.** `dotnet run --project src/AdaVoice.Host`: `S` (Live,
-mic on `CABLE Output`), `P` (beep), `O`/`O` (OFF AIR), unplug/replug the cable (alarm + fast
-recovery); **`R` … speak … `R`** → "Saved p-…"; confirm `%LOCALAPPDATA%\AdaVoice\library.json` has the
-entry and `audio\p-….wav` exists; **`V`** → the take plays on the headphones/default output (not the
-cable); restart → it logs the phrase reloaded. Also: set the Windows default playback to `CABLE Input`
-and press `V` → preview is **refused** with a log line. Cable must be at 48 kHz or `Start` stays
-Stopped with an error (by design for now).
+**1) Interactive smoke of the Board library UI** (`feat/board-library-ui`). `dotnet run --project
+src/AdaVoice.App`: right-click a phrase → **Edit…** → change title/category/tags → Save → the button
+updates immediately; right-click → **Delete** → confirm → it disappears and `audio\deleted-p-….wav`
+exists while `library.json` no longer lists it; type in **search** and pick a **category** → the grid
+filters (a no-match query shows the "No phrases match" card); **Categories…** → add/rename/delete a
+category (deleting one moves its phrases to Uncategorized). Restart → edits/deletes persisted. Then
+merge.
 
-**2) Then the rest of storage + the wizard.** Categories CRUD + tags, delete-as-orphan, daily
-backups, `settings.json`, a configurable monitor device (+ `Monitor` role) so preview targets a
-chosen headphone device instead of the default output, the kill-9 atomic-write test, and startup
-validation of missing files. Then the setup wizard (calibrates `micReferenceRms`). Then the WPF UI
-(Phase 3) reuses `EngineHost`.
+**2) Setup-wizard UI.** The logic already exists (`EnvironmentChecks`, `VoiceCalibration`,
+`WasapiEnvironmentProbe` in `AdaVoice.Audio/Setup`, exposed via `EngineHost.RunEnvironmentChecks` /
+`Calibrate`); what's missing is the WPF wizard flow that runs the checks, the loopback self-test, and
+the first-call confidence card. Then the full UI/UX pass + localization (UA/PL/EN `.resx`, currently all
+strings are English-only).
+
+**Note (debt):** localization was deliberately deferred — every Board/dialog string added in
+`feat/board-library-ui` is English-only and will need a `.resx` retrofit.
 
 **Open follow-ups (named so they're not lost):**
 - **Configurable monitor device:** preview currently uses the default output as the monitor
