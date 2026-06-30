@@ -125,10 +125,12 @@ then the full WPF UI/UX pass + localization (UA/PL/EN).
 
 ## In progress / interrupted
 
-- **`feat/board-library-ui` — code-complete, not yet merged.** Edit/delete/search/category-filter +
-  category manager all build and unit-test green, but the **interactive smoke is pending** (the dialogs
-  and the on-disk edit/delete round-trips can only be checked by real clicks — see Next action). Merge
-  after the smoke passes.
+- **`feat/board-library-ui` — round 1 done, round 2 underway.** Round 1 (edit/delete/search/category-
+  filter + category manager) is committed and passed an interactive smoke. The smoke produced 7
+  improvement items (editable-when-stopped, engine-button enable/disable, remember window size,
+  full category-colour fill, colored reusable tags, test-to-headphones). They are planned in
+  [`docs/superpowers/plans/2026-07-01-board-library-ui-round2.md`](docs/superpowers/plans/2026-07-01-board-library-ui-round2.md)
+  (3 slices). Merge the branch to `main` after round 2 + its smoke pass.
 
 ## Next action
 
