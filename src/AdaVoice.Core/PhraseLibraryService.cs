@@ -28,6 +28,9 @@ public sealed class PhraseLibraryService
     public IReadOnlyList<PhraseEntry> Phrases => _library.Phrases;
     public IReadOnlyList<Category> Categories => _library.Categories;
 
+    /// <summary>The tag registry: each tag name and the colour it shows in. Grows as tags are used.</summary>
+    public IReadOnlyList<TagInfo> Tags => _library.Tags;
+
     /// <summary>How the library was loaded — the host/UI surfaces this so a corrupt file is never
     /// mistaken for an empty library (design 04 §3).</summary>
     public LibraryLoadStatus LoadStatus { get; private set; }
@@ -51,6 +54,33 @@ public sealed class PhraseLibraryService
         LoadStatus = result.Status;
         LoadDetail = result.Detail;
         BrokenPhraseIds = LibraryValidator.FindBrokenPhraseIds(_library, _audioExists);
+
+        // One-time migration: give a colour to any tag that predates the registry (libraries written
+        // before tags were coloured). Idempotent — once persisted, later loads find nothing to add.
+        // Gated to a normal, fully-parsed load: ReadError returns an empty in-memory stand-in for a
+        // good-but-locked file specifically so it is never overwritten, and RecoveredFromBackup already
+        // persists itself. Migrating+saving on either path would defeat that safety.
+        if (LoadStatus == LibraryLoadStatus.Loaded && RegisterTags(_library.Phrases.SelectMany(p => p.Tags)))
+            _repository.Save(_library);
+    }
+
+    /// <summary>Ensure each name has a registry entry, assigning the next palette colour (cycling) to
+    /// any that is new. Case-insensitive: "Opening" and "opening" share one entry. Returns true if the
+    /// registry changed. Does not persist — the caller decides when to save.</summary>
+    private bool RegisterTags(IEnumerable<string> names)
+    {
+        var changed = false;
+        foreach (var name in names)
+        {
+            if (_library.Tags.Any(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            var color = ColorPalette.Swatches[_library.Tags.Count % ColorPalette.Swatches.Count];
+            _library.Tags.Add(new TagInfo { Name = name, Color = color });
+            changed = true;
+        }
+
+        return changed;
     }
 
     /// <summary>
@@ -191,6 +221,12 @@ public sealed class PhraseLibraryService
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+        // Register new names before editing, but only once we know the phrase exists (so a no-op edit
+        // never leaves orphan registry entries). EditPhrase then saves both in one write.
+        if (_library.Phrases.All(p => p.Id != phraseId))
+            return null;
+
+        RegisterTags(normalized);
         return EditPhrase(phraseId, p => p with { Tags = normalized });
     }
 

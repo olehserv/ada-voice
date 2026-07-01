@@ -130,6 +130,75 @@ public class CategoryAndTagTests : IDisposable
         Assert.Equal(new[] { "opening", "Greeting" }, Assert.Single(NewService().Phrases).Tags); // persisted
     }
 
+    // ---- Tag registry --------------------------------------------------------------------------
+
+    [Fact]
+    public void SetPhraseTags_registers_new_tags_with_cycling_palette_colours()
+    {
+        var service = NewService();
+        var phrase = service.Add("p", Category.DefaultId, 100, 0, _ => { });
+
+        service.SetPhraseTags(phrase.Id, ["alpha", "beta", "gamma"]);
+
+        var tags = service.Tags;
+        Assert.Equal(["alpha", "beta", "gamma"], tags.Select(t => t.Name));
+        Assert.Equal(ColorPalette.Swatches[0], tags[0].Color);
+        Assert.Equal(ColorPalette.Swatches[1], tags[1].Color);
+        Assert.Equal(ColorPalette.Swatches[2], tags[2].Color);
+    }
+
+    [Fact]
+    public void SetPhraseTags_keeps_an_existing_tags_colour_and_ignores_case()
+    {
+        var service = NewService();
+        var phrase = service.Add("p", Category.DefaultId, 100, 0, _ => { });
+        service.SetPhraseTags(phrase.Id, ["alpha"]);
+        var originalColor = service.Tags.Single().Color;
+
+        // Re-use the tag under different casing on another phrase — no new registry entry, same colour.
+        var other = service.Add("q", Category.DefaultId, 100, 0, _ => { });
+        service.SetPhraseTags(other.Id, ["ALPHA", "beta"]);
+
+        Assert.Equal(["alpha", "beta"], service.Tags.Select(t => t.Name)); // no duplicate "ALPHA"
+        Assert.Equal(originalColor, service.Tags.First(t => t.Name == "alpha").Color);
+    }
+
+    [Fact]
+    public void Tag_registry_round_trips_through_reload()
+    {
+        var service = NewService();
+        var phrase = service.Add("p", Category.DefaultId, 100, 0, _ => { });
+        service.SetPhraseTags(phrase.Id, ["alpha", "beta"]);
+
+        var reloaded = NewService();
+
+        Assert.Equal(["alpha", "beta"], reloaded.Tags.Select(t => t.Name));
+        Assert.Equal(ColorPalette.Swatches[0], reloaded.Tags[0].Color);
+    }
+
+    [Fact]
+    public void Loading_a_library_registers_pre_existing_phrase_tags_once()
+    {
+        // A legacy library file: a phrase carries tags, but there is no tag registry (pre-registry era).
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(AdaVoicePaths.LibraryFile(_root), """
+            {
+              "version": 1,
+              "categories": [{ "id": "c-default", "name": "Uncategorized", "color": "#808080", "sortOrder": 0 }],
+              "phrases": [{ "id": "p-1", "title": "p", "categoryId": "c-default", "tags": ["legacy"],
+                            "fileName": "p-1.wav", "durationMs": 100, "gainDb": 0, "sortOrder": 0,
+                            "createdAt": "2024-01-01T00:00:00Z", "updatedAt": "2024-01-01T00:00:00Z" }]
+            }
+            """);
+
+        var migrated = NewService(); // Load() should back-fill the registry
+
+        Assert.Contains(migrated.Tags, t => t.Name == "legacy");
+        Assert.Equal(ColorPalette.Swatches[0], migrated.Tags.Single(t => t.Name == "legacy").Color);
+        // Idempotent: a second load finds the tag already registered and does not duplicate it.
+        Assert.Single(NewService().Tags, t => t.Name == "legacy");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

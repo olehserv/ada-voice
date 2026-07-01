@@ -22,6 +22,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
 
     // ---- ILibraryHost knobs the tests configure or inspect ----
     public IReadOnlyList<Category> Categories { get; set; } = [];
+    public IReadOnlyList<TagInfo> Tags { get; set; } = [];
     public IReadOnlyList<string> BrokenPhraseIds { get; set; } = [];
     public List<PhraseEntry> Deleted { get; } = [];
 
@@ -76,8 +77,21 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     public PhraseEntry? SetPhraseCategory(string phraseId, string categoryId) =>
         Edit(phraseId, p => p with { CategoryId = categoryId });
 
-    public PhraseEntry? SetPhraseTags(string phraseId, IEnumerable<string> tags) =>
-        Edit(phraseId, p => p with { Tags = tags.Select(t => t.Trim()).Where(t => t.Length > 0).ToArray() });
+    public PhraseEntry? SetPhraseTags(string phraseId, IEnumerable<string> tags)
+    {
+        var normalized = tags.Select(t => t.Trim()).Where(t => t.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
+        // Mirror PhraseLibraryService: register new names into the tag registry (case-insensitive,
+        // cycling the palette) so board tests that add a tag then read its chip colour see the real flow.
+        var registry = Tags.ToList();
+        foreach (var name in normalized)
+            if (!registry.Any(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase)))
+                registry.Add(new TagInfo { Name = name, Color = ColorPalette.Swatches[registry.Count % ColorPalette.Swatches.Count] });
+        Tags = registry;
+
+        return Edit(phraseId, p => p with { Tags = normalized });
+    }
 
     public PhraseEntry? DeleteEntry(PhraseEntry entry)
     {

@@ -57,8 +57,11 @@ Floor: nothing below 12; status elements never below 14.
   the earlier "phrase buttons stay neutral" rule). Every text mark on a filled button uses one
   auto-contrast brush (black or white, WCAG-picked from the fill) so nothing goes illegible. The
   playing indicator is an Accent **ring** (not a background tint) so it reads over any fill. Colors
-  come from a curated palette (`AdaVoice.Core.Domain.ColorPalette`), chosen via swatches — never a
-  typed hex. Tags (Slice 3) render as colored chips, not neutral.
+  come from a curated palette (`AdaVoice.Core.Domain.ColorPalette`), chosen via a colour dropdown —
+  never a typed hex. Tags render as rounded chips on the phrase tile: colored border, colored text,
+  on a fixed dark scrim background (not the neutral surface colour) so they stay legible over any
+  category fill. Each tag's colour comes from the library's tag registry (`Library.Tags`), assigned
+  once from the same palette when the tag is first used, so a tag looks the same everywhere.
 - Utility copy only: orientation, status, action. No mood copy. Localized UA/PL/EN, sized
   for the longest locale.
 - One accent color; decorative gradients, blobs, icon-circles, and emoji-as-design are

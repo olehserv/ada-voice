@@ -69,7 +69,7 @@ public partial class BoardViewModel : ObservableObject
         Phrases = new ObservableCollection<PhraseItemViewModel>(
             _library.Phrases.Select(e => new PhraseItemViewModel(e) { IsBroken = broken.Contains(e.Id) }));
 
-        ApplyCategoryColors(); // tint each tile with its category's colour
+        ApplyColors(); // tint each tile with its category colour and resolve its tag chips
 
         // "All categories" + the real categories drive the filter dropdown; default to All.
         CategoryFilterOptions = [AllCategories, .. library.Categories];
@@ -163,7 +163,7 @@ public partial class BoardViewModel : ObservableObject
 
         CategoryFilterOptions = [AllCategories, .. _library.Categories];
         OnPropertyChanged(nameof(CategoryFilterOptions));
-        ApplyCategoryColors(); // categories may have been recoloured or deleted
+        ApplyColors(); // categories may have been recoloured or deleted
         SelectedCategoryFilter = AllCategories; // also refreshes the filter
     }
 
@@ -177,14 +177,25 @@ public partial class BoardViewModel : ObservableObject
         OnPropertyChanged(nameof(HasMatches));
     }
 
-    /// <summary>Tint every phrase tile with its category's colour. Called when the board is built, after
-    /// an edit (the category may have changed) and after the category manager closes (colours may have
-    /// been recoloured). Cheap for a board of a few dozen phrases.</summary>
-    private void ApplyCategoryColors()
+    /// <summary>Tint every phrase tile with its category's colour and resolve its tags into coloured
+    /// chips. Called when the board is built, after an edit (category/tags may have changed), after the
+    /// category manager closes (colours may have changed) and after a take is saved. Cheap for a board
+    /// of a few dozen phrases.</summary>
+    private void ApplyColors()
     {
         var colorById = _library.Categories.ToDictionary(c => c.Id, c => c.Color);
+        // Case-insensitive: a phrase can store a tag as "Opening" while the registry has "opening" (the
+        // registry keeps whichever casing was used first) — an ordinal lookup would miss the match and
+        // leave the chip uncoloured.
+        var tagColorByName = _library.Tags.ToDictionary(t => t.Name, t => t.Color, StringComparer.OrdinalIgnoreCase);
+
         foreach (var item in Phrases)
+        {
             item.CategoryColor = colorById.TryGetValue(item.CategoryId, out var hex) ? hex : "";
+            item.TagChips = item.Tags
+                .Select(name => new TagChipViewModel(name, tagColorByName.TryGetValue(name, out var color) ? color : ""))
+                .ToList();
+        }
     }
 
     // ---- Playback -------------------------------------------------------------------------------
@@ -242,7 +253,7 @@ public partial class BoardViewModel : ObservableObject
         if (edit.Save() is { } updated)
         {
             item.Update(updated);
-            ApplyCategoryColors(); // the category may have changed → re-tint
+            ApplyColors(); // the category or tags may have changed → re-tint / re-chip
             // Update swaps the entry in place (no CollectionChanged), so re-run the filter — a rename or
             // category change can move the item in or out of the current search/category view.
             RefreshFilter();
@@ -333,7 +344,7 @@ public partial class BoardViewModel : ObservableObject
         PendingTake = null;
         Notice = null; // the "Saved" feedback is now a toast (see Saved)
         Phrases.Add(new PhraseItemViewModel(entry)); // appears on the board immediately
-        ApplyCategoryColors(); // tint the new tile (falls back to its default category colour)
+        ApplyColors(); // tint the new tile (falls back to its default category colour)
         Saved?.Invoke(this, entry.Title);
     }
 

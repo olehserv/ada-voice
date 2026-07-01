@@ -474,6 +474,70 @@ public class BoardViewModelTests
         Assert.Equal("#FF6B6B", board.Phrases[0].CategoryColor);
     }
 
+    // ---- Tag chips -----------------------------------------------------------------------------
+
+    [Fact]
+    public void Phrase_items_carry_their_tags_as_coloured_chips()
+    {
+        var host = new FakePlaybackHost
+        {
+            Tags = [new TagInfo { Name = "opening", Color = "#4CC2FF" }, new TagInfo { Name = "urgent", Color = "#FF6B6B" }],
+            Phrases = [new PhraseEntry { Id = "p-1", Tags = ["opening", "urgent"] }],
+        };
+
+        var board = NewBoard(host);
+
+        Assert.Equal(
+            [new TagChipViewModel("opening", "#4CC2FF"), new TagChipViewModel("urgent", "#FF6B6B")],
+            board.Phrases[0].TagChips);
+    }
+
+    [Fact]
+    public void Tag_chip_colour_resolves_case_insensitively()
+    {
+        // The phrase stores "Opening" (its own casing); the registry has "opening" (first-used casing).
+        var host = new FakePlaybackHost
+        {
+            Tags = [new TagInfo { Name = "opening", Color = "#4CC2FF" }],
+            Phrases = [new PhraseEntry { Id = "p-1", Tags = ["Opening"] }],
+        };
+
+        var board = NewBoard(host);
+
+        Assert.Equal("#4CC2FF", board.Phrases[0].TagChips.Single().Color);
+    }
+
+    [Fact]
+    public void An_unregistered_tag_gets_an_empty_chip_colour()
+    {
+        // A tag on the phrase that never went through SetPhraseTags (so it has no registry entry).
+        var host = new FakePlaybackHost
+        {
+            Phrases = [new PhraseEntry { Id = "p-1", Tags = ["mystery"] }],
+        };
+
+        var board = NewBoard(host);
+
+        Assert.Equal("", board.Phrases[0].TagChips.Single().Color);
+    }
+
+    [Fact]
+    public void Editing_a_phrases_tags_refreshes_its_chips()
+    {
+        var host = new FakePlaybackHost
+        {
+            Tags = [new TagInfo { Name = "opening", Color = "#4CC2FF" }],
+            Categories = [new Category { Id = Category.DefaultId, Name = "Uncategorized" }],
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = Category.DefaultId, Tags = [] }],
+        };
+        var board = NewBoard(host, showEditDialog: edit => { edit.Tags.Add("opening"); return true; });
+
+        board.EditCommand.Execute(board.Phrases[0]);
+
+        Assert.Equal("opening", board.Phrases[0].TagChips.Single().Name);
+        Assert.Equal("#4CC2FF", board.Phrases[0].TagChips.Single().Color);
+    }
+
     // ---- Search / filter ---------------------------------------------------------------------
 
     private static IEnumerable<string> VisibleTitles(BoardViewModel board) =>

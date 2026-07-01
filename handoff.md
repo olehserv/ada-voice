@@ -125,7 +125,7 @@ then the full WPF UI/UX pass + localization (UA/PL/EN).
 
 ## In progress / interrupted
 
-- **`feat/board-library-ui` — round 1 done, round 2 Slice 1 done (Slices 2–3 pending).** Round 1
+- **`feat/board-library-ui` — round 1 done, round 2 all 3 slices implemented (Slice 3 needs a smoke pass).** Round 1
   (edit/delete/search/category-filter + category manager) is committed and passed an interactive
   smoke. The smoke produced 7 improvement items, planned in
   [`docs/superpowers/plans/2026-07-01-board-library-ui-round2.md`](docs/superpowers/plans/2026-07-01-board-library-ui-round2.md)
@@ -147,29 +147,37 @@ then the full WPF UI/UX pass + localization (UA/PL/EN).
     off-palette legacy colour can't be coerced to null and wiped; the phrase **edit** dialog's category
     picker now shows a colour swatch beside each name; phrase duration now reads in **seconds**
     (`DurationLabel`, e.g. "5.7 s") instead of ms. 236 tests.
-  - ⏳ **Slice 3 (colored reusable tags)** still to do.
-  - Merge the branch to `main` after round 2 + its smoke pass.
+  - ✅ **Slice 3 (colored reusable tags) committed, implemented + unit-verified, not yet smoked:** a
+    tag→colour registry on the library (`Library.Tags` / `TagInfo`) assigns each tag name the next
+    palette colour the first time it's used (`PhraseLibraryService.SetPhraseTags`, case-insensitive);
+    a one-time load migration backfills the registry for tags saved before it existed (gated to a
+    normal `Loaded` status — never runs on a degraded/recovered load, so it can't clobber a
+    good-but-locked file or double-persist a backup recovery). The phrase edit dialog's tag box is now
+    a **chip editor**: existing tags as removable chips, an add box, and clickable suggestion chips for
+    reusing an existing tag. Phrase tiles show their tags as **coloured rounded chips** (colour border +
+    colour text on a fixed dark scrim, so they read over any category fill). Design-09 updated. 247 tests.
+  - Merge the branch to `main` after Slice 3's smoke pass.
 
 ## Next action
 
-**1) Interactive smoke of Slice 1** (`feat/board-library-ui`). `dotnet run --project src/AdaVoice.App`:
-- **#1/#7:** with the engine **Stopped**, right-click a phrase → **Test on headphones** plays to the
-  monitor without freezing the window, and **Edit…**/**Delete** still open; left-click while Stopped
-  shows the "Start the engine…" notice (no play to the call).
-- **#4:** **Start** is disabled once running; **Stop engine**/**OFF AIR**/**STOP** are disabled while
-  Stopped and enabled again once the engine runs (incl. off air).
-- **#3:** resize + move the window, close, reopen → it returns to the same size/position (try closing
-  from a minimized state too — it should still restore sanely).
-- **#2 (Slice 2):** open **Categories…** → each row and the add-row have a colour **dropdown** (coloured
-  swatch + hex, 20 colours). Pick a colour → **Save** persists it. Open the manager and Save
-  **Uncategorized without touching the dropdown** → its colour must stay intact (no wipe). Phrase tiles
-  are **filled with their category colour** with **no white corner triangles**; title/duration/badge
-  text stays readable on every fill; the playing **ring** shows over a fill. In the phrase **Edit**
-  dialog the category dropdown shows a colour swatch beside each name. Tile duration reads in **seconds**
-  (e.g. "5.7 s").
+**1) Interactive smoke of Slice 3** (`feat/board-library-ui`) — Slices 1 and 2 are already smoked and
+confirmed working by the user. `dotnet run --project src/AdaVoice.App`:
+- **Tiles show coloured tag chips.** The current library's tags (`erty`/`oiuy`/`olehsh`) were
+  auto-migrated into the registry on load — their tiles should already show coloured chips with no
+  action needed. This is the check most likely to expose a binding problem (silent, not a crash).
+- **Open Edit on a phrase → the chip editor works.** Existing tags show as removable chips (✕);
+  typing a name + Enter/Add adds it as a new chip; the registry's other tags appear as clickable
+  suggestion chips below, and clicking one moves it into the phrase's tags.
+- **Legibility on a light fill.** Put a phrase in a light/yellow category and check its tag chips —
+  coloured text on a 40%-black scrim over a light background fill; confirm it still reads clearly.
+- Add a brand-new tag to a phrase, save, reopen the edit dialog → it appears as a chip and as a
+  suggestion on other phrases; restart the app → its colour is unchanged (persisted, not re-rolled).
 
-Then continue with **Slice 3** (colored reusable tags), and merge to `main` after the full round-2
-smoke pass.
+Once this passes, the branch is merge-ready — decide then whether to merge directly or open a PR.
+
+**Known non-issue, not a bug:** if a tag chip ever renders dark-grey/near-invisible, that means it has
+no registry entry — normal flow (migration + `SetPhraseTags`) always registers a tag, so this
+shouldn't occur; flag it if it does.
 
 **2) Setup-wizard UI.** The logic already exists (`EnvironmentChecks`, `VoiceCalibration`,
 `WasapiEnvironmentProbe` in `AdaVoice.Audio/Setup`, exposed via `EngineHost.RunEnvironmentChecks` /

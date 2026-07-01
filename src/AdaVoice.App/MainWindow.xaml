@@ -163,6 +163,24 @@
                                                Margin="0,4,0,0"
                                                Foreground="{Binding CategoryColor, Converter={StaticResource ContrastText}}"
                                                Visibility="{Binding IsBroken, Converter={StaticResource BoolToVis}}" />
+
+                                    <!-- Tag chips: colour border + colour text on a fixed dark scrim, so
+                                         they stay legible over any category fill (not just the neutral one). -->
+                                    <ItemsControl ItemsSource="{Binding TagChips}" Margin="0,6,0,0">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border CornerRadius="8" BorderThickness="1" Margin="0,0,4,4" Padding="6,1"
+                                                        Background="#66000000"
+                                                        BorderBrush="{Binding Color, Converter={StaticResource HexToBrush}}">
+                                                    <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSize.Label}"
+                                                               Foreground="{Binding Color, Converter={StaticResource HexToBrush}}" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                 </StackPanel>
                             </Border>
                         </ui:Button>

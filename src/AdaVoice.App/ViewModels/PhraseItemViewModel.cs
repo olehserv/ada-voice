@@ -33,6 +33,11 @@ public partial class PhraseItemViewModel(PhraseEntry entry) : ObservableObject
     [ObservableProperty]
     private string _categoryColor = "";
 
+    /// <summary>The phrase's tags with their registry colours (set by the board). Empty until the board
+    /// resolves them against the tag registry.</summary>
+    [ObservableProperty]
+    private IReadOnlyList<TagChipViewModel> _tagChips = [];
+
     /// <summary>Swap in the edited entry and refresh every derived, bound property. <see cref="PhraseEntry"/>
     /// is an immutable record, so an edit returns a new instance — without this the UI keeps the old one.</summary>
     public void Update(PhraseEntry updated)
@@ -45,3 +50,6 @@ public partial class PhraseItemViewModel(PhraseEntry entry) : ObservableObject
         OnPropertyChanged(nameof(Tags));
     }
 }
+
+/// <summary>One coloured tag chip shown on a phrase tile.</summary>
+public sealed record TagChipViewModel(string Name, string Color);

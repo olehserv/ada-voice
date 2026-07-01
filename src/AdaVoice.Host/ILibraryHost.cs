@@ -16,6 +16,10 @@ public interface ILibraryHost
     /// <summary>The categories, in sort order (the seeded "Uncategorized" is always present).</summary>
     IReadOnlyList<Category> Categories { get; }
 
+    /// <summary>The tag registry: each tag name and its colour. Used for tag suggestions and to colour
+    /// the tag chips on the board.</summary>
+    IReadOnlyList<TagInfo> Tags { get; }
+
     /// <summary>Ids of phrases whose audio file is missing — flagged broken in the UI rather than
     /// crashing playback.</summary>
     IReadOnlyList<string> BrokenPhraseIds { get; }

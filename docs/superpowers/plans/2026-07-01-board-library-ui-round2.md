@@ -1,5 +1,12 @@
 # Board Library UI — round 2 (smoke-test feedback)
 
+> **Status: all 3 slices implemented and committed on `feat/board-library-ui`.** Slice 1 smoked and
+> confirmed working by the user. Slice 2 smoked, confirmed, then refined again after a follow-up
+> round of feedback (dropdown colour picker + 20 colours, tile-corner fix, seconds not ms) — that
+> round is also committed. Slice 3 (tag registry + chip editor + tag chips on tiles) is implemented
+> and unit-verified but not yet smoked — see `handoff.md` for the smoke checklist. Once Slice 3 is
+> smoked, the branch is merge-ready.
+>
 > Round 1 (edit/delete/search/categories) is on `feat/board-library-ui`. This round addresses the
 > 7 items from the interactive smoke run. Work continues on the same branch.
 

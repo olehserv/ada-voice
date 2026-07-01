@@ -148,6 +148,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     // ---- ILibraryHost (the library read-model + edits the Board makes) --------------------------
 
     public IReadOnlyList<Category> Categories => _library.Categories;
+    public IReadOnlyList<TagInfo> Tags => _library.Tags;
     public IReadOnlyList<string> BrokenPhraseIds => _library.BrokenPhraseIds;
 
     public PhraseEntry? SetPhraseTitle(string phraseId, string title) => _library.SetPhraseTitle(phraseId, title);

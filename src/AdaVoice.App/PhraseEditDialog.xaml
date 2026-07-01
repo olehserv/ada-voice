@@ -27,8 +27,62 @@
             </ComboBox.ItemTemplate>
         </ComboBox>
 
-        <TextBlock Text="Tags (comma-separated)" Foreground="{StaticResource Text.Secondary}" Margin="0,12,0,4" />
-        <TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}" />
+        <TextBlock Text="Tags" Foreground="{StaticResource Text.Secondary}" Margin="0,12,0,4" />
+
+        <!-- Current tags as removable chips -->
+        <ItemsControl ItemsSource="{Binding Tags}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Background="{StaticResource Surface.Raised}" CornerRadius="10"
+                            Padding="8,3" Margin="0,0,6,6">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                            <Button Content="✕" Margin="6,0,0,0" Padding="0" BorderThickness="0"
+                                    Background="Transparent" Foreground="{StaticResource Text.Secondary}"
+                                    Cursor="Hand" ToolTip="Remove tag"
+                                    Command="{Binding DataContext.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}" />
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Add a new tag -->
+        <Grid Margin="0,4,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ui:TextBox Grid.Column="0" PlaceholderText="Add a tag…"
+                        Text="{Binding NewTag, UpdateSourceTrigger=PropertyChanged}">
+                <ui:TextBox.InputBindings>
+                    <KeyBinding Key="Return" Command="{Binding AddTagCommand}" />
+                </ui:TextBox.InputBindings>
+            </ui:TextBox>
+            <ui:Button Grid.Column="1" Content="Add" Appearance="Secondary" Margin="8,0,0,0"
+                       Command="{Binding AddTagCommand}" />
+        </Grid>
+
+        <!-- Reuse an existing tag -->
+        <ItemsControl ItemsSource="{Binding Suggestions}" Margin="0,8,0,0">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button Content="{Binding}" Margin="0,0,6,6" Padding="8,3" Cursor="Hand"
+                            BorderThickness="1" BorderBrush="{StaticResource Text.Secondary}"
+                            Background="Transparent" Foreground="{StaticResource Text.Secondary}"
+                            ToolTip="Add this existing tag"
+                            Command="{Binding DataContext.AddSuggestionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                            CommandParameter="{Binding}" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
             <ui:Button Content="Cancel" Appearance="Secondary" IsCancel="True" Margin="0,0,8,0" />
