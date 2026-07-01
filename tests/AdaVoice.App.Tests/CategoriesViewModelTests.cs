@@ -56,36 +56,40 @@ public class CategoriesViewModelTests
     }
 
     [Fact]
-    public void Pick_new_colour_sets_the_add_row_colour()
-    {
-        var vm = new CategoriesViewModel(HostWithDefault());
-
-        vm.PickNewColorCommand.Execute("#54D262");
-
-        Assert.Equal("#54D262", vm.NewColor);
-    }
-
-    [Fact]
-    public void Pick_colour_sets_a_rows_colour_without_persisting_until_save()
-    {
-        var host = HostWithDefault();
-        var vm = new CategoriesViewModel(host);
-        var row = vm.Rows.First(r => r.IsDefault);
-
-        row.PickColorCommand.Execute("#FF6B6B");
-
-        Assert.Equal("#FF6B6B", row.Color);
-        // Picking only stages the choice on the row; Save is what writes it through the seam.
-        Assert.Equal("#808080", host.Categories.Single(c => c.Id == Category.DefaultId).Color);
-    }
-
-    [Fact]
-    public void The_palette_offers_the_curated_swatches()
+    public void The_add_row_defaults_to_a_palette_colour()
     {
         var vm = new CategoriesViewModel(HostWithDefault());
 
         Assert.NotEmpty(vm.Palette);
-        Assert.Same(ColorPalette.Swatches, vm.Palette);
+        Assert.Contains(vm.NewColor, ColorPalette.Swatches); // dropdown always shows a real selection
+    }
+
+    [Fact]
+    public void A_rows_colour_options_include_a_legacy_colour_so_it_is_not_wiped()
+    {
+        // A category whose stored colour is not in the palette (e.g. legacy data).
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-1", Name = "Legacy", Color = "#123456" }],
+        };
+        var vm = new CategoriesViewModel(host);
+        var row = vm.Rows.Single();
+
+        // The current colour is a selectable option, so the ComboBox won't coerce it to null.
+        Assert.Contains("#123456", row.ColorOptions);
+        Assert.Contains(row.Color, row.ColorOptions);
+    }
+
+    [Fact]
+    public void A_rows_colour_options_are_just_the_palette_when_current_is_a_palette_colour()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-1", Name = "G", Color = ColorPalette.Swatches[2] }],
+        };
+        var row = new CategoriesViewModel(host).Rows.Single();
+
+        Assert.Equal(ColorPalette.Swatches.Count, row.ColorOptions.Count); // no duplicate prepended
     }
 
     [Fact]

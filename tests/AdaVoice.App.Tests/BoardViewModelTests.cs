@@ -465,7 +465,7 @@ public class BoardViewModelTests
         var board = NewBoard(host, showManageCategories: vm =>
         {
             var row = vm.Rows.First(r => r.Id == "c-1");
-            row.PickColorCommand.Execute("#FF6B6B");
+            row.Color = "#FF6B6B"; // the dropdown sets the row's colour
             vm.SaveCommand.Execute(row);
         });
 

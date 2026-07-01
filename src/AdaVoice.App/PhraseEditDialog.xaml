@@ -15,7 +15,17 @@
         <TextBlock Text="Category" Foreground="{StaticResource Text.Secondary}" Margin="0,12,0,4" />
         <ComboBox ItemsSource="{Binding Categories}"
                   SelectedValue="{Binding SelectedCategoryId}"
-                  SelectedValuePath="Id" DisplayMemberPath="Name" />
+                  SelectedValuePath="Id">
+            <ComboBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="16" Height="16" CornerRadius="3" VerticalAlignment="Center"
+                                Background="{Binding Color, Converter={StaticResource HexToBrush}}" />
+                        <TextBlock Text="{Binding Name}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
 
         <TextBlock Text="Tags (comma-separated)" Foreground="{StaticResource Text.Secondary}" Margin="0,12,0,4" />
         <TextBox Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}" />

@@ -14,6 +14,10 @@ public partial class PhraseItemViewModel(PhraseEntry entry) : ObservableObject
 
     public string Title => Entry.Title;
     public int DurationMs => Entry.DurationMs;
+
+    /// <summary>Duration in seconds with one decimal (e.g. "5.7 s") — friendlier than milliseconds.</summary>
+    public string DurationLabel => $"{DurationMs / 1000.0:0.0} s";
+
     public string CategoryId => Entry.CategoryId;
     public IReadOnlyList<string> Tags => Entry.Tags;
 
@@ -36,6 +40,7 @@ public partial class PhraseItemViewModel(PhraseEntry entry) : ObservableObject
         Entry = updated;
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(DurationMs));
+        OnPropertyChanged(nameof(DurationLabel));
         OnPropertyChanged(nameof(CategoryId));
         OnPropertyChanged(nameof(Tags));
     }

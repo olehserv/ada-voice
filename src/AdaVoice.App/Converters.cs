@@ -65,29 +65,3 @@ public sealed class ContrastTextConverter : IValueConverter
         return brush;
     }
 }
-
-/// <summary>[current colour, swatch colour] → a white ring brush when they match, else transparent. Marks
-/// the selected swatch in the colour picker.</summary>
-public sealed class SwatchRingConverter : IMultiValueConverter
-{
-    private static readonly SolidColorBrush Ring = Frozen(Colors.White);
-    private static readonly SolidColorBrush None = Frozen(Colors.Transparent);
-
-    public object Convert(object?[] values, Type targetType, object? parameter, CultureInfo culture)
-    {
-        if (values.Length == 2 && values[0] is string current && values[1] is string swatch
-            && string.Equals(current.Trim(), swatch.Trim(), StringComparison.OrdinalIgnoreCase))
-            return Ring;
-        return None;
-    }
-
-    public object[] ConvertBack(object? value, Type[] targetTypes, object? parameter, CultureInfo culture) =>
-        throw new NotSupportedException();
-
-    private static SolidColorBrush Frozen(Color color)
-    {
-        var brush = new SolidColorBrush(color);
-        brush.Freeze();
-        return brush;
-    }
-}

@@ -33,6 +33,7 @@ public partial class BoardViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPendingTake))]
     [NotifyPropertyChangedFor(nameof(ShowRecordButton))]
+    [NotifyPropertyChangedFor(nameof(PendingTakeDurationLabel))]
     private RecordingResult? _pendingTake;
 
     [ObservableProperty]
@@ -109,6 +110,9 @@ public partial class BoardViewModel : ObservableObject
 
     /// <summary>True when a just-recorded take is waiting to be named/saved.</summary>
     public bool HasPendingTake => PendingTake is not null;
+
+    /// <summary>The pending take's length in seconds (e.g. "5.7 s"), matching the phrase tiles.</summary>
+    public string PendingTakeDurationLabel => PendingTake is { } take ? $"{take.DurationMs / 1000.0:0.0} s" : "";
 
     /// <summary>The idle "Record" button shows only when not recording and no take is pending.</summary>
     public bool ShowRecordButton => !IsRecording && !HasPendingTake;

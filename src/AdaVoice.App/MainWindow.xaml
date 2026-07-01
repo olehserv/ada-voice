@@ -117,6 +117,7 @@
                              immune to WPF-UI's hover/press appearance states. -->
                         <ui:Button CommandParameter="{Binding}" Padding="0"
                                    HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                                   Background="Transparent" CornerRadius="{StaticResource Radius.Control}"
                                    Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
                             <ui:Button.Style>
@@ -155,7 +156,7 @@
                                                FontSize="{StaticResource FontSize.SectionTitle}"
                                                TextWrapping="Wrap" MaxWidth="170"
                                                Foreground="{Binding CategoryColor, Converter={StaticResource ContrastText}}" />
-                                    <TextBlock Text="{Binding DurationMs, StringFormat='{}{0} ms'}"
+                                    <TextBlock Text="{Binding DurationLabel}"
                                                FontSize="{StaticResource FontSize.Label}" Opacity="0.75" Margin="0,6,0,0"
                                                Foreground="{Binding CategoryColor, Converter={StaticResource ContrastText}}" />
                                     <TextBlock Text="⚠ audio missing" FontSize="{StaticResource FontSize.Label}"
@@ -218,7 +219,7 @@
                     <!-- A take is waiting to be saved -->
                     <StackPanel Orientation="Horizontal"
                                 Visibility="{Binding HasPendingTake, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="{Binding PendingTake.DurationMs, StringFormat='{}{0} ms'}"
+                        <TextBlock Text="{Binding PendingTakeDurationLabel}"
                                    VerticalAlignment="Center" Foreground="{StaticResource Text.Secondary}" />
                         <TextBox Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" Width="160"
                                  Margin="8,0,0,0" VerticalAlignment="Center" />

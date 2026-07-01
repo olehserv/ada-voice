@@ -19,7 +19,7 @@ public partial class CategoriesViewModel : ObservableObject
     private string _newName = "";
 
     [ObservableProperty]
-    private string _newColor = "#808080";
+    private string _newColor = ColorPalette.Swatches[0];
 
     public CategoriesViewModel(ILibraryHost library)
     {
@@ -30,16 +30,9 @@ public partial class CategoriesViewModel : ObservableObject
     /// <summary>One editable row per category.</summary>
     public ObservableCollection<CategoryRowViewModel> Rows { get; }
 
-    /// <summary>The curated colour swatches the add-row's picker offers.</summary>
+    /// <summary>The colours the add-row's dropdown offers. <see cref="NewColor"/> defaults to the first,
+    /// so the dropdown always shows a real selection.</summary>
     public IReadOnlyList<string> Palette => ColorPalette.Swatches;
-
-    /// <summary>Pick a colour for the new category from a swatch.</summary>
-    [RelayCommand]
-    private void PickNewColor(string? hex)
-    {
-        if (!string.IsNullOrWhiteSpace(hex))
-            NewColor = hex;
-    }
 
     [RelayCommand]
     private void Add()
@@ -87,15 +80,12 @@ public partial class CategoryRowViewModel(Category category) : ObservableObject
     [ObservableProperty]
     private string _color = category.Color;
 
-    /// <summary>The curated colour swatches this row's picker offers.</summary>
-    public IReadOnlyList<string> Palette => ColorPalette.Swatches;
-
-    /// <summary>Pick this row's colour from a swatch. Only stages the choice on the row; the manager's
-    /// Save command writes it through the seam.</summary>
-    [RelayCommand]
-    private void PickColor(string? hex)
-    {
-        if (!string.IsNullOrWhiteSpace(hex))
-            Color = hex;
-    }
+    /// <summary>The colours this row's dropdown offers: the curated palette, plus the row's own current
+    /// colour if it isn't one of them. Including the current value guarantees the bound
+    /// <see cref="Color"/> always matches an item, so the ComboBox never coerces the selection to null
+    /// and writes that null back — which would silently wipe a legacy (off-palette) colour.</summary>
+    public IReadOnlyList<string> ColorOptions { get; } =
+        ColorPalette.Swatches.Contains(category.Color)
+            ? ColorPalette.Swatches
+            : [category.Color, .. ColorPalette.Swatches];
 }
