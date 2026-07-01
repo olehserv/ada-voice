@@ -1,5 +1,6 @@
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Recording;
+using AdaVoice.Audio.Setup;
 using AdaVoice.Core.Domain;
 using AdaVoice.Host;
 
@@ -8,7 +9,7 @@ namespace AdaVoice.App.Tests;
 /// <summary>A test double for the host seams: records the calls the view-models make, can raise state
 /// changes, and grows its phrase list when a take is saved. Mirrors the real <c>EngineHost</c>, which
 /// implements every seam on one object.</summary>
-internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryHost
+internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryHost, ISetupHost
 {
     private List<PhraseEntry> _phrases = [];
 
@@ -41,6 +42,25 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     // Preview-to-headphones knobs the tests inspect / configure.
     public PhraseEntry? PreviewedEntry { get; private set; }
     public string? PreviewEntryResult { get; set; }
+
+    // ---- ISetupHost knobs the tests configure or inspect ----
+    public IReadOnlyList<EnvironmentCheck> NextChecks { get; set; } = [];
+    public CalibrationResult NextCalibrationResult { get; set; } = new(true, 0.05, null);
+    public bool CalibrateThrows { get; set; }
+
+    public IReadOnlyList<EnvironmentCheck> RunEnvironmentChecks()
+    {
+        Calls.Add("RunEnvironmentChecks");
+        return NextChecks;
+    }
+
+    public CalibrationResult Calibrate(int seconds = 5)
+    {
+        Calls.Add("Calibrate");
+        if (CalibrateThrows)
+            throw new InvalidOperationException("mic busy (simulated)");
+        return NextCalibrationResult;
+    }
 
     // ---- IPlaybackHost ----
     public void Start() => Calls.Add("Start");
