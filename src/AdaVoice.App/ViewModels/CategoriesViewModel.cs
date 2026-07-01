@@ -30,6 +30,17 @@ public partial class CategoriesViewModel : ObservableObject
     /// <summary>One editable row per category.</summary>
     public ObservableCollection<CategoryRowViewModel> Rows { get; }
 
+    /// <summary>The curated colour swatches the add-row's picker offers.</summary>
+    public IReadOnlyList<string> Palette => ColorPalette.Swatches;
+
+    /// <summary>Pick a colour for the new category from a swatch.</summary>
+    [RelayCommand]
+    private void PickNewColor(string? hex)
+    {
+        if (!string.IsNullOrWhiteSpace(hex))
+            NewColor = hex;
+    }
+
     [RelayCommand]
     private void Add()
     {
@@ -75,4 +86,16 @@ public partial class CategoryRowViewModel(Category category) : ObservableObject
 
     [ObservableProperty]
     private string _color = category.Color;
+
+    /// <summary>The curated colour swatches this row's picker offers.</summary>
+    public IReadOnlyList<string> Palette => ColorPalette.Swatches;
+
+    /// <summary>Pick this row's colour from a swatch. Only stages the choice on the row; the manager's
+    /// Save command writes it through the seam.</summary>
+    [RelayCommand]
+    private void PickColor(string? hex)
+    {
+        if (!string.IsNullOrWhiteSpace(hex))
+            Color = hex;
+    }
 }

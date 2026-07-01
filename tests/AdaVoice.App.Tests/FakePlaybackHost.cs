@@ -149,7 +149,8 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     {
         Calls.Add("SaveTake");
         SavedTitle = title;
-        var entry = new PhraseEntry { Id = "p-saved", Title = title };
+        // Mirror EngineHost: a new take lands in the default category.
+        var entry = new PhraseEntry { Id = "p-saved", Title = title, CategoryId = Category.DefaultId };
         _phrases.Add(entry);
         return entry;
     }

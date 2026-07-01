@@ -8,6 +8,22 @@
         Background="{StaticResource Surface.Window}"
         TextElement.Foreground="{StaticResource Text.Primary}"
         FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
+    <Window.Resources>
+        <!-- One clickable colour swatch: a coloured square that shows a white ring when it is the
+             current choice. Defined here (not in App.xaml) so the app-level colour converters are
+             already registered when this dialog is parsed. -->
+        <ControlTemplate x:Key="ColorSwatchTemplate" TargetType="Button">
+            <Border CornerRadius="4" BorderThickness="2"
+                    Background="{Binding Converter={StaticResource HexToBrush}}">
+                <Border.BorderBrush>
+                    <MultiBinding Converter="{StaticResource SwatchRing}">
+                        <Binding Path="Tag" RelativeSource="{RelativeSource AncestorType=ItemsControl}" />
+                        <Binding />
+                    </MultiBinding>
+                </Border.BorderBrush>
+            </Border>
+        </ControlTemplate>
+    </Window.Resources>
     <StackPanel Margin="16">
         <!-- Existing categories: edit name/colour inline; the default is protected (no Delete) -->
         <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="360">
@@ -21,9 +37,22 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBox Grid.Column="1" Width="80" Margin="8,0,0,0"
-                                     Text="{Binding Color, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBox Grid.Column="0" VerticalAlignment="Center"
+                                     Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                            <ItemsControl Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                          ItemsSource="{Binding Palette}" Tag="{Binding Color}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel Width="104" /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Template="{StaticResource ColorSwatchTemplate}"
+                                                Width="22" Height="22" Margin="2" Cursor="Hand" ToolTip="{Binding}"
+                                                Command="{Binding DataContext.PickColorCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                             <ui:Button Grid.Column="2" Content="Save" Appearance="Secondary" Margin="8,0,0,0"
                                        Command="{Binding DataContext.SaveCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                        CommandParameter="{Binding}" />
@@ -55,10 +84,22 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <ui:TextBox Grid.Column="0" PlaceholderText="New category name"
+                <ui:TextBox Grid.Column="0" PlaceholderText="New category name" VerticalAlignment="Center"
                             Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}" />
-                <TextBox Grid.Column="1" Width="80" Margin="8,0,0,0"
-                         Text="{Binding NewColor, UpdateSourceTrigger=PropertyChanged}" />
+                <ItemsControl Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center"
+                              ItemsSource="{Binding Palette}" Tag="{Binding NewColor}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel Width="104" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Template="{StaticResource ColorSwatchTemplate}"
+                                    Width="22" Height="22" Margin="2" Cursor="Hand" ToolTip="{Binding}"
+                                    Command="{Binding DataContext.PickNewColorCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
                 <ui:Button Grid.Column="2" Content="Add" Appearance="Primary" Margin="8,0,0,0"
                            Command="{Binding AddCommand}" />
             </Grid>

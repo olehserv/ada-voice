@@ -112,7 +112,11 @@
                     <DataTemplate>
                         <!-- Tag carries the board VM so the context-menu items (outside the visual tree)
                              can reach EditCommand/DeleteCommand; CommandParameter is the phrase item. -->
-                        <ui:Button CommandParameter="{Binding}"
+                        <!-- Padding 0 + stretched content so the category-colour Border fills the whole
+                             tile. The fill lives on our own Border (not the ui:Button Background) so it is
+                             immune to WPF-UI's hover/press appearance states. -->
+                        <ui:Button CommandParameter="{Binding}" Padding="0"
+                                   HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                                    Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
                             <ui:Button.Style>
@@ -142,17 +146,24 @@
                                               CommandParameter="{Binding}" />
                                 </ContextMenu>
                             </ui:Button.ContextMenu>
-                            <StackPanel>
-                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
-                                           FontSize="{StaticResource FontSize.SectionTitle}"
-                                           TextWrapping="Wrap" MaxWidth="170" />
-                                <TextBlock Text="{Binding DurationMs, StringFormat='{}{0} ms'}"
-                                           FontSize="{StaticResource FontSize.Label}"
-                                           Foreground="{StaticResource Text.Secondary}" Margin="0,6,0,0" />
-                                <TextBlock Text="⚠ audio missing" FontSize="{StaticResource FontSize.Label}"
-                                           Foreground="{StaticResource Status.OffAir}" Margin="0,4,0,0"
-                                           Visibility="{Binding IsBroken, Converter={StaticResource BoolToVis}}" />
-                            </StackPanel>
+                            <!-- Full-bleed fill = the category colour; every text mark uses the same
+                                 auto-contrast (black/white) brush so nothing goes illegible on a fill. -->
+                            <Border CornerRadius="{StaticResource Radius.Control}" Padding="12"
+                                    Background="{Binding CategoryColor, Converter={StaticResource HexToBrush}}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                               FontSize="{StaticResource FontSize.SectionTitle}"
+                                               TextWrapping="Wrap" MaxWidth="170"
+                                               Foreground="{Binding CategoryColor, Converter={StaticResource ContrastText}}" />
+                                    <TextBlock Text="{Binding DurationMs, StringFormat='{}{0} ms'}"
+                                               FontSize="{StaticResource FontSize.Label}" Opacity="0.75" Margin="0,6,0,0"
+                                               Foreground="{Binding CategoryColor, Converter={StaticResource ContrastText}}" />
+                                    <TextBlock Text="⚠ audio missing" FontSize="{StaticResource FontSize.Label}"
+                                               Margin="0,4,0,0"
+                                               Foreground="{Binding CategoryColor, Converter={StaticResource ContrastText}}"
+                                               Visibility="{Binding IsBroken, Converter={StaticResource BoolToVis}}" />
+                                </StackPanel>
+                            </Border>
                         </ui:Button>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

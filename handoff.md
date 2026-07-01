@@ -136,7 +136,13 @@ then the full WPF UI/UX pass + localization (UA/PL/EN).
     reflect state (Start enabled only when stopped; Stop engine / OFF AIR / STOP enabled whenever the
     engine runs); the window remembers its size/position (`Settings.Window*` + `WindowPlacement`,
     restored clamped to the current screens). 212 tests green.
-  - ⏳ **Slice 2 (category colour fill)** and **Slice 3 (colored reusable tags)** still to do.
+  - ✅ **Slice 2 (category colour fill) committed:** the category manager picks colours from a curated
+    swatch palette (`AdaVoice.Core.Domain.ColorPalette`) instead of a typed hex box (command-based
+    picks, so opening the manager can't wipe a non-palette colour); phrase tiles are filled with their
+    category colour via a full-bleed `Border` inside the button (immune to WPF-UI hover/press states),
+    and every text mark uses one WCAG auto-contrast brush (`ColorContrast.PrefersDarkText` + the
+    `HexToBrush`/`ContrastText` converters). Design-09 §Rules updated to record the override. 229 tests.
+  - ⏳ **Slice 3 (colored reusable tags)** still to do.
   - Merge the branch to `main` after round 2 + its smoke pass.
 
 ## Next action
@@ -149,9 +155,14 @@ then the full WPF UI/UX pass + localization (UA/PL/EN).
   Stopped and enabled again once the engine runs (incl. off air).
 - **#3:** resize + move the window, close, reopen → it returns to the same size/position (try closing
   from a minimized state too — it should still restore sanely).
+- **#2 (Slice 2):** open **Categories…** → each row and the add-row show colour **swatches** (no hex
+  box); click a swatch → it gets a white ring; **Save** persists it. Open the manager and click Save
+  on **Uncategorized without touching a swatch** → its colour must stay intact (no wipe). Phrase tiles
+  are **filled with their category colour**, and the title/duration/badge text stays readable on every
+  fill (light text on dark colours, dark text on light ones). The playing **ring** still shows over a fill.
 
-Then continue with **Slice 2** (category colour fill) and **Slice 3** (colored reusable tags), and
-merge to `main` after the full round-2 smoke pass.
+Then continue with **Slice 3** (colored reusable tags), and merge to `main` after the full round-2
+smoke pass.
 
 **2) Setup-wizard UI.** The logic already exists (`EnvironmentChecks`, `VoiceCalibration`,
 `WasapiEnvironmentProbe` in `AdaVoice.Audio/Setup`, exposed via `EngineHost.RunEnvironmentChecks` /

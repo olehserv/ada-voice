@@ -398,6 +398,82 @@ public class BoardViewModelTests
         Assert.Empty(host.Deleted);
     }
 
+    // ---- Category colour ---------------------------------------------------------------------
+
+    [Fact]
+    public void Phrase_items_carry_their_category_colour()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-1", Name = "Greetings", Color = "#54D262" }],
+            Phrases = [new PhraseEntry { Id = "p-1", CategoryId = "c-1" }],
+        };
+
+        var board = NewBoard(host);
+
+        Assert.Equal("#54D262", board.Phrases[0].CategoryColor);
+    }
+
+    [Fact]
+    public void Editing_a_phrase_into_another_category_updates_its_colour()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories =
+            [
+                new Category { Id = Category.DefaultId, Name = "Uncategorized", Color = "#808080" },
+                new Category { Id = "c-1", Name = "Greetings", Color = "#54D262" },
+            ],
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = Category.DefaultId }],
+        };
+        var board = NewBoard(host, showEditDialog: edit => { edit.SelectedCategoryId = "c-1"; return true; });
+
+        board.EditCommand.Execute(board.Phrases[0]);
+
+        Assert.Equal("#54D262", board.Phrases[0].CategoryColor);
+    }
+
+    [Fact]
+    public void A_saved_take_gets_the_default_category_colour()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = Category.DefaultId, Name = "Uncategorized", Color = "#808080" }],
+            NextStopResult = Take(),
+        };
+        var board = NewBoard(host);
+        board.StopRecordingCommand.Execute(null);
+
+        board.SaveTakeCommand.Execute(null);
+
+        Assert.Equal("#808080", board.Phrases[0].CategoryColor);
+    }
+
+    [Fact]
+    public void Recolouring_a_category_in_the_manager_re_tints_its_tiles()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories =
+            [
+                new Category { Id = Category.DefaultId, Name = "Uncategorized", Color = "#808080" },
+                new Category { Id = "c-1", Name = "Greetings", Color = "#54D262" },
+            ],
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = "c-1" }],
+        };
+        // The "manager" recolours Greetings and saves, like the user would.
+        var board = NewBoard(host, showManageCategories: vm =>
+        {
+            var row = vm.Rows.First(r => r.Id == "c-1");
+            row.PickColorCommand.Execute("#FF6B6B");
+            vm.SaveCommand.Execute(row);
+        });
+
+        board.ManageCategoriesCommand.Execute(null);
+
+        Assert.Equal("#FF6B6B", board.Phrases[0].CategoryColor);
+    }
+
     // ---- Search / filter ---------------------------------------------------------------------
 
     private static IEnumerable<string> VisibleTitles(BoardViewModel board) =>

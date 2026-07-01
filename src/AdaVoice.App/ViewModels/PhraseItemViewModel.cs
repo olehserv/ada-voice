@@ -24,6 +24,11 @@ public partial class PhraseItemViewModel(PhraseEntry entry) : ObservableObject
     [ObservableProperty]
     private bool _isBroken;
 
+    /// <summary>Hex fill colour of the phrase's category (set by the board from the category list). Empty
+    /// means "no colour" — the tile falls back to a neutral fill.</summary>
+    [ObservableProperty]
+    private string _categoryColor = "";
+
     /// <summary>Swap in the edited entry and refresh every derived, bound property. <see cref="PhraseEntry"/>
     /// is an immutable record, so an edit returns a new instance — without this the UI keeps the old one.</summary>
     public void Update(PhraseEntry updated)

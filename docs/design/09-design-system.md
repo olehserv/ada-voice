@@ -53,8 +53,12 @@ Floor: nothing below 12; status elements never below 14.
 
 ## Rules
 
-- Category colors appear **only** as a small dot in the category rail. Phrase buttons stay
-  neutral — no colored borders or per-category button tinting.
+- Category colors **fill the whole phrase button** (product-owner decision, 2026-07-01, overriding
+  the earlier "phrase buttons stay neutral" rule). Every text mark on a filled button uses one
+  auto-contrast brush (black or white, WCAG-picked from the fill) so nothing goes illegible. The
+  playing indicator is an Accent **ring** (not a background tint) so it reads over any fill. Colors
+  come from a curated palette (`AdaVoice.Core.Domain.ColorPalette`), chosen via swatches — never a
+  typed hex. Tags (Slice 3) render as colored chips, not neutral.
 - Utility copy only: orientation, status, action. No mood copy. Localized UA/PL/EN, sized
   for the longest locale.
 - One accent color; decorative gradients, blobs, icon-circles, and emoji-as-design are
