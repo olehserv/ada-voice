@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Media;
+using AdaVoice.Audio.Setup;
 
 namespace AdaVoice.App;
 
@@ -54,6 +55,36 @@ public sealed class ContrastTextConverter : IValueConverter
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         ColorContrast.PrefersDarkText(value as string) ? Dark : Light;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+
+    private static SolidColorBrush Frozen(Color color)
+    {
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        return brush;
+    }
+}
+
+/// <summary>An environment check's pass/fail status → a "✓ Pass"/"✗ Fail" label.</summary>
+public sealed class CheckStatusToLabelConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is CheckStatus.Pass ? "✓ Pass" : "✗ Fail";
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+/// <summary>An environment check's pass/fail status → a green/red brush.</summary>
+public sealed class CheckStatusToBrushConverter : IValueConverter
+{
+    private static readonly SolidColorBrush Pass = Frozen(Color.FromRgb(0x54, 0xD2, 0x62)); // Status.Live
+    private static readonly SolidColorBrush Fail = Frozen(Color.FromRgb(0xFF, 0x6B, 0x6B)); // Status.Degraded
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is CheckStatus.Pass ? Pass : Fail;
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();

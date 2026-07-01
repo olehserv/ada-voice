@@ -16,6 +16,8 @@
             <!-- Colour converters (category fill + readable text). -->
             <app:HexToBrushConverter x:Key="HexToBrush" />
             <app:ContrastTextConverter x:Key="ContrastText" />
+            <app:CheckStatusToLabelConverter x:Key="CheckStatusToLabel" />
+            <app:CheckStatusToBrushConverter x:Key="CheckStatusToBrush" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
