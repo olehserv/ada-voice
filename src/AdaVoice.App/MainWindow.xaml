@@ -49,9 +49,12 @@
                     <TextBlock Text="{Binding Status.StateLabel}" FontWeight="SemiBold"
                                FontSize="{StaticResource FontSize.SectionTitle}"
                                VerticalAlignment="Center" MinWidth="90" />
-                    <ui:Button Content="Start" Appearance="Secondary" Command="{Binding StartEngineCommand}" Margin="8,0,0,0" />
-                    <ui:Button Content="Stop engine" Appearance="Secondary" Command="{Binding StopEngineCommand}" Margin="8,0,0,0" />
-                    <ui:Button Content="OFF AIR" Appearance="Secondary" Command="{Binding ToggleOffAirCommand}" Margin="8,0,0,0" />
+                    <ui:Button Content="Start" Appearance="Secondary" Command="{Binding StartEngineCommand}" Margin="8,0,0,0"
+                               IsEnabled="{Binding Status.CanStart}" />
+                    <ui:Button Content="Stop engine" Appearance="Secondary" Command="{Binding StopEngineCommand}" Margin="8,0,0,0"
+                               IsEnabled="{Binding Status.IsEngineRunning}" />
+                    <ui:Button Content="OFF AIR" Appearance="Secondary" Command="{Binding ToggleOffAirCommand}" Margin="8,0,0,0"
+                               IsEnabled="{Binding Status.IsEngineRunning}" />
                 </StackPanel>
 
                 <!-- Mic duck: how much the live voice drops while a phrase plays. Applies live;
@@ -114,12 +117,12 @@
                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
                             <ui:Button.Style>
                                 <Style TargetType="ui:Button" BasedOn="{StaticResource PhraseButtonStyle}">
-                                    <!-- Playable only while Live; a broken phrase (missing audio) is disabled and dimmed. -->
-                                    <Setter Property="IsEnabled"
-                                            Value="{Binding DataContext.Status.IsLive, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                    <!-- The button stays enabled even when the engine is stopped or the audio
+                                         is missing: the left-click action is gated in the view-model, and a
+                                         disabled control would swallow its own right-click menu. A broken
+                                         phrase is only dimmed (visual), so Edit/Delete/Test still work. -->
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsBroken}" Value="True">
-                                            <Setter Property="IsEnabled" Value="False" />
                                             <Setter Property="Opacity" Value="0.5" />
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -127,6 +130,10 @@
                             </ui:Button.Style>
                             <ui:Button.ContextMenu>
                                 <ContextMenu>
+                                    <MenuItem Header="Test on headphones"
+                                              Command="{Binding PlacementTarget.Tag.TestOnHeadphonesCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                              CommandParameter="{Binding}" />
+                                    <Separator />
                                     <MenuItem Header="Edit…"
                                               Command="{Binding PlacementTarget.Tag.EditCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                               CommandParameter="{Binding}" />
@@ -219,6 +226,7 @@
              HotkeyHint text + visibility are set in code-behind once the key is registered. -->
         <StackPanel Grid.Row="4">
             <ui:Button Content="STOP" Appearance="Danger" Command="{Binding StopCommand}"
+                       IsEnabled="{Binding Status.IsEngineRunning}"
                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                        Height="56" FontSize="{StaticResource FontSize.Title}" FontWeight="Bold" />
             <TextBlock x:Name="HotkeyHint" HorizontalAlignment="Center" Margin="0,6,0,0"

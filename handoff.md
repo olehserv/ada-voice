@@ -125,22 +125,33 @@ then the full WPF UI/UX pass + localization (UA/PL/EN).
 
 ## In progress / interrupted
 
-- **`feat/board-library-ui` — round 1 done, round 2 underway.** Round 1 (edit/delete/search/category-
-  filter + category manager) is committed and passed an interactive smoke. The smoke produced 7
-  improvement items (editable-when-stopped, engine-button enable/disable, remember window size,
-  full category-colour fill, colored reusable tags, test-to-headphones). They are planned in
+- **`feat/board-library-ui` — round 1 done, round 2 Slice 1 done (Slices 2–3 pending).** Round 1
+  (edit/delete/search/category-filter + category manager) is committed and passed an interactive
+  smoke. The smoke produced 7 improvement items, planned in
   [`docs/superpowers/plans/2026-07-01-board-library-ui-round2.md`](docs/superpowers/plans/2026-07-01-board-library-ui-round2.md)
-  (3 slices). Merge the branch to `main` after round 2 + its smoke pass.
+  (3 slices).
+  - ✅ **Slice 1 (bug fixes) committed:** phrase buttons stay enabled when the engine is stopped so
+    their right-click menu still opens (Play is gated in the VM, not the control); new right-click
+    **Test on headphones** previews a phrase to the monitor with the engine off; engine buttons
+    reflect state (Start enabled only when stopped; Stop engine / OFF AIR / STOP enabled whenever the
+    engine runs); the window remembers its size/position (`Settings.Window*` + `WindowPlacement`,
+    restored clamped to the current screens). 212 tests green.
+  - ⏳ **Slice 2 (category colour fill)** and **Slice 3 (colored reusable tags)** still to do.
+  - Merge the branch to `main` after round 2 + its smoke pass.
 
 ## Next action
 
-**1) Interactive smoke of the Board library UI** (`feat/board-library-ui`). `dotnet run --project
-src/AdaVoice.App`: right-click a phrase → **Edit…** → change title/category/tags → Save → the button
-updates immediately; right-click → **Delete** → confirm → it disappears and `audio\deleted-p-….wav`
-exists while `library.json` no longer lists it; type in **search** and pick a **category** → the grid
-filters (a no-match query shows the "No phrases match" card); **Categories…** → add/rename/delete a
-category (deleting one moves its phrases to Uncategorized). Restart → edits/deletes persisted. Then
-merge.
+**1) Interactive smoke of Slice 1** (`feat/board-library-ui`). `dotnet run --project src/AdaVoice.App`:
+- **#1/#7:** with the engine **Stopped**, right-click a phrase → **Test on headphones** plays to the
+  monitor without freezing the window, and **Edit…**/**Delete** still open; left-click while Stopped
+  shows the "Start the engine…" notice (no play to the call).
+- **#4:** **Start** is disabled once running; **Stop engine**/**OFF AIR**/**STOP** are disabled while
+  Stopped and enabled again once the engine runs (incl. off air).
+- **#3:** resize + move the window, close, reopen → it returns to the same size/position (try closing
+  from a minimized state too — it should still restore sanely).
+
+Then continue with **Slice 2** (category colour fill) and **Slice 3** (colored reusable tags), and
+merge to `main` after the full round-2 smoke pass.
 
 **2) Setup-wizard UI.** The logic already exists (`EnvironmentChecks`, `VoiceCalibration`,
 `WasapiEnvironmentProbe` in `AdaVoice.Audio/Setup`, exposed via `EngineHost.RunEnvironmentChecks` /

@@ -20,4 +20,10 @@ public interface ISettingsHost
 
     /// <summary>Persist the current settings to disk (call when a slider drag finishes).</summary>
     void SaveSettings();
+
+    /// <summary>The window's saved size and position, or null if it has never been saved (use defaults).</summary>
+    WindowPlacement? WindowPlacement { get; }
+
+    /// <summary>Remember the window's size and position and persist it (called when the window closes).</summary>
+    void SaveWindowPlacement(double width, double height, double left, double top);
 }

@@ -10,6 +10,9 @@ internal sealed class FakeSettingsHost : ISettingsHost
     public List<double> SetCalls { get; } = [];
     public int SaveCount { get; private set; }
 
+    public WindowPlacement? WindowPlacement { get; set; }
+    public WindowPlacement? SavedPlacement { get; private set; }
+
     public void SetMicDuckDb(double db)
     {
         MicDuckDb = db;
@@ -17,4 +20,7 @@ internal sealed class FakeSettingsHost : ISettingsHost
     }
 
     public void SaveSettings() => SaveCount++;
+
+    public void SaveWindowPlacement(double width, double height, double left, double top) =>
+        SavedPlacement = new WindowPlacement(width, height, left, top);
 }

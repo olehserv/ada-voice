@@ -1,4 +1,5 @@
 using AdaVoice.App.ViewModels;
+using AdaVoice.Host;
 
 namespace AdaVoice.App.Tests;
 
@@ -45,5 +46,18 @@ public class SettingsViewModelTests
         var vm = new SettingsViewModel(new FakeSettingsHost { MicDuckDb = -12 });
 
         Assert.Equal("-12 dB", vm.DuckLabel);
+    }
+
+    [Fact]
+    public void Window_placement_reads_and_writes_through_the_host()
+    {
+        var host = new FakeSettingsHost { WindowPlacement = new(480, 640, 100, 80) };
+        var vm = new SettingsViewModel(host);
+
+        Assert.Equal(new WindowPlacement(480, 640, 100, 80), vm.WindowPlacement);
+
+        vm.SaveWindowPlacement(500, 700, 120, 60);
+
+        Assert.Equal(new WindowPlacement(500, 700, 120, 60), host.SavedPlacement);
     }
 }

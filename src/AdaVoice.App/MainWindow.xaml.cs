@@ -30,6 +30,42 @@ public partial class MainWindow : FluentWindow
         Closed += (_, _) => _hotkeys?.Dispose();
     }
 
+    /// <summary>Restore the saved window size/position before the first render (so there is no flash),
+    /// clamped to the current screens in case it was last closed on a monitor that is now unplugged.</summary>
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+
+        if ((DataContext as BoardViewModel)?.Settings.WindowPlacement is { } saved)
+        {
+            // The virtual screen is the union of all monitors (WPF exposes it as four values, not a Rect).
+            var p = saved.ClampTo(
+                SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
+                SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Left = p.Left;
+            Top = p.Top;
+            Width = p.Width;
+            Height = p.Height;
+        }
+    }
+
+    /// <summary>Remember where the operator left the window. Uses <see cref="Window.RestoreBounds"/> when
+    /// minimized/maximized, so we never persist the off-screen (~ −32000) coordinates a minimized window
+    /// reports.</summary>
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        base.OnClosing(e);
+
+        if (DataContext is BoardViewModel board)
+        {
+            var bounds = WindowState == WindowState.Normal
+                ? new Rect(Left, Top, Width, Height)
+                : RestoreBounds;
+            board.Settings.SaveWindowPlacement(bounds.Width, bounds.Height, bounds.Left, bounds.Top);
+        }
+    }
+
     /// <summary>Confirm a delete (the board calls this before orphaning the WAV). Synchronous so it fits
     /// the view-model's <c>Func&lt;_, bool&gt;</c> callback.</summary>
     public bool ConfirmDelete(PhraseItemViewModel item) =>

@@ -37,6 +37,10 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     public string? SavedTitle { get; private set; }
     public float[]? PreviewedSamples { get; private set; }
 
+    // Preview-to-headphones knobs the tests inspect / configure.
+    public PhraseEntry? PreviewedEntry { get; private set; }
+    public string? PreviewEntryResult { get; set; }
+
     // ---- IPlaybackHost ----
     public void Start() => Calls.Add("Start");
     public void Stop() => Calls.Add("Stop");
@@ -48,6 +52,13 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     {
         Calls.Add("PlayEntry");
         PlayedEntry = entry;
+    }
+
+    public string? PreviewEntry(PhraseEntry entry)
+    {
+        Calls.Add("PreviewEntry");
+        PreviewedEntry = entry;
+        return PreviewEntryResult;
     }
 
     public void RaiseStateChanged(EngineState state)

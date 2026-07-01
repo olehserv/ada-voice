@@ -27,9 +27,13 @@ public class BoardViewModelTests
     }
 
     [Fact]
-    public void Play_command_plays_that_phrase_to_the_call()
+    public void Play_command_plays_that_phrase_to_the_call_when_live()
     {
-        var host = new FakePlaybackHost { Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav" }] };
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav" }],
+        };
         var board = NewBoard(host);
         var item = board.Phrases[0];
 
@@ -37,6 +41,72 @@ public class BoardViewModelTests
 
         Assert.Equal("PlayEntry", Assert.Single(host.Calls));
         Assert.Same(item.Entry, host.PlayedEntry);
+    }
+
+    [Fact]
+    public void Play_when_not_live_shows_a_notice_and_does_not_play()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Stopped,
+            Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav" }],
+        };
+        var board = NewBoard(host);
+
+        board.PlayCommand.Execute(board.Phrases[0]);
+
+        Assert.DoesNotContain("PlayEntry", host.Calls);
+        Assert.NotNull(board.Notice);
+    }
+
+    [Fact]
+    public void Play_a_broken_phrase_shows_a_notice_and_does_not_play()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav" }],
+            BrokenPhraseIds = ["p-1"],
+        };
+        var board = NewBoard(host);
+
+        board.PlayCommand.Execute(board.Phrases[0]);
+
+        Assert.DoesNotContain("PlayEntry", host.Calls);
+        Assert.NotNull(board.Notice);
+    }
+
+    [Fact]
+    public async Task Test_on_headphones_previews_the_entry_off_the_call()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Stopped, // works even with the engine stopped
+            Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav" }],
+        };
+        var board = NewBoard(host);
+        var item = board.Phrases[0];
+
+        await board.TestOnHeadphonesCommand.ExecuteAsync(item);
+
+        Assert.Contains("PreviewEntry", host.Calls);
+        Assert.Same(item.Entry, host.PreviewedEntry);
+        Assert.DoesNotContain("PlayEntry", host.Calls); // never toward the call
+    }
+
+    [Fact]
+    public async Task Test_on_headphones_surfaces_a_preview_error_as_a_notice()
+    {
+        var host = new FakePlaybackHost
+        {
+            Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav" }],
+            PreviewEntryResult = "missing audio file: p-1.wav",
+        };
+        var board = NewBoard(host);
+
+        await board.TestOnHeadphonesCommand.ExecuteAsync(board.Phrases[0]);
+
+        Assert.Equal("missing audio file: p-1.wav", board.Notice);
     }
 
     [Fact]

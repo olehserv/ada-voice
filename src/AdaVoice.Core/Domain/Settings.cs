@@ -27,4 +27,12 @@ public sealed record Settings
     /// recorder uses its dBFS stand-in. Null (not 0) on purpose: a 0 reference would make every take
     /// silent.</summary>
     public double? MicReferenceRms { get; init; }
+
+    /// <summary>The main window's last size and position, so it reopens where the operator left it. All
+    /// four are null until the window is first closed (never saved → use the XAML defaults). Stored as
+    /// plain numbers here; the host composes them into a <c>WindowPlacement</c> for the UI.</summary>
+    public double? WindowWidth { get; init; }
+    public double? WindowHeight { get; init; }
+    public double? WindowLeft { get; init; }
+    public double? WindowTop { get; init; }
 }

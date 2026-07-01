@@ -39,6 +39,23 @@ public class JsonSettingsRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void Window_placement_defaults_to_null_and_roundtrips()
+    {
+        var loaded = new JsonSettingsRepository(_root).Load();
+        Assert.Null(loaded.WindowWidth); // never saved yet → use the XAML defaults
+        Assert.Null(loaded.WindowLeft);
+
+        new JsonSettingsRepository(_root).Save(
+            new Settings { WindowWidth = 500, WindowHeight = 700, WindowLeft = 120, WindowTop = 60 });
+
+        var reloaded = new JsonSettingsRepository(_root).Load();
+        Assert.Equal(500, reloaded.WindowWidth);
+        Assert.Equal(700, reloaded.WindowHeight);
+        Assert.Equal(120, reloaded.WindowLeft);
+        Assert.Equal(60, reloaded.WindowTop);
+    }
+
+    [Fact]
     public void Save_then_load_roundtrips_the_monitor_choice()
     {
         var repo = new JsonSettingsRepository(_root);

@@ -25,4 +25,9 @@ public interface IPlaybackHost
     void PlayEntry(PhraseEntry entry);
     void EnterOffAir();
     void ExitOffAir();
+
+    /// <summary>Play a catalogued phrase to the monitor (headphones/speakers) so the operator can test
+    /// it without the engine running — it never reaches the call. Blocks until playback ends, so callers
+    /// should run it off the UI thread. Returns an error message, or null on success.</summary>
+    string? PreviewEntry(PhraseEntry entry);
 }

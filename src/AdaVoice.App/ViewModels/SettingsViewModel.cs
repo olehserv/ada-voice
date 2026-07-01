@@ -33,5 +33,12 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>Persist the current settings (call when a slider drag finishes).</summary>
     public void Commit() => _settings.SaveSettings();
 
+    /// <summary>The window's saved size and position, or null to use the XAML defaults (first run).</summary>
+    public WindowPlacement? WindowPlacement => _settings.WindowPlacement;
+
+    /// <summary>Remember and persist the window's size and position (called when the window closes).</summary>
+    public void SaveWindowPlacement(double width, double height, double left, double top) =>
+        _settings.SaveWindowPlacement(width, height, left, top);
+
     partial void OnMicDuckDbChanged(double value) => _settings.SetMicDuckDb(value);
 }

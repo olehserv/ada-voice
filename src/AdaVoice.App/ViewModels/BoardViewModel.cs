@@ -172,11 +172,37 @@ public partial class BoardViewModel : ObservableObject
 
     // ---- Playback -------------------------------------------------------------------------------
 
+    /// <summary>Left-click a phrase: play it to the call. The action is gated (not the button), so the
+    /// button still opens its right-click menu when the engine is stopped or the audio is missing.</summary>
     [RelayCommand]
     private void Play(PhraseItemViewModel? item)
     {
-        if (item is not null)
+        if (item is null)
+            return;
+
+        if (item.IsBroken)
+            Notice = "This phrase's audio file is missing — it can't be played.";
+        else if (_playback.State != EngineState.Live)
+            Notice = "Start the engine (and be ON AIR) to play to the call.";
+        else
+        {
+            Notice = null;
             _playback.PlayEntry(item.Entry);
+        }
+    }
+
+    /// <summary>Right-click "Test on headphones": preview a phrase on the monitor output, engine or not.
+    /// Preview blocks until playback ends, so it runs off the UI thread; a failure becomes a notice.</summary>
+    [RelayCommand]
+    private async Task TestOnHeadphones(PhraseItemViewModel? item)
+    {
+        if (item is null)
+            return;
+
+        Notice = null; // clear any stale notice from a prior action before we preview
+        var error = await Task.Run(() => _playback.PreviewEntry(item.Entry));
+        if (error is not null)
+            _onUiThread(() => Notice = error);
     }
 
     [RelayCommand]

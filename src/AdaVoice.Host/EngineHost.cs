@@ -306,6 +306,25 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     /// <summary>Persist the current settings to disk (call when a slider drag finishes).</summary>
     public void SaveSettings() => _settingsRepository.Save(_settings);
 
+    /// <summary>The window's saved size and position, or null if any coordinate was never saved.</summary>
+    public WindowPlacement? WindowPlacement =>
+        _settings is { WindowWidth: { } w, WindowHeight: { } h, WindowLeft: { } left, WindowTop: { } top }
+            ? new WindowPlacement(w, h, left, top)
+            : null;
+
+    /// <summary>Remember the window's size and position and persist it (called when the window closes).</summary>
+    public void SaveWindowPlacement(double width, double height, double left, double top)
+    {
+        _settings = _settings with
+        {
+            WindowWidth = width,
+            WindowHeight = height,
+            WindowLeft = left,
+            WindowTop = top,
+        };
+        _settingsRepository.Save(_settings);
+    }
+
     /// <summary>Choose, save, and report the monitor device previews play to. A null or blank name
     /// clears the choice (previews go to the OS default output).</summary>
     public void SetMonitorDevice(string? nameSubstring)
