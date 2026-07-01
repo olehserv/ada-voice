@@ -35,4 +35,8 @@ public sealed record Settings
     public double? WindowHeight { get; init; }
     public double? WindowLeft { get; init; }
     public double? WindowTop { get; init; }
+
+    /// <summary>True once the setup wizard has been completed at least once. Drives whether it
+    /// auto-shows on startup; false (the default) means "never completed" — show it.</summary>
+    public bool WizardCompleted { get; init; }
 }

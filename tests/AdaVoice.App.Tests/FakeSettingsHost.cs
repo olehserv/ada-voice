@@ -23,4 +23,13 @@ internal sealed class FakeSettingsHost : ISettingsHost
 
     public void SaveWindowPlacement(double width, double height, double left, double top) =>
         SavedPlacement = new WindowPlacement(width, height, left, top);
+
+    public bool WizardCompleted { get; set; }
+    public int MarkWizardCompletedCount { get; private set; }
+
+    public void MarkWizardCompleted()
+    {
+        WizardCompleted = true;
+        MarkWizardCompletedCount++;
+    }
 }

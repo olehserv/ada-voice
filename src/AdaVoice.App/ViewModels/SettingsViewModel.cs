@@ -40,5 +40,11 @@ public partial class SettingsViewModel : ObservableObject
     public void SaveWindowPlacement(double width, double height, double left, double top) =>
         _settings.SaveWindowPlacement(width, height, left, top);
 
+    /// <summary>True once the setup wizard has been completed at least once.</summary>
+    public bool WizardCompleted => _settings.WizardCompleted;
+
+    /// <summary>Mark the setup wizard completed and persist immediately.</summary>
+    public void MarkWizardCompleted() => _settings.MarkWizardCompleted();
+
     partial void OnMicDuckDbChanged(double value) => _settings.SetMicDuckDb(value);
 }

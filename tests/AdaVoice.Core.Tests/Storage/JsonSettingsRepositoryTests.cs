@@ -56,6 +56,16 @@ public class JsonSettingsRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void Wizard_completed_defaults_to_false_and_roundtrips()
+    {
+        Assert.False(new JsonSettingsRepository(_root).Load().WizardCompleted);
+
+        new JsonSettingsRepository(_root).Save(new Settings { WizardCompleted = true });
+
+        Assert.True(new JsonSettingsRepository(_root).Load().WizardCompleted);
+    }
+
+    [Fact]
     public void Save_then_load_roundtrips_the_monitor_choice()
     {
         var repo = new JsonSettingsRepository(_root);

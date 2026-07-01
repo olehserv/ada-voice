@@ -326,6 +326,16 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
         _settingsRepository.Save(_settings);
     }
 
+    /// <summary>True once the setup wizard has been completed at least once.</summary>
+    public bool WizardCompleted => _settings.WizardCompleted;
+
+    /// <summary>Mark the setup wizard completed and persist immediately.</summary>
+    public void MarkWizardCompleted()
+    {
+        _settings = _settings with { WizardCompleted = true };
+        _settingsRepository.Save(_settings);
+    }
+
     /// <summary>Choose, save, and report the monitor device previews play to. A null or blank name
     /// clears the choice (previews go to the OS default output).</summary>
     public void SetMonitorDevice(string? nameSubstring)

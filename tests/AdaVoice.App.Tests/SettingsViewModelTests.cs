@@ -60,4 +60,17 @@ public class SettingsViewModelTests
 
         Assert.Equal(new WindowPlacement(500, 700, 120, 60), host.SavedPlacement);
     }
+
+    [Fact]
+    public void Wizard_completed_reads_and_writes_through_the_host()
+    {
+        var host = new FakeSettingsHost { WizardCompleted = false };
+        var vm = new SettingsViewModel(host);
+        Assert.False(vm.WizardCompleted);
+
+        vm.MarkWizardCompleted();
+
+        Assert.True(host.WizardCompleted);
+        Assert.Equal(1, host.MarkWizardCompletedCount);
+    }
 }

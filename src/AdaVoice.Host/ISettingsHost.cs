@@ -26,4 +26,10 @@ public interface ISettingsHost
 
     /// <summary>Remember the window's size and position and persist it (called when the window closes).</summary>
     void SaveWindowPlacement(double width, double height, double left, double top);
+
+    /// <summary>True once the setup wizard has been completed at least once.</summary>
+    bool WizardCompleted { get; }
+
+    /// <summary>Mark the setup wizard completed and persist immediately.</summary>
+    void MarkWizardCompleted();
 }
