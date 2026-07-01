@@ -8,7 +8,7 @@ back up. It answers one question: *where are we right now?*
   the strategy (see [roadmap](docs/roadmaps/mvp-roadmap.md)), or the decision record
   (canonical table in [design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
 
-_Last updated: 2026-07-01._
+_Last updated: 2026-07-02._
 
 ---
 
@@ -17,23 +17,37 @@ _Last updated: 2026-07-01._
 **Design complete and reviewed. Phase 0 go/no-go gate PASSED. Phase 1 engine + Recorder + storage +
 preview run live end-to-end AND verified on the target machine. Phase 2 storage (categories/tags,
 delete-as-orphan, daily backups, export/import, `settings.json`, validation/recovery) is built and
-tested. The WPF Board now manages the library: play/record + edit/delete/search/category-filter +
-a category manager (branch `feat/board-library-ui`, code-complete + unit-verified — interactive
-smoke pending).** Next real step: the setup-wizard UI (the checks/calibration logic already exists),
-then the full WPF UI/UX pass + localization (UA/PL/EN).
+tested. The WPF Board now manages the library — play/record, edit/delete, search/category-filter, a
+category manager, colour-filled phrase tiles, and coloured reusable tag chips — smoke-tested end to
+end by the user and merged + pushed to `main` (2026-07-02).** Next real step: the setup-wizard UI (the
+checks/calibration logic already exists), then the full WPF UI/UX pass + localization (UA/PL/EN).
 
 ## Done
 
-- ✅ **Board library UI — branch `feat/board-library-ui` (2026-07-01, code-complete; interactive smoke
-  pending).** Surfaced the already-built library features in the WPF Board. New `ILibraryHost` seam (the
-  library read-model + edits; `Phrases` moved off `IPlaybackHost`). The Board gained: right-click
-  **Edit…** (modal dialog — rename, move category, edit tags; item refreshes in place via
-  `PhraseItemViewModel.Update`) and **Delete** (confirm → orphan WAV → toast); a live **search** box
-  (title/tags) + **category filter** over an `ICollectionView`, with a distinct "no matches" state vs the
-  first-run welcome; broken-phrase flag (dimmed + badge); a **"Categories…"** manager
-  (add/rename/recolour/delete, default protected). One Core addition (`SetPhraseTitle`). 52 App + 52 Core
-  tests green; app smoke-launches. **Not yet runtime-verified:** the dialogs opening and the
-  edit/delete/manage round-trips (need real clicks — see Next action).
+- ✅ **Board library UI — merged to `main`, pushed (2026-07-02).** Surfaced the already-built library
+  features in the WPF Board, across round 1 + a 3-slice round 2 driven by two rounds of interactive
+  smoke feedback. All smoked and confirmed working by the user; plan:
+  [`docs/superpowers/plans/2026-07-01-board-library-ui-round2.md`](docs/superpowers/plans/2026-07-01-board-library-ui-round2.md).
+  - **Round 1:** new `ILibraryHost` seam (the library read-model + edits; `Phrases` moved off
+    `IPlaybackHost`). Right-click **Edit…** (rename, move category, edit tags) and **Delete** (confirm →
+    orphan WAV → toast); live **search** (title/tags) + **category filter** over an `ICollectionView`
+    with a distinct "no matches" state; broken-phrase flag (dimmed + badge); a **"Categories…"** manager
+    (add/rename/recolour/delete, default protected).
+  - **Round 2 Slice 1 (bug fixes):** phrase buttons stay enabled when the engine is stopped (Play is
+    gated in the VM, not the control, so the right-click menu still opens); right-click **Test on
+    headphones** previews to the monitor with the engine off; engine buttons (`Start`/`Stop
+    engine`/`OFF AIR`/`STOP`) reflect engine state; the window remembers its size/position
+    (`WindowPlacement`, clamped to the current screens on restore).
+  - **Round 2 Slice 2 (category colour fill):** phrase tiles are filled with their category colour via a
+    full-bleed `Border` (immune to WPF-UI hover/press states) with one WCAG auto-contrast text brush;
+    colour picking is a single-select dropdown over a 20-colour palette (`ColorPalette`), bound so an
+    off-palette legacy colour can't be silently wiped; the phrase edit dialog's category picker shows
+    colour too; tile duration reads in seconds ("5.7 s"). Design-09 records the neutral→filled override.
+  - **Round 2 Slice 3 (colored reusable tags):** a tag→colour registry on the library (`Library.Tags` /
+    `TagInfo`, case-insensitive, cycles the palette on first use, migrates pre-registry tags on load);
+    the edit dialog's tag box is a chip editor (add/remove/reuse-via-suggestion); phrase tiles show tags
+    as coloured chips on a fixed dark scrim so they read over any category fill.
+  - 247 tests green (57 Core + 88 Audio + 102 App) at merge.
 - ✅ **Phase 2 storage — built + tested (pre-2026-07-01; the handoff had under-recorded this).** Category
   CRUD + phrase categorization + tags, delete-by-orphan, daily backups + recover-from-backup,
   library export/import, `JsonSettingsRepository`, corrupt-library quarantine + broken-phrase flagging,
@@ -125,61 +139,12 @@ then the full WPF UI/UX pass + localization (UA/PL/EN).
 
 ## In progress / interrupted
 
-- **`feat/board-library-ui` — round 1 done, round 2 all 3 slices implemented (Slice 3 needs a smoke pass).** Round 1
-  (edit/delete/search/category-filter + category manager) is committed and passed an interactive
-  smoke. The smoke produced 7 improvement items, planned in
-  [`docs/superpowers/plans/2026-07-01-board-library-ui-round2.md`](docs/superpowers/plans/2026-07-01-board-library-ui-round2.md)
-  (3 slices).
-  - ✅ **Slice 1 (bug fixes) committed:** phrase buttons stay enabled when the engine is stopped so
-    their right-click menu still opens (Play is gated in the VM, not the control); new right-click
-    **Test on headphones** previews a phrase to the monitor with the engine off; engine buttons
-    reflect state (Start enabled only when stopped; Stop engine / OFF AIR / STOP enabled whenever the
-    engine runs); the window remembers its size/position (`Settings.Window*` + `WindowPlacement`,
-    restored clamped to the current screens). 212 tests green.
-  - ✅ **Slice 2 (category colour fill) committed, then refined after a 2nd smoke:** phrase tiles are
-    filled with their category colour via a full-bleed `Border` inside the button (immune to WPF-UI
-    hover/press states), every text mark uses one WCAG auto-contrast brush
-    (`ColorContrast.PrefersDarkText` + `HexToBrush`/`ContrastText` converters), the playing indicator is
-    the Accent ring. Design-09 §Rules records the override. **Round-3 fixes on top:** tile corners fixed
-    (button `Background=Transparent` + matching `CornerRadius`, killing the white corner triangles);
-    colour picking is now a **single-select dropdown** (coloured swatch + hex) with a **20-colour**
-    palette, not a swatch grid — bound to `ColorOptions` (palette + the row's current colour) so an
-    off-palette legacy colour can't be coerced to null and wiped; the phrase **edit** dialog's category
-    picker now shows a colour swatch beside each name; phrase duration now reads in **seconds**
-    (`DurationLabel`, e.g. "5.7 s") instead of ms. 236 tests.
-  - ✅ **Slice 3 (colored reusable tags) committed, implemented + unit-verified, not yet smoked:** a
-    tag→colour registry on the library (`Library.Tags` / `TagInfo`) assigns each tag name the next
-    palette colour the first time it's used (`PhraseLibraryService.SetPhraseTags`, case-insensitive);
-    a one-time load migration backfills the registry for tags saved before it existed (gated to a
-    normal `Loaded` status — never runs on a degraded/recovered load, so it can't clobber a
-    good-but-locked file or double-persist a backup recovery). The phrase edit dialog's tag box is now
-    a **chip editor**: existing tags as removable chips, an add box, and clickable suggestion chips for
-    reusing an existing tag. Phrase tiles show their tags as **coloured rounded chips** (colour border +
-    colour text on a fixed dark scrim, so they read over any category fill). Design-09 updated. 247 tests.
-  - Merge the branch to `main` after Slice 3's smoke pass.
+Nothing in flight right now — the Board library UI arc (round 1 + round-2 slices 1–3) is complete,
+smoked, merged, and pushed to `main` (see Done, above).
 
 ## Next action
 
-**1) Interactive smoke of Slice 3** (`feat/board-library-ui`) — Slices 1 and 2 are already smoked and
-confirmed working by the user. `dotnet run --project src/AdaVoice.App`:
-- **Tiles show coloured tag chips.** The current library's tags (`erty`/`oiuy`/`olehsh`) were
-  auto-migrated into the registry on load — their tiles should already show coloured chips with no
-  action needed. This is the check most likely to expose a binding problem (silent, not a crash).
-- **Open Edit on a phrase → the chip editor works.** Existing tags show as removable chips (✕);
-  typing a name + Enter/Add adds it as a new chip; the registry's other tags appear as clickable
-  suggestion chips below, and clicking one moves it into the phrase's tags.
-- **Legibility on a light fill.** Put a phrase in a light/yellow category and check its tag chips —
-  coloured text on a 40%-black scrim over a light background fill; confirm it still reads clearly.
-- Add a brand-new tag to a phrase, save, reopen the edit dialog → it appears as a chip and as a
-  suggestion on other phrases; restart the app → its colour is unchanged (persisted, not re-rolled).
-
-Once this passes, the branch is merge-ready — decide then whether to merge directly or open a PR.
-
-**Known non-issue, not a bug:** if a tag chip ever renders dark-grey/near-invisible, that means it has
-no registry entry — normal flow (migration + `SetPhraseTags`) always registers a tag, so this
-shouldn't occur; flag it if it does.
-
-**2) Setup-wizard UI.** The logic already exists (`EnvironmentChecks`, `VoiceCalibration`,
+**1) Setup-wizard UI.** The logic already exists (`EnvironmentChecks`, `VoiceCalibration`,
 `WasapiEnvironmentProbe` in `AdaVoice.Audio/Setup`, exposed via `EngineHost.RunEnvironmentChecks` /
 `Calibrate`); what's missing is the WPF wizard flow that runs the checks, the loopback self-test, and
 the first-call confidence card. Then the full UI/UX pass + localization (UA/PL/EN `.resx`, currently all
@@ -196,14 +161,12 @@ strings are English-only).
   hardware run.
 - Cold-start auto-retry into Degraded (a failed `Start` currently just stays Stopped, error surfaced).
 - Doc task: create `spike/PHASE0-RESULTS.md` with the measured Phase 0 numbers.
-- **UI/UX pass for the WPF Board (deferred on purpose).** The Phase 3 Board (`src/AdaVoice.App`) is a
-  functional walking-skeleton — it plays phrases to the call, has a big STOP, an engine-state line, and
-  is Topmost — built with plain WPF + the [design 09](docs/design/09-design-system.md) dark tokens. The
-  engine-control buttons are still unstyled WPF defaults, and layout/spacing/typography are minimal. A
-  real UI/UX pass is needed later: adopt WPF-UI (Fluent chrome), the Full/Docked layouts, proper button
-  styling, and the [design 05 §2](docs/design/05-ui-design.md) interaction states. _(User confirmed
-  2026-06-25: keep it simple for now, polish the UI/UX later. Verified the skeleton renders and plays a
-  take on the target machine.)_
+- **UI/UX pass for the WPF Board — mostly done, one piece remains.** WPF-UI Fluent chrome, `ui:Button`
+  styling (incl. engine controls), design-09 dark tokens, colour-filled phrase tiles, and coloured tag
+  chips all landed across the duck-slider/WPF-UI-polish and board-library-ui work. Still outstanding:
+  the named **Full/Docked layouts** and the [design 05 §2](docs/design/05-ui-design.md) interaction
+  states (hover/press/focus specifics beyond what WPF-UI gives for free) — pick this up alongside or
+  after the setup-wizard UI.
 
 ## Open questions
 
