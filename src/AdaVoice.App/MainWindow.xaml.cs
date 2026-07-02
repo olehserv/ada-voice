@@ -140,12 +140,4 @@ public partial class MainWindow : FluentWindow
             Appearance = ControlAppearance.Caution,
             Timeout = TimeSpan.FromSeconds(3),
         }.Show();
-
-    // Persist the duck level only when the user finishes adjusting it (mouse drag end / focus loss),
-    // so a drag does not write settings.json on every value change. Live apply happens via the binding.
-    private void DuckSlider_DragCompleted(object sender, DragCompletedEventArgs e) => CommitSettings();
-
-    private void DuckSlider_Committed(object sender, RoutedEventArgs e) => CommitSettings();
-
-    private void CommitSettings() => (DataContext as BoardViewModel)?.Settings.Commit();
 }

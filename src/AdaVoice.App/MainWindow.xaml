@@ -57,20 +57,6 @@
                                IsEnabled="{Binding Status.IsEngineRunning}" />
                     <ui:Button Content="Setup…" Appearance="Secondary" Command="{Binding RunSetupCommand}" Margin="8,0,0,0" />
                 </StackPanel>
-
-                <!-- Mic duck: how much the live voice drops while a phrase plays. Applies live;
-                     the chosen value is saved when the drag ends (DragCompleted/LostFocus). -->
-                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <TextBlock Text="Mic duck" VerticalAlignment="Center"
-                               Foreground="{StaticResource Text.Secondary}" />
-                    <Slider x:Name="DuckSlider" Width="170" Margin="8,0" VerticalAlignment="Center"
-                            Minimum="-40" Maximum="0" SmallChange="1"
-                            IsSnapToTickEnabled="True" TickFrequency="1"
-                            Value="{Binding Settings.MicDuckDb, Mode=TwoWay}"
-                            Thumb.DragCompleted="DuckSlider_DragCompleted"
-                            LostFocus="DuckSlider_Committed" />
-                    <TextBlock Text="{Binding Settings.DuckLabel}" VerticalAlignment="Center" MinWidth="48" />
-                </StackPanel>
             </StackPanel>
         </Border>
 
