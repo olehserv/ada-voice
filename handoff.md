@@ -9,11 +9,12 @@ back up. It answers one question: *where are we right now?*
   (canonical table in [design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
 
 _Last updated: 2026-07-02._  
-_Setup-wizard UI (incl. VB-CABLE link + calibration countdown-ring follow-ups) merged to `main`
-and pushed. Manually smoke-tested by the user — confirmed working. All 279 tests green
-(58 Core + 88 Audio + 133 App). Next arc (UI/UX pass + localization) scoped into 4 ordered
-slices — see [`docs/plans/ui-ux-localization-scope.md`](docs/plans/ui-ux-localization-scope.md);
-now planning slice 1 (Settings window)._
+_Settings window (slice 1 of the UI/UX + localization scope) built via subagent-driven development
+— 7 tasks, each independently reviewed, plus a final whole-branch review — and merged to `main`.
+All 302 tests green (63 Core + 88 Audio + 151 App). Not yet manually smoke-tested by the user (the
+plan's Step 14 GUI checklist is still open — see Next action). Next arc slice 2 (interaction-state
+gaps) not yet started — see
+[`docs/plans/ui-ux-localization-scope.md`](docs/plans/ui-ux-localization-scope.md)._
 
 ---
 
@@ -27,10 +28,40 @@ category manager, colour-filled phrase tiles, and coloured reusable tag chips �
 end by the user and merged + pushed to `main` (2026-07-02). The setup-wizard UI (environment
 checks, voice calibration, hotkey status, instructions, first-call card, VB-CABLE download link,
 calibration countdown ring) is also built, smoke-tested by the user, and merged + pushed to
-`main` (2026-07-02).** Next real step: the full WPF UI/UX pass + localization (UA/PL/EN).
+`main` (2026-07-02). The Settings window (Levels/Behavior/Language & Backup groups — slice 1 of
+the UI/UX + localization scope) is also built, fully reviewed, and merged to `main` (2026-07-02),
+but not yet manually smoke-tested by the user.** Next real step: smoke-test the Settings window,
+then slice 2 (interaction-state gaps) of the UI/UX pass + localization.
 
 ## Done
 
+- ✅ **Settings window — merged to `main`, pushed (2026-07-02).** Slice 1 of the UI/UX +
+  localization scope
+  ([`docs/plans/ui-ux-localization-scope.md`](docs/plans/ui-ux-localization-scope.md)). Design
+  spec: [`docs/superpowers/specs/2026-07-02-settings-window-design.md`](docs/superpowers/specs/2026-07-02-settings-window-design.md);
+  plan: [`docs/superpowers/plans/2026-07-02-settings-window.md`](docs/superpowers/plans/2026-07-02-settings-window.md).
+  - A new modal `SettingsWindow` (triggered via **Settings…** next to **Setup…** in the status bar)
+    with three groups: **Levels** (mic-duck slider, moved here from the Board's status bar; re-run
+    voice calibration reusing the wizard's `CalibrationStepViewModel`/view unmodified), **Behavior**
+    (always-on-top toggle — live; "new phrase stops the current one" toggle — restart-to-apply;
+    read-only stop-hotkey status), **Language & Backup** (English/Українська/Polski picker —
+    persists and offers a restart now, no `.resx` yet; manual export/import via
+    `LibraryArchiveService`; last-backup-date readout; open-backup-folder).
+  - Built via subagent-driven development: 7 tasks, each independently implemented and reviewed,
+    plus a final whole-branch review. The final review caught one real gap — `BackupSettingsViewModel
+    .Import` was missing the same unexpected-exception catch-all `Export` already had, a genuine
+    crash path (no global unhandled-exception handler exists in `App.xaml.cs`) for an operator
+    importing a slightly-bad backup file — fixed before merge.
+  - Deliberately deferred (own future slice, needs new audio capability): the **Devices** group
+    (mic/cable/monitor pickers with live level meters — no live audio metering or `Monitor` device
+    role exists anywhere yet) and the phrase **monitor slider**. Also deferred: true hotkey
+    reassignment (capture-any-key) — this slice only shows which of the two fixed candidates
+    (`Pause`/`Ctrl+F12`) is active.
+  - **Accepted UX trade-off:** the duck slider no longer lives inline on the Board — adjusting it
+    mid-call now requires opening Settings. Matches design 05's original layout; a deliberate,
+    user-approved change from what shipped before.
+  - 302 tests green (63 Core + 88 Audio + 151 App) at merge. **Not yet manually smoke-tested by the
+    user** — see "In progress / interrupted" above for the open GUI checklist.
 - ✅ **Board library UI — merged to `main`, pushed (2026-07-02).** Surfaced the already-built library
   features in the WPF Board, across round 1 + a 3-slice round 2 driven by two rounds of interactive
   smoke feedback. All smoked and confirmed working by the user; plan:
@@ -167,30 +198,42 @@ calibration countdown ring) is also built, smoke-tested by the user, and merged 
 
 ## In progress / interrupted
 
-Nothing in progress or interrupted. The setup-wizard UI (incl. its same-day follow-up) is complete,
-smoke-tested, merged, and pushed.
+Nothing in progress or interrupted. Settings window (slice 1) is code-complete, fully reviewed, and
+merged. **Not yet manually smoke-tested by the user** — the plan's final step
+([`docs/superpowers/plans/2026-07-02-settings-window.md`](docs/superpowers/plans/2026-07-02-settings-window.md),
+Task 7 Step 14) is an 11-item interactive GUI checklist (duck slider from its new home, recalibrate,
+live always-on-top, restart-required labels, language + restart, export/import round-trip,
+open-backup-folder) that no subagent could run in a non-interactive environment. Do this before
+calling slice 1 fully done.
 
 ## Next action
 
-**1) UI/UX pass + localization — scoped into 4 ordered slices (2026-07-02).**  
-What used to read as one "full UI/UX pass" is actually four independently shippable slices; full
-audit + rationale in
+**1) UI/UX pass + localization — scoped into 4 ordered slices.** Full audit + rationale in
 [`docs/plans/ui-ux-localization-scope.md`](docs/plans/ui-ux-localization-scope.md):
 
-1. **Settings window** (device pickers, language, hotkey reassignment, backup/export UI) — no
-   Settings window exists yet at all; starting here since it's also the biggest surface of new
-   strings.
+1. ✅ **Settings window** — built (2026-07-02): Levels (duck slider moved here from the Board status
+   bar, re-run voice calibration reusing the wizard's step), Behavior (always-on-top, "new phrase
+   stops current" toggle, read-only hotkey status), Language & Backup (language picker — persists
+   now, `.resx` retrofit is slice 4 — manual export/import, backup-folder access, last-backup-date).
+   Device pickers/live meters and true hotkey reassignment deliberately deferred (design spec:
+   [`docs/superpowers/specs/2026-07-02-settings-window-design.md`](docs/superpowers/specs/2026-07-02-settings-window-design.md));
+   plan: [`docs/superpowers/plans/2026-07-02-settings-window.md`](docs/superpowers/plans/2026-07-02-settings-window.md).
+   Built via subagent-driven development — 7 tasks each independently implemented + reviewed, one
+   final whole-branch review that caught and fixed a real gap (`BackupSettingsViewModel.Import` was
+   missing the same unexpected-exception catch-all `Export` already had — a genuine crash path for
+   an operator importing a slightly-bad backup, since the app has no global unhandled-exception
+   handler). 302 tests green (63 Core + 88 Audio + 151 App) at merge. **Needs the manual GUI smoke
+   test above before considering it fully done.**
 2. **Interaction-state gaps** on the existing Board (repair dialog, category-empty CTA, search
-   Clear button, recorder level meter/processing state, wizard per-row spinner).
+   Clear button, recorder level meter/processing state, wizard per-row spinner) — not started.
 3. **Full/Docked responsive layout** — currently unbuilt (single layout at all widths); needs a
    design decision (bring back the category rail at ≥720px, or keep dropdown-only and update
-   design 05) before implementation.
-4. **Localization retrofit (UA/PL/EN)** — done last, after 1–3's new strings exist.
-
-**Currently planning slice 1 (Settings window).**
+   design 05) before implementation. Not started.
+4. **Localization retrofit (UA/PL/EN)** — done last, after 1–3's new strings exist. Not started.
 
 **Note (debt):** localization was deliberately deferred — every Board/dialog string added so far
-is English-only and will need a `.resx` retrofit (slice 4).
+(including all of slice 1's new Settings-window strings) is English-only and will need a `.resx`
+retrofit (slice 4).
 
 **Open follow-ups (named so they're not lost):**
 - **Configurable monitor device:** preview currently uses the default output as the monitor
