@@ -8,7 +8,8 @@ back up. It answers one question: *where are we right now?*
   the strategy (see [roadmap](docs/roadmaps/mvp-roadmap.md)), or the decision record
   (canonical table in [design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
 
-_Last updated: 2026-07-02._
+_Last updated: 2026-07-02._  
+_Setup-wizard UI complete: first-run trigger wired, build verified (0W/0E), all 275 tests green (58 Core + 88 Audio + 129 App). Manual GUI smoke (Steps 4-5 of plan) outstanding._
 
 ---
 
@@ -48,6 +49,16 @@ checks/calibration logic already exists), then the full WPF UI/UX pass + localiz
     the edit dialog's tag box is a chip editor (add/remove/reuse-via-suggestion); phrase tiles show tags
     as coloured chips on a fixed dark scrim so they read over any category fill.
   - 247 tests green (57 Core + 88 Audio + 102 App) at merge.
+- ✅ **Setup-wizard UI — built, unit-tested, and first-run-wired (2026-07-02).** All 5 Bucket A
+  steps implemented (environment checks, voice calibration, hotkey status, instructions,
+  first-call checklist) as a modal wizard flow on top of the Board. Triggered automatically on
+  first run (when `settings.WizardCompleted` is false) and re-runnable via **Setup…** in the status
+  bar. Full unit-test coverage (129 tests in App.Tests) with no regressions across Core/Audio/App.
+  Design spec: [`docs/superpowers/specs/2026-07-02-setup-wizard-ui-design.md`](docs/superpowers/specs/2026-07-02-setup-wizard-ui-design.md).
+  **Outstanding:** manual GUI smoke testing (first-run walkthrough with real mic calibration; re-run
+  and cancel behavior) has not yet been performed and should happen before this is marked fully
+  complete. Device selection, live meters, the loopback self-test, and the 3 extra environment
+  checks remain a v2 follow-up.
 - ✅ **Phase 2 storage — built + tested (pre-2026-07-01; the handoff had under-recorded this).** Category
   CRUD + phrase categorization + tags, delete-by-orphan, daily backups + recover-from-backup,
   library export/import, `JsonSettingsRepository`, corrupt-library quarantine + broken-phrase flagging,
@@ -139,16 +150,16 @@ checks/calibration logic already exists), then the full WPF UI/UX pass + localiz
 
 ## In progress / interrupted
 
-Nothing in flight right now — the Board library UI arc (round 1 + round-2 slices 1–3) is complete,
-smoked, merged, and pushed to `main` (see Done, above).
+**Pending (not yet started):** Manual GUI smoke testing for the setup wizard (first-run walkthrough
+with real mic calibration; re-run entry point and cancel behavior). See the setup-wizard Done entry
+above for details. This is the final gate before the wizard is marked fully complete.
 
 ## Next action
 
-**1) Setup-wizard UI.** The logic already exists (`EnvironmentChecks`, `VoiceCalibration`,
-`WasapiEnvironmentProbe` in `AdaVoice.Audio/Setup`, exposed via `EngineHost.RunEnvironmentChecks` /
-`Calibrate`); what's missing is the WPF wizard flow that runs the checks, the loopback self-test, and
-the first-call confidence card. Then the full UI/UX pass + localization (UA/PL/EN `.resx`, currently all
-strings are English-only).
+**1) Full UI/UX pass + localization (UA/PL/EN).**  
+After manual GUI smoke testing on the setup wizard is complete, the next major arc is a full UI/UX
+polish pass (refining interaction states, Full/Docked layout variants) and retrofitting every user-
+facing string to `.resx` localization files (Ukrainian, Polish, English).
 
 **Note (debt):** localization was deliberately deferred — every Board/dialog string added in
 `feat/board-library-ui` is English-only and will need a `.resx` retrofit.

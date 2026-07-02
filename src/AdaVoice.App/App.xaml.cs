@@ -43,6 +43,10 @@ public partial class App : Application
 
         window.DataContext = board;
         window.Show(); // triggers OnLoaded: wires Saved/Deleted AND registers the stop hotkey
+
+        // First run: window.ActiveHotkey is only valid after Show() (OnLoaded already ran).
+        if (!settings.WizardCompleted)
+            window.ShowSetupWizard(new SetupWizardViewModel(_host, window.ActiveHotkey));
     }
 
     protected override void OnExit(ExitEventArgs e)
