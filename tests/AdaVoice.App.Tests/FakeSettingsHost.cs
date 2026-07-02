@@ -4,7 +4,7 @@ using AdaVoice.Host;
 namespace AdaVoice.App.Tests;
 
 /// <summary>A test double for <see cref="ISettingsHost"/>: records duck changes and save calls.</summary>
-internal sealed class FakeSettingsHost : ISettingsHost
+internal class FakeSettingsHost : ISettingsHost
 {
     public double MicDuckDb { get; set; } = -12;
 
@@ -57,7 +57,7 @@ internal sealed class FakeSettingsHost : ISettingsHost
     public void SetLanguage(string code) => Language = code;
 
     public string? ExportedPath { get; private set; }
-    public void Export(string destinationZipPath) => ExportedPath = destinationZipPath;
+    public virtual void Export(string destinationZipPath) => ExportedPath = destinationZipPath;
 
     public (string Path, ImportMode Mode)? ImportedWith { get; private set; }
     public ImportResult NextImportResult { get; set; } = new(true, 1, 0);
