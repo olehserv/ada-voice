@@ -11,10 +11,11 @@ public class BoardViewModelTests
         FakePlaybackHost host,
         Func<PhraseItemViewModel, bool>? confirmDelete = null,
         Func<PhraseEditViewModel, bool>? showEditDialog = null,
-        Action<CategoriesViewModel>? showManageCategories = null) =>
-        new(host, host, host, new StatusViewModel(host), new SettingsViewModel(new FakeSettingsHost()),
-            confirmDelete: confirmDelete, showEditDialog: showEditDialog,
-            showManageCategories: showManageCategories);
+        Action<CategoriesViewModel>? showManageCategories = null,
+        Action<SetupWizardViewModel>? showSetupWizard = null) =>
+        new(host, host, host, host, new StatusViewModel(host), new SettingsViewModel(new FakeSettingsHost()),
+            getActiveHotkey: () => "Pause", confirmDelete: confirmDelete, showEditDialog: showEditDialog,
+            showManageCategories: showManageCategories, showSetupWizard: showSetupWizard);
 
     private static RecordingResult Take() => new(new float[10], GainDb: -3, DurationMs: 1000, PeakDbfs: -6);
 
@@ -625,5 +626,18 @@ public class BoardViewModelTests
         // "All categories" sentinel + Uncategorized + the new one.
         Assert.Contains(board.CategoryFilterOptions, c => c.Name == "Greetings");
         Assert.Same(BoardViewModel.AllCategories, board.SelectedCategoryFilter); // reset to All
+    }
+
+    [Fact]
+    public void Run_setup_opens_the_wizard_with_the_current_hotkey_status()
+    {
+        var host = new FakePlaybackHost();
+        SetupWizardViewModel? shown = null;
+        var board = NewBoard(host, showSetupWizard: vm => shown = vm);
+
+        board.RunSetupCommand.Execute(null);
+
+        var hotkeyStep = Assert.IsType<HotkeyStatusStepViewModel>(shown!.Steps[2]);
+        Assert.Equal("Global stop hotkey registered: Pause", hotkeyStep.StatusLabel);
     }
 }

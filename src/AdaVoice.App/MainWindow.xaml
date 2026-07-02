@@ -55,6 +55,7 @@
                                IsEnabled="{Binding Status.IsEngineRunning}" />
                     <ui:Button Content="OFF AIR" Appearance="Secondary" Command="{Binding ToggleOffAirCommand}" Margin="8,0,0,0"
                                IsEnabled="{Binding Status.IsEngineRunning}" />
+                    <ui:Button Content="Setup…" Appearance="Secondary" Command="{Binding RunSetupCommand}" Margin="8,0,0,0" />
                 </StackPanel>
 
                 <!-- Mic duck: how much the live voice drops while a phrase plays. Applies live;

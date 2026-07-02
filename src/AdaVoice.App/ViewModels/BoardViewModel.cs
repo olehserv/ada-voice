@@ -21,6 +21,9 @@ public partial class BoardViewModel : ObservableObject
     private readonly IPlaybackHost _playback;
     private readonly IRecorderHost _recorder;
     private readonly ILibraryHost _library;
+    private readonly ISetupHost _setup;
+    private readonly Func<string?> _getActiveHotkey;
+    private readonly Action<SetupWizardViewModel> _showSetupWizard;
     private readonly Func<PhraseItemViewModel, bool> _confirmDelete;
     private readonly Func<PhraseEditViewModel, bool> _showEditDialog;
     private readonly Action<CategoriesViewModel> _showManageCategories;
@@ -50,19 +53,24 @@ public partial class BoardViewModel : ObservableObject
     [ObservableProperty]
     private Category _selectedCategoryFilter;
 
-    public BoardViewModel(IPlaybackHost playback, IRecorderHost recorder, ILibraryHost library,
-        StatusViewModel status, SettingsViewModel settings, Action<Action>? onUiThread = null,
+    public BoardViewModel(IPlaybackHost playback, IRecorderHost recorder, ILibraryHost library, ISetupHost setup,
+        StatusViewModel status, SettingsViewModel settings, Func<string?>? getActiveHotkey = null,
+        Action<Action>? onUiThread = null,
         Func<PhraseItemViewModel, bool>? confirmDelete = null,
         Func<PhraseEditViewModel, bool>? showEditDialog = null,
-        Action<CategoriesViewModel>? showManageCategories = null)
+        Action<CategoriesViewModel>? showManageCategories = null,
+        Action<SetupWizardViewModel>? showSetupWizard = null)
     {
         _playback = playback;
         _recorder = recorder;
         _library = library;
+        _setup = setup;
+        _getActiveHotkey = getActiveHotkey ?? (() => null); // default: no hotkey (unit tests)
         _onUiThread = onUiThread ?? (action => action()); // default: inline (unit tests)
         _confirmDelete = confirmDelete ?? (_ => true);     // default: confirm (unit tests)
         _showEditDialog = showEditDialog ?? (_ => false);  // default: cancel (unit tests opt in)
         _showManageCategories = showManageCategories ?? (_ => { }); // default: no-op (unit tests)
+        _showSetupWizard = showSetupWizard ?? (_ => { });  // default: no-op (unit tests)
         Status = status;
         Settings = settings;
         var broken = library.BrokenPhraseIds.ToHashSet();
@@ -166,6 +174,11 @@ public partial class BoardViewModel : ObservableObject
         ApplyColors(); // categories may have been recoloured or deleted
         SelectedCategoryFilter = AllCategories; // also refreshes the filter
     }
+
+    /// <summary>Open the setup wizard on demand (re-run entry point). Always builds a fresh wizard
+    /// so a re-run never shows stale check results from a previous run.</summary>
+    [RelayCommand]
+    private void RunSetup() => _showSetupWizard(new SetupWizardViewModel(_setup, _getActiveHotkey()));
 
     partial void OnSearchTextChanged(string value) => RefreshFilter();
     partial void OnSelectedCategoryFilterChanged(Category value) => RefreshFilter();

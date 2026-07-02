@@ -12,6 +12,10 @@ public partial class MainWindow : FluentWindow
 {
     private HotkeyService? _hotkeys;
 
+    /// <summary>The stop hotkey label <see cref="HotkeyService"/> resolved on load ("Pause",
+    /// "Ctrl+F12", or null if neither could be registered). Read by the setup wizard's hotkey step.</summary>
+    public string? ActiveHotkey => _hotkeys?.ActiveHotkey;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -83,6 +87,15 @@ public partial class MainWindow : FluentWindow
     /// <summary>Show the modal category manager (changes persist live, so nothing is returned).</summary>
     public void ShowManageCategories(CategoriesViewModel categories) =>
         new ManageCategoriesDialog { DataContext = categories, Owner = this }.ShowDialog();
+
+    /// <summary>Show the modal setup wizard. If she reaches Finish (not just closes early), mark
+    /// the wizard completed so it does not auto-show again on the next launch.</summary>
+    public void ShowSetupWizard(SetupWizardViewModel wizard)
+    {
+        var window = new SetupWizardWindow { DataContext = wizard, Owner = this };
+        if (window.ShowDialog() == true)
+            (DataContext as BoardViewModel)?.Settings.MarkWizardCompleted();
+    }
 
     private void SetUpStopHotkey()
     {

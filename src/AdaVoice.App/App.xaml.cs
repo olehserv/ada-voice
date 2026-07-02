@@ -33,14 +33,16 @@ public partial class App : Application
 
         var window = new MainWindow();
         var board = new BoardViewModel(
-            _host, _host, _host, status, settings,
+            _host, _host, _host, _host, status, settings,
+            () => window.ActiveHotkey,
             action => Dispatcher.BeginInvoke(action),
             confirmDelete: window.ConfirmDelete,
             showEditDialog: window.ShowEditDialog,
-            showManageCategories: window.ShowManageCategories);
+            showManageCategories: window.ShowManageCategories,
+            showSetupWizard: window.ShowSetupWizard);
 
         window.DataContext = board;
-        window.Show();
+        window.Show(); // triggers OnLoaded: wires Saved/Deleted AND registers the stop hotkey
     }
 
     protected override void OnExit(ExitEventArgs e)
