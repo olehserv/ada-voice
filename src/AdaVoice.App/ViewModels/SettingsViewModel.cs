@@ -1,5 +1,4 @@
 using AdaVoice.Host;
-using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AdaVoice.App.ViewModels;
 
@@ -9,7 +8,7 @@ namespace AdaVoice.App.ViewModels;
 /// fake. The mic-duck slider lives in <see cref="LevelsSettingsViewModel"/> (the Settings window)
 /// instead — this class is not the Settings screen's view-model.
 /// </summary>
-public partial class SettingsViewModel : ObservableObject
+public sealed class SettingsViewModel
 {
     private readonly ISettingsHost _settings;
 

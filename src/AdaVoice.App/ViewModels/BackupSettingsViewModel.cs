@@ -68,7 +68,17 @@ public partial class BackupSettingsViewModel : ObservableObject
         if (picked is not { } choice)
             return; // cancelled
 
-        var result = _settings.Import(choice.Path, choice.Mode);
+        ImportResult result;
+        try
+        {
+            result = _settings.Import(choice.Path, choice.Mode);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            _showError($"Could not import: {ex.Message}");
+            return;
+        }
+
         if (!result.Success)
             _showError($"Could not import: {result.Error}");
         else

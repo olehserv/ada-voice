@@ -126,6 +126,18 @@ public class BackupSettingsViewModelTests
         Assert.Contains(errors, e => e.Contains("bad archive"));
     }
 
+    [Fact]
+    public void Import_unexpected_exception_is_surfaced_without_crashing()
+    {
+        var host = new ThrowingImportSettingsHost();
+        var errors = new List<string>();
+        var vm = NewVm(host, pickImportFile: () => (@"C:\bad.zip", ImportMode.Replace), errors: errors);
+
+        vm.ImportCommand.Execute(null);
+
+        Assert.Single(errors);
+    }
+
     // A minimal ISettingsHost that throws on Export, to prove the view-model catches it. Must use
     // `override`, not `new` — BackupSettingsViewModel calls Export through the ISettingsHost
     // interface reference, and only a true override participates in that virtual dispatch; `new`
@@ -133,5 +145,14 @@ public class BackupSettingsViewModelTests
     private sealed class ThrowingExportSettingsHost : FakeSettingsHost
     {
         public override void Export(string destinationZipPath) => throw new IOException("disk full");
+    }
+
+    // Same reasoning as ThrowingExportSettingsHost, for the Import path: LibraryArchiveService.Import
+    // can throw past its own internal try/catch (e.g. InvalidDataException from a corrupt zip entry
+    // during extraction, or IOException from a failed Save) — the view-model must not crash on that.
+    private sealed class ThrowingImportSettingsHost : FakeSettingsHost
+    {
+        public override ImportResult Import(string sourceZipPath, ImportMode mode) =>
+            throw new IOException("disk full");
     }
 }

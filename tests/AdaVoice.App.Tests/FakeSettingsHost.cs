@@ -61,7 +61,7 @@ internal class FakeSettingsHost : ISettingsHost
 
     public (string Path, ImportMode Mode)? ImportedWith { get; private set; }
     public ImportResult NextImportResult { get; set; } = new(true, 1, 0);
-    public ImportResult Import(string sourceZipPath, ImportMode mode)
+    public virtual ImportResult Import(string sourceZipPath, ImportMode mode)
     {
         ImportedWith = (sourceZipPath, mode);
         return NextImportResult;
