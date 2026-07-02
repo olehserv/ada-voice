@@ -9,7 +9,9 @@ back up. It answers one question: *where are we right now?*
   (canonical table in [design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
 
 _Last updated: 2026-07-02._  
-_Setup-wizard UI complete: first-run trigger wired, build verified (0W/0E), all 275 tests green (58 Core + 88 Audio + 129 App). Manual GUI smoke (Steps 4-5 of plan) outstanding._
+_Setup-wizard UI (incl. VB-CABLE link + calibration countdown-ring follow-ups) merged to `main`
+and pushed. Manually smoke-tested by the user — confirmed working. All 279 tests green
+(58 Core + 88 Audio + 133 App)._
 
 ---
 
@@ -20,8 +22,10 @@ preview run live end-to-end AND verified on the target machine. Phase 2 storage 
 delete-as-orphan, daily backups, export/import, `settings.json`, validation/recovery) is built and
 tested. The WPF Board now manages the library — play/record, edit/delete, search/category-filter, a
 category manager, colour-filled phrase tiles, and coloured reusable tag chips — smoke-tested end to
-end by the user and merged + pushed to `main` (2026-07-02).** Next real step: the setup-wizard UI (the
-checks/calibration logic already exists), then the full WPF UI/UX pass + localization (UA/PL/EN).
+end by the user and merged + pushed to `main` (2026-07-02). The setup-wizard UI (environment
+checks, voice calibration, hotkey status, instructions, first-call card, VB-CABLE download link,
+calibration countdown ring) is also built, smoke-tested by the user, and merged + pushed to
+`main` (2026-07-02).** Next real step: the full WPF UI/UX pass + localization (UA/PL/EN).
 
 ## Done
 
@@ -49,16 +53,27 @@ checks/calibration logic already exists), then the full WPF UI/UX pass + localiz
     the edit dialog's tag box is a chip editor (add/remove/reuse-via-suggestion); phrase tiles show tags
     as coloured chips on a fixed dark scrim so they read over any category fill.
   - 247 tests green (57 Core + 88 Audio + 102 App) at merge.
-- ✅ **Setup-wizard UI — built, unit-tested, and first-run-wired (2026-07-02).** All 5 Bucket A
-  steps implemented (environment checks, voice calibration, hotkey status, instructions,
-  first-call checklist) as a modal wizard flow on top of the Board. Triggered automatically on
-  first run (when `settings.WizardCompleted` is false) and re-runnable via **Setup…** in the status
-  bar. Full unit-test coverage (129 tests in App.Tests) with no regressions across Core/Audio/App.
-  Design spec: [`docs/superpowers/specs/2026-07-02-setup-wizard-ui-design.md`](docs/superpowers/specs/2026-07-02-setup-wizard-ui-design.md).
-  **Outstanding:** manual GUI smoke testing (first-run walkthrough with real mic calibration; re-run
-  and cancel behavior) has not yet been performed and should happen before this is marked fully
-  complete. Device selection, live meters, the loopback self-test, and the 3 extra environment
-  checks remain a v2 follow-up.
+- ✅ **Setup-wizard UI — built, unit-tested, smoke-tested, merged + pushed to `main` (2026-07-02).**
+  All 5 Bucket A steps implemented (environment checks, voice calibration, hotkey status,
+  instructions, first-call checklist) as a modal wizard flow on top of the Board. Triggered
+  automatically on first run (when `settings.WizardCompleted` is false) and re-runnable via
+  **Setup…** in the status bar. Design spec:
+  [`docs/superpowers/specs/2026-07-02-setup-wizard-ui-design.md`](docs/superpowers/specs/2026-07-02-setup-wizard-ui-design.md);
+  build plan: [`docs/superpowers/plans/2026-07-02-setup-wizard-ui.md`](docs/superpowers/plans/2026-07-02-setup-wizard-ui.md).
+  - **Follow-up (same day):** restored two spec items the build plan had silently dropped — a
+    VB-CABLE download link (`https://vb-audio.com/Cable/`) shown when the cable environment check
+    fails, and a purely cosmetic 5-second countdown-ring animation on the calibration step
+    (View-owned, no ViewModel change). Plan:
+    [`docs/superpowers/plans/2026-07-02-setup-wizard-followups.md`](docs/superpowers/plans/2026-07-02-setup-wizard-followups.md).
+  - 279 tests green (58 Core + 88 Audio + 133 App) at merge.
+  - **Manual GUI smoke-tested by the user and confirmed working** (first-run hotkey label,
+    environment checks + VB-CABLE link, calibration + countdown ring, re-run/cancel behavior).
+  - Known accepted trade-off: the VB-CABLE link identifies the cable check by matching
+    `EnvironmentCheck.Name == "Cable output"` (a string, not a type) — fragile to a future rename
+    in `EnvironmentChecks.cs`, deliberately not fixed with a new enum (out of scope for a cosmetic
+    link).
+  - Device selection, live meters, the loopback self-test, VB-CABLE install detection, and the 3
+    extra environment checks remain a v2 follow-up (not started).
 - ✅ **Phase 2 storage — built + tested (pre-2026-07-01; the handoff had under-recorded this).** Category
   CRUD + phrase categorization + tags, delete-by-orphan, daily backups + recover-from-backup,
   library export/import, `JsonSettingsRepository`, corrupt-library quarantine + broken-phrase flagging,
@@ -150,16 +165,15 @@ checks/calibration logic already exists), then the full WPF UI/UX pass + localiz
 
 ## In progress / interrupted
 
-**Pending (not yet started):** Manual GUI smoke testing for the setup wizard (first-run walkthrough
-with real mic calibration; re-run entry point and cancel behavior). See the setup-wizard Done entry
-above for details. This is the final gate before the wizard is marked fully complete.
+Nothing in progress or interrupted. The setup-wizard UI (incl. its same-day follow-up) is complete,
+smoke-tested, merged, and pushed.
 
 ## Next action
 
 **1) Full UI/UX pass + localization (UA/PL/EN).**  
-After manual GUI smoke testing on the setup wizard is complete, the next major arc is a full UI/UX
-polish pass (refining interaction states, Full/Docked layout variants) and retrofitting every user-
-facing string to `.resx` localization files (Ukrainian, Polish, English).
+The next major arc is a full UI/UX polish pass (refining interaction states, Full/Docked layout
+variants) and retrofitting every user-facing string to `.resx` localization files (Ukrainian,
+Polish, English).
 
 **Note (debt):** localization was deliberately deferred — every Board/dialog string added in
 `feat/board-library-ui` is English-only and will need a `.resx` retrofit.
