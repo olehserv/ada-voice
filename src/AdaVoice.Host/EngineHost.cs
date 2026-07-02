@@ -356,6 +356,22 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     /// <summary>Remember the language preference in memory. Does not persist.</summary>
     public void SetLanguage(string code) => _settings = _settings with { Language = code };
 
+    /// <summary>Export the library to a zip — thin delegation to the already-existing
+    /// <see cref="ExportLibrary"/> (used today by the console host).</summary>
+    public void Export(string destinationZipPath) => ExportLibrary(destinationZipPath);
+
+    /// <summary>Import a library archive — thin delegation to the already-existing
+    /// <see cref="ImportLibrary"/> (used today by the console host), which already reloads the
+    /// in-session library on success.</summary>
+    public ImportResult Import(string sourceZipPath, ImportMode mode) => ImportLibrary(sourceZipPath, mode);
+
+    /// <summary>The date of the newest daily backup, or null if none exist yet.</summary>
+    public DateOnly? LastBackupDate => new BackupService(_dataRoot).LatestBackupDate();
+
+    /// <summary>Open the backups folder in the OS file explorer.</summary>
+    public void OpenBackupFolder() =>
+        Process.Start(new ProcessStartInfo(AdaVoicePaths.BackupsDir(_dataRoot)) { UseShellExecute = true });
+
     /// <summary>Choose, save, and report the monitor device previews play to. A null or blank name
     /// clears the choice (previews go to the OS default output).</summary>
     public void SetMonitorDevice(string? nameSubstring)

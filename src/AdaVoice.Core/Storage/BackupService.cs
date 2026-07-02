@@ -72,6 +72,19 @@ public sealed class BackupService(string root, int keep = 7)
         return null;
     }
 
+    /// <summary>The date of the newest backup, or null if none exist yet. Used by the Settings
+    /// window's backup status readout.</summary>
+    public DateOnly? LatestBackupDate()
+    {
+        var newest = BackupFilesNewestFirst().FirstOrDefault();
+        if (newest is null)
+            return null;
+
+        var name = Path.GetFileNameWithoutExtension(newest);
+        var dateText = name[AdaVoicePaths.BackupFilePrefix.Length..];
+        return DateOnly.TryParse(dateText, out var date) ? date : null;
+    }
+
     private void CreateZip(string zipPath)
     {
         using var zip = ZipFile.Open(zipPath, ZipArchiveMode.Create);

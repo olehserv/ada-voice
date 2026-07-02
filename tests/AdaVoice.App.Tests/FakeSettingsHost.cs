@@ -1,3 +1,4 @@
+using AdaVoice.Core.Storage;
 using AdaVoice.Host;
 
 namespace AdaVoice.App.Tests;
@@ -54,4 +55,19 @@ internal sealed class FakeSettingsHost : ISettingsHost
     public string Language { get; set; } = "en";
 
     public void SetLanguage(string code) => Language = code;
+
+    public string? ExportedPath { get; private set; }
+    public void Export(string destinationZipPath) => ExportedPath = destinationZipPath;
+
+    public (string Path, ImportMode Mode)? ImportedWith { get; private set; }
+    public ImportResult NextImportResult { get; set; } = new(true, 1, 0);
+    public ImportResult Import(string sourceZipPath, ImportMode mode)
+    {
+        ImportedWith = (sourceZipPath, mode);
+        return NextImportResult;
+    }
+
+    public DateOnly? LastBackupDate { get; set; }
+    public int OpenBackupFolderCount { get; private set; }
+    public void OpenBackupFolder() => OpenBackupFolderCount++;
 }

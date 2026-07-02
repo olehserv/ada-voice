@@ -86,6 +86,23 @@ public class BackupServiceTests : IDisposable
     }
 
     [Fact]
+    public void LatestBackupDate_returns_the_newest_backups_date()
+    {
+        SeedLibrary("p-1");
+        var service = new BackupService(_root);
+        service.EnsureDailyBackup(new DateOnly(2026, 6, 1));
+        service.EnsureDailyBackup(new DateOnly(2026, 6, 3));
+
+        Assert.Equal(new DateOnly(2026, 6, 3), service.LatestBackupDate());
+    }
+
+    [Fact]
+    public void LatestBackupDate_returns_null_when_no_backups_exist()
+    {
+        Assert.Null(new BackupService(_root).LatestBackupDate());
+    }
+
+    [Fact]
     public void Corrupt_library_is_recovered_through_the_real_wired_path()
     {
         // The whole point of the slice: a real backup + a corrupt file + the wiring the host uses.

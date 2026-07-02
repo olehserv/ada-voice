@@ -1,3 +1,5 @@
+using AdaVoice.Core.Storage;
+
 namespace AdaVoice.Host;
 
 /// <summary>
@@ -57,4 +59,18 @@ public interface ISettingsHost
     /// <summary>Set the language preference and remember it in memory. Does not write to disk —
     /// call <see cref="SaveSettings"/> to persist.</summary>
     void SetLanguage(string code);
+
+    /// <summary>Export the library (metadata + active phrase WAVs) to a zip.</summary>
+    void Export(string destinationZipPath);
+
+    /// <summary>Import a library archive (merge or replace). The in-session library refreshes on
+    /// success — the Board's on-screen list does not (see the design spec's "Import refresh"
+    /// note), so the caller should tell the operator a restart is needed to see the result.</summary>
+    ImportResult Import(string sourceZipPath, ImportMode mode);
+
+    /// <summary>The date of the newest daily backup, or null if none exist yet.</summary>
+    DateOnly? LastBackupDate { get; }
+
+    /// <summary>Open the backups folder in the OS file explorer.</summary>
+    void OpenBackupFolder();
 }
