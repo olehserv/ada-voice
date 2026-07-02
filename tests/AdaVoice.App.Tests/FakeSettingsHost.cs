@@ -32,4 +32,16 @@ internal sealed class FakeSettingsHost : ISettingsHost
         WizardCompleted = true;
         MarkWizardCompletedCount++;
     }
+
+    public bool AlwaysOnTop { get; set; } = true;
+
+    public void SetAlwaysOnTop(bool value) => AlwaysOnTop = value;
+
+    public bool ReplaceOnRetrigger { get; set; } = true;
+
+    public void SetReplaceOnRetrigger(bool value) => ReplaceOnRetrigger = value;
+
+    public string Language { get; set; } = "en";
+
+    public void SetLanguage(string code) => Language = code;
 }
