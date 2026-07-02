@@ -11,7 +11,9 @@ back up. It answers one question: *where are we right now?*
 _Last updated: 2026-07-02._  
 _Setup-wizard UI (incl. VB-CABLE link + calibration countdown-ring follow-ups) merged to `main`
 and pushed. Manually smoke-tested by the user — confirmed working. All 279 tests green
-(58 Core + 88 Audio + 133 App)._
+(58 Core + 88 Audio + 133 App). Next arc (UI/UX pass + localization) scoped into 4 ordered
+slices — see [`docs/plans/ui-ux-localization-scope.md`](docs/plans/ui-ux-localization-scope.md);
+now planning slice 1 (Settings window)._
 
 ---
 
@@ -170,13 +172,25 @@ smoke-tested, merged, and pushed.
 
 ## Next action
 
-**1) Full UI/UX pass + localization (UA/PL/EN).**  
-The next major arc is a full UI/UX polish pass (refining interaction states, Full/Docked layout
-variants) and retrofitting every user-facing string to `.resx` localization files (Ukrainian,
-Polish, English).
+**1) UI/UX pass + localization — scoped into 4 ordered slices (2026-07-02).**  
+What used to read as one "full UI/UX pass" is actually four independently shippable slices; full
+audit + rationale in
+[`docs/plans/ui-ux-localization-scope.md`](docs/plans/ui-ux-localization-scope.md):
 
-**Note (debt):** localization was deliberately deferred — every Board/dialog string added in
-`feat/board-library-ui` is English-only and will need a `.resx` retrofit.
+1. **Settings window** (device pickers, language, hotkey reassignment, backup/export UI) — no
+   Settings window exists yet at all; starting here since it's also the biggest surface of new
+   strings.
+2. **Interaction-state gaps** on the existing Board (repair dialog, category-empty CTA, search
+   Clear button, recorder level meter/processing state, wizard per-row spinner).
+3. **Full/Docked responsive layout** — currently unbuilt (single layout at all widths); needs a
+   design decision (bring back the category rail at ≥720px, or keep dropdown-only and update
+   design 05) before implementation.
+4. **Localization retrofit (UA/PL/EN)** — done last, after 1–3's new strings exist.
+
+**Currently planning slice 1 (Settings window).**
+
+**Note (debt):** localization was deliberately deferred — every Board/dialog string added so far
+is English-only and will need a `.resx` retrofit (slice 4).
 
 **Open follow-ups (named so they're not lost):**
 - **Configurable monitor device:** preview currently uses the default output as the monitor
