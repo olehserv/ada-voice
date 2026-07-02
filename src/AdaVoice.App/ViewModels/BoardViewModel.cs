@@ -14,8 +14,9 @@ namespace AdaVoice.App.ViewModels;
 /// <summary>
 /// The Board: shows the phrases, plays them to the call, records new ones, and edits/deletes them. Talks
 /// only to the host seams (<see cref="IPlaybackHost"/> / <see cref="IRecorderHost"/> /
-/// <see cref="ILibraryHost"/>), so it is unit-testable with a fake. Editing and deleting use injected
-/// dialog callbacks so the view-model needs no XAML to test.
+/// <see cref="ILibraryHost"/> / <see cref="ISetupHost"/> / <see cref="ISettingsHost"/>), so it is
+/// unit-testable with a fake. Editing and deleting use injected dialog callbacks so the view-model
+/// needs no XAML to test.
 /// </summary>
 public partial class BoardViewModel : ObservableObject
 {
