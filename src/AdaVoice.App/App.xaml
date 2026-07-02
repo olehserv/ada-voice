@@ -18,6 +18,7 @@
             <app:ContrastTextConverter x:Key="ContrastText" />
             <app:CheckStatusToLabelConverter x:Key="CheckStatusToLabel" />
             <app:CheckStatusToBrushConverter x:Key="CheckStatusToBrush" />
+            <app:FailedCableCheckToVisibilityConverter x:Key="FailedCableCheckToLink" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

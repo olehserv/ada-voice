@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 using AdaVoice.Audio.Setup;
@@ -95,4 +96,19 @@ public sealed class CheckStatusToBrushConverter : IValueConverter
         brush.Freeze();
         return brush;
     }
+}
+
+/// <summary>The whole bound <see cref="EnvironmentCheck"/> (via a path-less `{Binding}`) →
+/// visible only for the failed cable-output check, so the VB-CABLE download link shows next to
+/// that one check's detail text and nowhere else. Matches by <see cref="EnvironmentCheck.Name"/>
+/// since no `CheckType` enum exists — see EnvironmentChecks.cs's "Cable output" literal.</summary>
+public sealed class FailedCableCheckToVisibilityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is EnvironmentCheck { Name: "Cable output", Status: CheckStatus.Fail }
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
 }

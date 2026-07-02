@@ -18,6 +18,12 @@
                             </StackPanel>
                             <TextBlock Text="{Binding Detail}" Foreground="{StaticResource Text.Secondary}"
                                        Margin="0,4,0,0" TextWrapping="Wrap" />
+                            <TextBlock Margin="0,4,0,0"
+                                       Visibility="{Binding Converter={StaticResource FailedCableCheckToLink}}">
+                                <Hyperlink NavigateUri="https://vb-audio.com/Cable/" RequestNavigate="OnVbCableLinkRequestNavigate">
+                                    Download VB-CABLE
+                                </Hyperlink>
+                            </TextBlock>
                         </StackPanel>
                     </Border>
                 </DataTemplate>
