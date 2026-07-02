@@ -15,6 +15,44 @@
                    HorizontalAlignment="Left"
                    Visibility="{Binding CanStart, Converter={StaticResource BoolToVis}}" />
 
+        <Grid Width="44" Height="44" Margin="0,0,0,8" HorizontalAlignment="Left"
+              Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}">
+            <!-- Static background track. -->
+            <Ellipse Width="44" Height="44" Stroke="{StaticResource Text.Secondary}" StrokeThickness="4" />
+
+            <!-- Foreground ring: one dash and one gap, each equal to the full circumference (in
+                 StrokeThickness-relative units: 125.664 / 4 = 31.416), rotated -90 degrees so the
+                 drain starts at 12 o'clock. StrokeDashOffset animates 0 -> 31.416 (same
+                 thickness-relative units as StrokeDashArray) over exactly 5 seconds while
+                 IsRecording is true. -->
+            <Ellipse x:Name="CountdownRing" Width="44" Height="44" Stroke="{StaticResource Accent}"
+                     StrokeThickness="4" StrokeDashArray="31.416,31.416" StrokeDashOffset="0"
+                     RenderTransformOrigin="0.5,0.5">
+                <Ellipse.RenderTransform>
+                    <RotateTransform Angle="-90" />
+                </Ellipse.RenderTransform>
+                <Ellipse.Style>
+                    <Style TargetType="Ellipse">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsRecording}" Value="True">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard x:Name="CountdownBeginStoryboard">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="StrokeDashOffset"
+                                                             From="0" To="31.416" Duration="0:0:5" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                                <DataTrigger.ExitActions>
+                                    <StopStoryboard BeginStoryboardName="CountdownBeginStoryboard" />
+                                </DataTrigger.ExitActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Ellipse.Style>
+            </Ellipse>
+        </Grid>
+
         <TextBlock Text="Recording… speak now" FontWeight="SemiBold" Margin="0,0,0,8"
                    Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}" />
 
