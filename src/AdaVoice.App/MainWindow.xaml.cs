@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Windows;
-using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using AdaVoice.App.Services;
 using AdaVoice.App.ViewModels;
+using AdaVoice.Core.Storage;
+using Microsoft.Win32;
 using Serilog;
 using Wpf.Ui.Controls;
 
@@ -96,6 +98,91 @@ public partial class MainWindow : FluentWindow
         if (window.ShowDialog() == true)
             (DataContext as BoardViewModel)?.Settings.MarkWizardCompleted();
     }
+
+    /// <summary>Show the modal Settings window. Always-on-top changes apply live to this window
+    /// as the operator toggles them — <c>Window.Topmost</c> is a WPF concept the view-model does
+    /// not touch, so this window applies it on the view-model's behalf.</summary>
+    public void ShowSettings(SettingsWindowViewModel vm)
+    {
+        vm.Behavior.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(BehaviorSettingsViewModel.AlwaysOnTop))
+                Topmost = vm.Behavior.AlwaysOnTop;
+        };
+
+        new SettingsWindow { DataContext = vm, Owner = this }.ShowDialog();
+    }
+
+    /// <summary>Ask where to save a library export. Returns null if the operator cancels.</summary>
+    public string? PickExportPath()
+    {
+        var dialog = new SaveFileDialog
+        {
+            Filter = "AdaVoice export (*.zip)|*.zip",
+            FileName = $"adavoice-export-{DateTime.Now:yyyy-MM-dd}.zip",
+        };
+        return dialog.ShowDialog(this) == true ? dialog.FileName : null;
+    }
+
+    /// <summary>Ask which archive to import and whether to merge or replace. Returns null if the
+    /// operator cancels at either step.</summary>
+    public (string Path, ImportMode Mode)? PickImportFile()
+    {
+        var openDialog = new OpenFileDialog { Filter = "AdaVoice export (*.zip)|*.zip" };
+        if (openDialog.ShowDialog(this) != true)
+            return null;
+
+        var choice = System.Windows.MessageBox.Show(
+            this,
+            "Merge with your current library, or replace it entirely?\n\n" +
+            "Yes = Merge (keeps your current phrases)\nNo = Replace (your current library is overwritten)",
+            "Import library",
+            System.Windows.MessageBoxButton.YesNoCancel,
+            System.Windows.MessageBoxImage.Question);
+
+        return choice switch
+        {
+            System.Windows.MessageBoxResult.Yes => (openDialog.FileName, ImportMode.Merge),
+            System.Windows.MessageBoxResult.No => (openDialog.FileName, ImportMode.Replace),
+            _ => null,
+        };
+    }
+
+    /// <summary>Offer to restart now so a language change takes effect. Fails silently if the
+    /// relaunch itself cannot start — the setting is already saved either way, so a failed restart
+    /// must never block closing Settings.</summary>
+    public void ConfirmAndRestart()
+    {
+        var restart = System.Windows.MessageBox.Show(
+            this,
+            "The language change takes effect after a restart. Restart AdaVoice now?",
+            "Restart required",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Question) == System.Windows.MessageBoxResult.Yes;
+
+        if (!restart)
+            return;
+
+        try
+        {
+            Process.Start(Environment.ProcessPath!);
+            System.Windows.Application.Current.Shutdown();
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            Log.Warning(ex, "Could not restart automatically — the language change applies on the next manual launch");
+        }
+    }
+
+    /// <summary>Show an error dialog (Export/Import failures).</summary>
+    public void ShowError(string message) =>
+        System.Windows.MessageBox.Show(this, message, "AdaVoice",
+            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+
+    /// <summary>Show an informational dialog (the Import-succeeded notice).</summary>
+    public void ShowInfo(string message) =>
+        System.Windows.MessageBox.Show(this, message, "AdaVoice",
+            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
 
     private void SetUpStopHotkey()
     {

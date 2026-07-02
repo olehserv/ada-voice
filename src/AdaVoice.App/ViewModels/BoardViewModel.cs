@@ -4,6 +4,7 @@ using System.Windows.Data;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Recording;
 using AdaVoice.Core.Domain;
+using AdaVoice.Core.Storage;
 using AdaVoice.Host;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -22,8 +23,15 @@ public partial class BoardViewModel : ObservableObject
     private readonly IRecorderHost _recorder;
     private readonly ILibraryHost _library;
     private readonly ISetupHost _setup;
+    private readonly ISettingsHost _settingsHost;
     private readonly Func<string?> _getActiveHotkey;
     private readonly Action<SetupWizardViewModel> _showSetupWizard;
+    private readonly Action<SettingsWindowViewModel> _showSettings;
+    private readonly Func<string?> _pickExportPath;
+    private readonly Func<(string Path, ImportMode Mode)?> _pickImportFile;
+    private readonly Action _confirmAndRestart;
+    private readonly Action<string> _showError;
+    private readonly Action<string> _showSettingsInfo;
     private readonly Func<PhraseItemViewModel, bool> _confirmDelete;
     private readonly Func<PhraseEditViewModel, bool> _showEditDialog;
     private readonly Action<CategoriesViewModel> _showManageCategories;
@@ -54,23 +62,37 @@ public partial class BoardViewModel : ObservableObject
     private Category _selectedCategoryFilter;
 
     public BoardViewModel(IPlaybackHost playback, IRecorderHost recorder, ILibraryHost library, ISetupHost setup,
-        StatusViewModel status, SettingsViewModel settings, Func<string?>? getActiveHotkey = null,
+        ISettingsHost settingsHost, StatusViewModel status, SettingsViewModel settings,
+        Func<string?>? getActiveHotkey = null,
         Action<Action>? onUiThread = null,
         Func<PhraseItemViewModel, bool>? confirmDelete = null,
         Func<PhraseEditViewModel, bool>? showEditDialog = null,
         Action<CategoriesViewModel>? showManageCategories = null,
-        Action<SetupWizardViewModel>? showSetupWizard = null)
+        Action<SetupWizardViewModel>? showSetupWizard = null,
+        Action<SettingsWindowViewModel>? showSettings = null,
+        Func<string?>? pickExportPath = null,
+        Func<(string Path, ImportMode Mode)?>? pickImportFile = null,
+        Action? confirmAndRestart = null,
+        Action<string>? showError = null,
+        Action<string>? showSettingsInfo = null)
     {
         _playback = playback;
         _recorder = recorder;
         _library = library;
         _setup = setup;
+        _settingsHost = settingsHost;
         _getActiveHotkey = getActiveHotkey ?? (() => null); // default: no hotkey (unit tests)
         _onUiThread = onUiThread ?? (action => action()); // default: inline (unit tests)
         _confirmDelete = confirmDelete ?? (_ => true);     // default: confirm (unit tests)
         _showEditDialog = showEditDialog ?? (_ => false);  // default: cancel (unit tests opt in)
         _showManageCategories = showManageCategories ?? (_ => { }); // default: no-op (unit tests)
         _showSetupWizard = showSetupWizard ?? (_ => { });  // default: no-op (unit tests)
+        _showSettings = showSettings ?? (_ => { });        // default: no-op (unit tests)
+        _pickExportPath = pickExportPath ?? (() => null);  // default: cancelled (unit tests)
+        _pickImportFile = pickImportFile ?? (() => null);  // default: cancelled (unit tests)
+        _confirmAndRestart = confirmAndRestart ?? (() => { }); // default: no-op (unit tests)
+        _showError = showError ?? (_ => { });              // default: no-op (unit tests)
+        _showSettingsInfo = showSettingsInfo ?? (_ => { }); // default: no-op (unit tests)
         Status = status;
         Settings = settings;
         var broken = library.BrokenPhraseIds.ToHashSet();
@@ -179,6 +201,13 @@ public partial class BoardViewModel : ObservableObject
     /// so a re-run never shows stale check results from a previous run.</summary>
     [RelayCommand]
     private void RunSetup() => _showSetupWizard(new SetupWizardViewModel(_setup, _getActiveHotkey()));
+
+    /// <summary>Open the Settings window on demand. Always builds a fresh view-model so a re-open
+    /// never shows a stale hotkey status or backup date from a previous open.</summary>
+    [RelayCommand]
+    private void RunSettings() => _showSettings(new SettingsWindowViewModel(
+        _settingsHost, _setup, _getActiveHotkey(), _pickExportPath, _pickImportFile,
+        _confirmAndRestart, _showError, _showSettingsInfo));
 
     partial void OnSearchTextChanged(string value) => RefreshFilter();
     partial void OnSelectedCategoryFilterChanged(Category value) => RefreshFilter();

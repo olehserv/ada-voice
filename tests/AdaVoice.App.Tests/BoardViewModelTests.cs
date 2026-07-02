@@ -2,6 +2,7 @@ using AdaVoice.App.ViewModels;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Recording;
 using AdaVoice.Core.Domain;
+using AdaVoice.Host;
 
 namespace AdaVoice.App.Tests;
 
@@ -12,10 +13,14 @@ public class BoardViewModelTests
         Func<PhraseItemViewModel, bool>? confirmDelete = null,
         Func<PhraseEditViewModel, bool>? showEditDialog = null,
         Action<CategoriesViewModel>? showManageCategories = null,
-        Action<SetupWizardViewModel>? showSetupWizard = null) =>
-        new(host, host, host, host, new StatusViewModel(host), new SettingsViewModel(new FakeSettingsHost()),
+        Action<SetupWizardViewModel>? showSetupWizard = null,
+        ISettingsHost? settingsHost = null,
+        Action<SettingsWindowViewModel>? showSettings = null) =>
+        new(host, host, host, host, settingsHost ?? new FakeSettingsHost(), new StatusViewModel(host),
+            new SettingsViewModel(new FakeSettingsHost()),
             getActiveHotkey: () => "Pause", confirmDelete: confirmDelete, showEditDialog: showEditDialog,
-            showManageCategories: showManageCategories, showSetupWizard: showSetupWizard);
+            showManageCategories: showManageCategories, showSetupWizard: showSetupWizard,
+            showSettings: showSettings);
 
     private static RecordingResult Take() => new(new float[10], GainDb: -3, DurationMs: 1000, PeakDbfs: -6);
 
@@ -639,5 +644,18 @@ public class BoardViewModelTests
 
         var hotkeyStep = Assert.IsType<HotkeyStatusStepViewModel>(shown!.Steps[2]);
         Assert.Equal("Global stop hotkey registered: Pause", hotkeyStep.StatusLabel);
+    }
+
+    [Fact]
+    public void Run_settings_builds_a_window_view_model_from_the_hosts_and_shows_it()
+    {
+        var host = new FakePlaybackHost();
+        SettingsWindowViewModel? shown = null;
+        var board = NewBoard(host, settingsHost: new FakeSettingsHost(), showSettings: vm => shown = vm);
+
+        board.RunSettingsCommand.Execute(null);
+
+        Assert.NotNull(shown);
+        Assert.Equal("Pause", shown!.Behavior.HotkeyStatus.Split(": ")[1]);
     }
 }

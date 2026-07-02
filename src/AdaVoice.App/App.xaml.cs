@@ -31,15 +31,21 @@ public partial class App : Application
         var status = new StatusViewModel(_host, action => Dispatcher.BeginInvoke(action));
         var settings = new SettingsViewModel(_host);
 
-        var window = new MainWindow();
+        var window = new MainWindow { Topmost = _host.AlwaysOnTop };
         var board = new BoardViewModel(
-            _host, _host, _host, _host, status, settings,
+            _host, _host, _host, _host, _host, status, settings,
             () => window.ActiveHotkey,
             action => Dispatcher.BeginInvoke(action),
             confirmDelete: window.ConfirmDelete,
             showEditDialog: window.ShowEditDialog,
             showManageCategories: window.ShowManageCategories,
-            showSetupWizard: window.ShowSetupWizard);
+            showSetupWizard: window.ShowSetupWizard,
+            showSettings: window.ShowSettings,
+            pickExportPath: window.PickExportPath,
+            pickImportFile: window.PickImportFile,
+            confirmAndRestart: window.ConfirmAndRestart,
+            showError: window.ShowError,
+            showSettingsInfo: window.ShowInfo);
 
         window.DataContext = board;
         window.Show(); // triggers OnLoaded: wires Saved/Deleted AND registers the stop hotkey
