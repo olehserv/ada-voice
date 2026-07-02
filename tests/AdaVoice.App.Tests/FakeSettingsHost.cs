@@ -34,12 +34,22 @@ internal sealed class FakeSettingsHost : ISettingsHost
     }
 
     public bool AlwaysOnTop { get; set; } = true;
+    public int SetAlwaysOnTopCount { get; private set; }
 
-    public void SetAlwaysOnTop(bool value) => AlwaysOnTop = value;
+    public void SetAlwaysOnTop(bool value)
+    {
+        AlwaysOnTop = value;
+        SetAlwaysOnTopCount++;
+    }
 
     public bool ReplaceOnRetrigger { get; set; } = true;
+    public int SetReplaceOnRetriggerCount { get; private set; }
 
-    public void SetReplaceOnRetrigger(bool value) => ReplaceOnRetrigger = value;
+    public void SetReplaceOnRetrigger(bool value)
+    {
+        ReplaceOnRetrigger = value;
+        SetReplaceOnRetriggerCount++;
+    }
 
     public string Language { get; set; } = "en";
 
