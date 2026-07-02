@@ -39,4 +39,21 @@ public sealed record Settings
     /// <summary>True once the setup wizard has been completed at least once. Drives whether it
     /// auto-shows on startup; false (the default) means "never completed" — show it.</summary>
     public bool WizardCompleted { get; init; }
+
+    /// <summary>Whether the Board window stays always-on-top. The window itself applies this (a
+    /// WPF concept this record does not touch) — this is just the persisted preference. Default
+    /// true so an existing settings.json (this field absent) changes nothing for anyone until they
+    /// explicitly turn it off — it matches the app's original hardcoded Topmost="True".</summary>
+    public bool AlwaysOnTop { get; init; } = true;
+
+    /// <summary>If true, playing a new phrase replaces the one currently playing; if false, the new
+    /// trigger is ignored while a phrase is already playing. Read once when the engine builds the
+    /// phrase player — changing it takes effect on the next restart. Default true, matching
+    /// <c>PhrasePlayerOptions.ReplaceOnRetrigger</c>'s existing default.</summary>
+    public bool ReplaceOnRetrigger { get; init; } = true;
+
+    /// <summary>The UI language code ("en", "uk", or "pl"). Applies on restart. Default "en" — the
+    /// app is English-only until the localization retrofit lands; choosing another language
+    /// persists the choice but does not yet change any displayed text.</summary>
+    public string Language { get; init; } = "en";
 }

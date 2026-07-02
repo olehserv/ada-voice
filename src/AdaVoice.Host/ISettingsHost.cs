@@ -32,4 +32,29 @@ public interface ISettingsHost
 
     /// <summary>Mark the setup wizard completed and persist immediately.</summary>
     void MarkWizardCompleted();
+
+    /// <summary>Whether the Board window should stay always-on-top. The window itself applies
+    /// this — this seam only carries the persisted preference.</summary>
+    bool AlwaysOnTop { get; }
+
+    /// <summary>Set the always-on-top preference and remember it in memory. Does not write to
+    /// disk — call <see cref="SaveSettings"/> to persist.</summary>
+    void SetAlwaysOnTop(bool value);
+
+    /// <summary>If true (the default), a new phrase trigger replaces the one currently playing; if
+    /// false, the new trigger is ignored while a phrase is already playing. Read once when the
+    /// engine builds the phrase player, so a change here takes effect on the next restart.</summary>
+    bool ReplaceOnRetrigger { get; }
+
+    /// <summary>Set the retrigger preference and remember it in memory. Does not write to disk —
+    /// call <see cref="SaveSettings"/> to persist.</summary>
+    void SetReplaceOnRetrigger(bool value);
+
+    /// <summary>The UI language code ("en", "uk", or "pl"). Applies on restart — choosing another
+    /// language does not change any displayed text until the localization retrofit lands.</summary>
+    string Language { get; }
+
+    /// <summary>Set the language preference and remember it in memory. Does not write to disk —
+    /// call <see cref="SaveSettings"/> to persist.</summary>
+    void SetLanguage(string code);
 }

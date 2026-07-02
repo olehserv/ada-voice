@@ -66,6 +66,36 @@ public class JsonSettingsRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void Always_on_top_defaults_to_true_and_roundtrips()
+    {
+        Assert.True(new JsonSettingsRepository(_root).Load().AlwaysOnTop);
+
+        new JsonSettingsRepository(_root).Save(new Settings { AlwaysOnTop = false });
+
+        Assert.False(new JsonSettingsRepository(_root).Load().AlwaysOnTop);
+    }
+
+    [Fact]
+    public void Replace_on_retrigger_defaults_to_true_and_roundtrips()
+    {
+        Assert.True(new JsonSettingsRepository(_root).Load().ReplaceOnRetrigger);
+
+        new JsonSettingsRepository(_root).Save(new Settings { ReplaceOnRetrigger = false });
+
+        Assert.False(new JsonSettingsRepository(_root).Load().ReplaceOnRetrigger);
+    }
+
+    [Fact]
+    public void Language_defaults_to_en_and_roundtrips()
+    {
+        Assert.Equal("en", new JsonSettingsRepository(_root).Load().Language);
+
+        new JsonSettingsRepository(_root).Save(new Settings { Language = "uk" });
+
+        Assert.Equal("uk", new JsonSettingsRepository(_root).Load().Language);
+    }
+
+    [Fact]
     public void Save_then_load_roundtrips_the_monitor_choice()
     {
         var repo = new JsonSettingsRepository(_root);

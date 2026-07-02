@@ -104,6 +104,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     {
         DuckGain = RampGain.DbToLinear(_settings.MicDuckDb),
         DuckRampMs = _settings.DuckRampMs,
+        ReplaceOnRetrigger = _settings.ReplaceOnRetrigger,
     };
 
     /// <summary>Run the setup environment checks against the live audio devices (cable present + at
@@ -335,6 +336,25 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
         _settings = _settings with { WizardCompleted = true };
         _settingsRepository.Save(_settings);
     }
+
+    /// <summary>Whether the Board window should stay always-on-top.</summary>
+    public bool AlwaysOnTop => _settings.AlwaysOnTop;
+
+    /// <summary>Remember the always-on-top preference in memory. Does not persist.</summary>
+    public void SetAlwaysOnTop(bool value) => _settings = _settings with { AlwaysOnTop = value };
+
+    /// <summary>Whether a new phrase trigger replaces the one currently playing.</summary>
+    public bool ReplaceOnRetrigger => _settings.ReplaceOnRetrigger;
+
+    /// <summary>Remember the retrigger preference in memory. Does not persist. Takes effect on the
+    /// next restart (read by <see cref="PlayerOptionsFromSettings"/> at construction).</summary>
+    public void SetReplaceOnRetrigger(bool value) => _settings = _settings with { ReplaceOnRetrigger = value };
+
+    /// <summary>The UI language code.</summary>
+    public string Language => _settings.Language;
+
+    /// <summary>Remember the language preference in memory. Does not persist.</summary>
+    public void SetLanguage(string code) => _settings = _settings with { Language = code };
 
     /// <summary>Choose, save, and report the monitor device previews play to. A null or blank name
     /// clears the choice (previews go to the OS default output).</summary>
