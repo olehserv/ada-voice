@@ -255,6 +255,74 @@ public class BoardViewModelTests
     }
 
     [Fact]
+    public void Save_take_is_disabled_when_the_title_is_blank()
+    {
+        var board = NewBoard(new FakePlaybackHost());
+        board.PendingTake = Take();
+        board.NewTitle = "   ";
+
+        Assert.False(board.SaveTakeCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void Save_take_becomes_enabled_once_a_title_is_typed()
+    {
+        var board = NewBoard(new FakePlaybackHost());
+        board.PendingTake = Take();
+        board.NewTitle = "";
+        Assert.False(board.SaveTakeCommand.CanExecute(null));
+
+        board.NewTitle = "Greeting";
+
+        Assert.True(board.SaveTakeCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void Save_take_failure_keeps_the_pending_take_and_shows_a_notice()
+    {
+        var host = new FakePlaybackHost { SaveTakeThrows = true };
+        var board = NewBoard(host);
+        board.PendingTake = Take();
+        board.NewTitle = "Greeting";
+
+        board.SaveTakeCommand.Execute(null);
+
+        Assert.True(board.HasPendingTake); // not lost — the operator can retry Save or Discard
+        Assert.NotNull(board.Notice);
+    }
+
+    // IsProcessing is set synchronously before the first `await` inside StopRecording, so it is
+    // already true the instant ExecuteAsync returns its (still-running) Task — this is not a race,
+    // it's how C# async methods run their pre-await prefix on the caller's thread.
+    [Fact]
+    public async Task Stop_recording_reports_processing_until_the_take_is_ready()
+    {
+        var host = new FakePlaybackHost { NextStopResult = Take() };
+        var board = NewBoard(host);
+
+        var stopTask = board.StopRecordingCommand.ExecuteAsync(null);
+        Assert.True(board.IsProcessing);
+        Assert.False(board.ShowRecordButton); // the idle Record button must not flash back
+
+        await stopTask;
+
+        Assert.False(board.IsProcessing);
+        Assert.True(board.HasPendingTake);
+    }
+
+    [Fact]
+    public async Task Stop_recording_clears_processing_even_on_failure()
+    {
+        var host = new FakePlaybackHost { NextStopResult = null }; // StopRecording throws below
+        var board = NewBoard(host);
+        host.ThrowOnStopRecording = true;
+
+        await board.StopRecordingCommand.ExecuteAsync(null);
+
+        Assert.False(board.IsProcessing);
+    }
+
+    [Fact]
     public void IsEmpty_reflects_whether_the_board_has_phrases()
     {
         Assert.True(NewBoard(new FakePlaybackHost()).IsEmpty);

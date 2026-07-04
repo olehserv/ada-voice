@@ -1,3 +1,4 @@
+using System.IO;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Recording;
 using AdaVoice.Audio.Setup;
@@ -177,15 +178,23 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
         return CanRecord;
     }
 
+    public bool ThrowOnStopRecording { get; set; }
+
     public RecordingResult? StopRecording()
     {
         Calls.Add("StopRecording");
+        if (ThrowOnStopRecording)
+            throw new InvalidOperationException("engine vanished (simulated)");
         return NextStopResult;
     }
+
+    public bool SaveTakeThrows { get; set; }
 
     public PhraseEntry SaveTake(RecordingResult result, string title)
     {
         Calls.Add("SaveTake");
+        if (SaveTakeThrows)
+            throw new IOException("disk full (simulated)");
         SavedTitle = title;
         // Mirror EngineHost: a new take lands in the default category.
         var entry = new PhraseEntry { Id = "p-saved", Title = title, CategoryId = Category.DefaultId };

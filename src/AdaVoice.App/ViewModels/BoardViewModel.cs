@@ -48,7 +48,15 @@ public partial class BoardViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(PendingTakeDurationLabel))]
     private RecordingResult? _pendingTake;
 
+    /// <summary>True from the moment Stop is clicked until the pending take is ready (or the
+    /// attempt fails) — bridges the async gap in <see cref="StopRecording"/> so the idle Record
+    /// button does not flash back into view while the take is still being trimmed/loudness-matched.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowRecordButton))]
+    private bool _isProcessing;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveTakeCommand))]
     private string _newTitle = "";
 
     [ObservableProperty]
@@ -148,8 +156,9 @@ public partial class BoardViewModel : ObservableObject
     /// <summary>The pending take's length in seconds (e.g. "5.7 s"), matching the phrase tiles.</summary>
     public string PendingTakeDurationLabel => PendingTake is { } take ? $"{take.DurationMs / 1000.0:0.0} s" : "";
 
-    /// <summary>The idle "Record" button shows only when not recording and no take is pending.</summary>
-    public bool ShowRecordButton => !IsRecording && !HasPendingTake;
+    /// <summary>The idle "Record" button shows only when not recording, not mid-Stop, and no take
+    /// is pending.</summary>
+    public bool ShowRecordButton => !IsRecording && !IsProcessing && !HasPendingTake;
 
     /// <summary>The filtered, ordered view of <see cref="Phrases"/> the grid binds to.</summary>
     public ICollectionView PhrasesView { get; }
@@ -377,11 +386,13 @@ public partial class BoardViewModel : ObservableObject
     }
 
     /// <summary>Stop the take. StopRecording trims/loudness-matches the audio and waits for the
-    /// engine to go back on air, so it runs off the UI thread too.</summary>
+    /// engine to go back on air, so it runs off the UI thread too. IsProcessing covers the whole
+    /// window so the idle Record button never flashes back before the pending-take bar appears.</summary>
     [RelayCommand]
     private async Task StopRecording()
     {
         IsRecording = false;
+        IsProcessing = true;
         try
         {
             var take = await Task.Run(() => _recorder.StopRecording());
@@ -408,6 +419,10 @@ public partial class BoardViewModel : ObservableObject
                 Notice = "Could not finish the recording — the take was lost.";
             });
         }
+        finally
+        {
+            IsProcessing = false;
+        }
     }
 
     /// <summary>Preview the pending take on the monitor output. Preview blocks until playback
@@ -433,18 +448,34 @@ public partial class BoardViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    /// <summary>True once there's a non-blank title to save — every other recording command
+    /// already guards its own failure path (M1/M2); this was the one gap the 2026-07-04 review
+    /// flagged (M15) as still open: no CanExecute (an empty title was silently accepted) and no
+    /// catch (a disk-full write would bubble to the global handler's generic dialog instead of
+    /// this section's friendly inline Notice).</summary>
+    private bool CanSaveTake() => !string.IsNullOrWhiteSpace(NewTitle);
+
+    [RelayCommand(CanExecute = nameof(CanSaveTake))]
     private void SaveTake()
     {
         if (PendingTake is not { } take)
             return;
 
-        var entry = _recorder.SaveTake(take, NewTitle);
-        PendingTake = null;
-        Notice = null; // the "Saved" feedback is now a toast (see Saved)
-        Phrases.Add(new PhraseItemViewModel(entry)); // appears on the board immediately
-        ApplyColors(); // tint the new tile (falls back to its default category colour)
-        Saved?.Invoke(this, entry.Title);
+        try
+        {
+            var entry = _recorder.SaveTake(take, NewTitle);
+            PendingTake = null;
+            Notice = null; // the "Saved" feedback is now a toast (see Saved)
+            Phrases.Add(new PhraseItemViewModel(entry)); // appears on the board immediately
+            ApplyColors(); // tint the new tile (falls back to its default category colour)
+            Saved?.Invoke(this, entry.Title);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // Keep PendingTake set so the operator can retry Save or Discard instead of silently
+            // losing the recording.
+            Notice = "Could not save the recording — check disk space and try again.";
+        }
     }
 
     [RelayCommand]

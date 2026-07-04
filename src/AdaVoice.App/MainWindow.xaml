@@ -225,6 +225,11 @@
                         <ui:Button Content="Stop" Appearance="Secondary" Command="{Binding StopRecordingCommand}" Margin="12,0,0,0" />
                     </StackPanel>
 
+                    <!-- Bridges the gap between Stop and the pending-take bar appearing, so the
+                         idle Record button never flashes back in between. -->
+                    <TextBlock Text="Processing…" VerticalAlignment="Center" FontWeight="SemiBold"
+                               Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}}" />
+
                     <!-- A take is waiting to be saved -->
                     <StackPanel Orientation="Horizontal"
                                 Visibility="{Binding HasPendingTake, Converter={StaticResource BoolToVis}}">
