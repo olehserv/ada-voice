@@ -10,7 +10,8 @@ using Serilog;
 // Relaunch after a crash: the mic-forwarding process must not stay dead (design 03).
 NativeMethods.RegisterApplicationRestart(null, 0);
 
-var logPath = Path.Combine(AppContext.BaseDirectory, "logs", "adavoice-.log");
+// Log to the data root, not the install dir — the install dir may not be user-writable.
+var logPath = Path.Combine(AdaVoicePaths.DefaultRoot, "logs", "adavoice-.log");
 Log.Logger = new LoggerConfiguration()
     .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
     .CreateLogger();
