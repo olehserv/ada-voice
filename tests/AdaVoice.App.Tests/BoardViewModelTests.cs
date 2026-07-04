@@ -441,7 +441,10 @@ public class BoardViewModelTests
         board.EditCommand.Execute(board.Phrases[0]);
 
         Assert.Empty(VisibleTitles(board)); // moved out of the filtered view
-        Assert.True(board.NoMatches);
+        // The category is now genuinely empty (not just search-filtered) — CategoryIsEmpty owns
+        // this case; NoMatches is deliberately false here after this task's change.
+        Assert.True(board.CategoryIsEmpty);
+        Assert.False(board.NoMatches);
     }
 
     [Fact]
@@ -682,6 +685,110 @@ public class BoardViewModelTests
         board.SelectedCategoryFilter = board.CategoryFilterOptions.First(c => c.Id == "c-1");
 
         Assert.Equal(["A"], VisibleTitles(board));
+    }
+
+    [Fact]
+    public void Category_is_empty_when_selected_category_has_no_phrases_and_search_is_blank()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-1", Name = "Openers" }, new Category { Id = "c-2", Name = "Closers" }],
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = "c-1" }],
+        };
+        var board = NewBoard(host);
+
+        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
+
+        Assert.True(board.CategoryIsEmpty);
+    }
+
+    [Fact]
+    public void Category_is_not_empty_when_it_has_a_phrase()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-1", Name = "Openers" }],
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = "c-1" }],
+        };
+        var board = NewBoard(host);
+
+        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-1");
+
+        Assert.False(board.CategoryIsEmpty);
+    }
+
+    [Fact]
+    public void Category_is_not_reported_empty_while_search_text_is_active()
+    {
+        // Search-no-match (Task 3) owns this case instead — the two states are mutually exclusive
+        // by construction (one requires blank search text, the other requires non-blank).
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-2", Name = "Closers" }],
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = "c-1" }],
+        };
+        var board = NewBoard(host);
+        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
+
+        board.SearchText = "hello";
+
+        Assert.False(board.CategoryIsEmpty);
+    }
+
+    [Fact]
+    public void Category_is_not_empty_when_all_categories_is_selected()
+    {
+        var host = new FakePlaybackHost { Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi" }] };
+        var board = NewBoard(host);
+
+        Assert.False(board.CategoryIsEmpty); // default filter is "All categories"
+    }
+
+    [Fact]
+    public async Task Record_into_category_starts_recording_like_the_normal_Record_button()
+    {
+        var host = new FakePlaybackHost { CanRecord = true, Categories = [new Category { Id = "c-2", Name = "Closers" }] };
+        var board = NewBoard(host);
+        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
+
+        await board.RecordIntoCategoryCommand.ExecuteAsync(null);
+
+        Assert.True(board.IsRecording);
+    }
+
+    [Fact]
+    public async Task Record_into_category_applies_the_category_to_the_saved_take()
+    {
+        var host = new FakePlaybackHost { CanRecord = true, Categories = [new Category { Id = "c-2", Name = "Closers" }] };
+        var board = NewBoard(host);
+        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
+
+        await board.RecordIntoCategoryCommand.ExecuteAsync(null);
+        board.PendingTake = Take();
+        board.NewTitle = "Greeting";
+
+        board.SaveTakeCommand.Execute(null);
+
+        var saved = host.Phrases.Single(p => p.Title == "Greeting");
+        Assert.Equal("c-2", saved.CategoryId);
+    }
+
+    [Fact]
+    public async Task Discarding_a_take_clears_any_pending_category()
+    {
+        var host = new FakePlaybackHost { CanRecord = true, Categories = [new Category { Id = "c-2", Name = "Closers" }] };
+        var board = NewBoard(host);
+        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
+        await board.RecordIntoCategoryCommand.ExecuteAsync(null);
+        board.DiscardTakeCommand.Execute(null);
+
+        // A later, unrelated save must NOT pick up the stale pending category.
+        board.PendingTake = Take();
+        board.NewTitle = "Unrelated";
+        board.SaveTakeCommand.Execute(null);
+
+        var saved = host.Phrases.Single(p => p.Title == "Unrelated");
+        Assert.Equal(Category.DefaultId, saved.CategoryId);
     }
 
     [Fact]

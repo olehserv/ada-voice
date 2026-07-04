@@ -125,6 +125,7 @@ public partial class BoardViewModel : ObservableObject
         {
             OnPropertyChanged(nameof(IsEmpty));
             OnPropertyChanged(nameof(HasPhrases));
+            OnPropertyChanged(nameof(CategoryIsEmpty));
             OnPropertyChanged(nameof(NoMatches));
             OnPropertyChanged(nameof(HasMatches));
         };
@@ -173,15 +174,32 @@ public partial class BoardViewModel : ObservableObject
     /// <summary>Inverse of <see cref="IsEmpty"/>.</summary>
     public bool HasPhrases => !IsEmpty;
 
-    /// <summary>Phrases exist but the current search/filter hides them all — a distinct "no matches"
-    /// state, separate from the first-run welcome (<see cref="IsEmpty"/>).</summary>
-    public bool NoMatches => HasPhrases && PhrasesView.IsEmpty;
+    /// <summary>Phrases exist but the current search/filter hides them all, and it isn't because
+    /// the selected category is itself empty (see <see cref="CategoryIsEmpty"/>) — a distinct "no
+    /// matches" state, separate from the first-run welcome (<see cref="IsEmpty"/>). Task 3 narrows
+    /// this further into a search-specific state; left as-is here since Task 2 only needs to carve
+    /// the category-empty case out of it.</summary>
+    public bool NoMatches => HasPhrases && PhrasesView.IsEmpty && !CategoryIsEmpty;
 
     /// <summary>At least one phrase is visible under the current filter — the grid binds to this.</summary>
     public bool HasMatches => HasPhrases && !PhrasesView.IsEmpty;
 
+    /// <summary>True when a specific category is selected, no search is active, and that category
+    /// has no phrases at all — the CTA card offers to record straight into it. Mutually exclusive
+    /// with the search-driven no-match state (Task 3): this one requires blank search text.</summary>
+    public bool CategoryIsEmpty => HasPhrases
+        && !string.IsNullOrEmpty(EffectiveCategoryId)
+        && string.IsNullOrWhiteSpace(SearchText)
+        && !Phrases.Any(p => p.Entry.CategoryId == EffectiveCategoryId);
+
     private string? EffectiveCategoryId =>
         string.IsNullOrEmpty(SelectedCategoryFilter?.Id) ? null : SelectedCategoryFilter.Id;
+
+    /// <summary>Category and/or tags to apply to the next take <see cref="SaveTake"/> creates —
+    /// set by <see cref="RecordIntoCategory"/> (category only) or the repair dialog's Re-record
+    /// path (category and tags), and always cleared after Save or Discard so it can never leak
+    /// into an unrelated future save.</summary>
+    private (string? CategoryId, IReadOnlyList<string>? Tags) _pendingMetadata;
 
     /// <summary>A phrase matches when its category passes the filter and the search text appears in its
     /// title or any tag. Pure, so it is unit-testable without WPF.</summary>
@@ -228,6 +246,7 @@ public partial class BoardViewModel : ObservableObject
     private void RefreshFilter()
     {
         PhrasesView.Refresh();
+        OnPropertyChanged(nameof(CategoryIsEmpty));
         OnPropertyChanged(nameof(NoMatches));
         OnPropertyChanged(nameof(HasMatches));
     }
@@ -385,6 +404,16 @@ public partial class BoardViewModel : ObservableObject
         }
     }
 
+    /// <summary>Record straight into the currently selected (empty) category — the category-empty
+    /// CTA's button. Reuses StartRecording exactly as clicking the normal Record button would;
+    /// only the pending-category stash differs.</summary>
+    [RelayCommand]
+    private async Task RecordIntoCategory()
+    {
+        _pendingMetadata = (EffectiveCategoryId, _pendingMetadata.Tags);
+        await StartRecording();
+    }
+
     /// <summary>Stop the take. StopRecording trims/loudness-matches the audio and waits for the
     /// engine to go back on air, so it runs off the UI thread too. IsProcessing covers the whole
     /// window so the idle Record button never flashes back before the pending-take bar appears.</summary>
@@ -464,6 +493,12 @@ public partial class BoardViewModel : ObservableObject
         try
         {
             var entry = _recorder.SaveTake(take, NewTitle);
+            if (_pendingMetadata.CategoryId is { } categoryId)
+                entry = _library.SetPhraseCategory(entry.Id, categoryId) ?? entry;
+            if (_pendingMetadata.Tags is { } tags)
+                entry = _library.SetPhraseTags(entry.Id, tags) ?? entry;
+            _pendingMetadata = default;
+
             PendingTake = null;
             Notice = null; // the "Saved" feedback is now a toast (see Saved)
             Phrases.Add(new PhraseItemViewModel(entry)); // appears on the board immediately
@@ -472,8 +507,8 @@ public partial class BoardViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // Keep PendingTake set so the operator can retry Save or Discard instead of silently
-            // losing the recording.
+            // Keep PendingTake (and the pending metadata) set so the operator can retry Save or
+            // Discard instead of silently losing the recording.
             Notice = "Could not save the recording — check disk space and try again.";
         }
     }
@@ -482,6 +517,7 @@ public partial class BoardViewModel : ObservableObject
     private void DiscardTake()
     {
         PendingTake = null;
+        _pendingMetadata = default;
         Notice = "Take discarded.";
     }
 }

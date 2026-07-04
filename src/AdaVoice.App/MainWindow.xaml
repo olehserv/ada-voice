@@ -194,6 +194,23 @@
             </StackPanel>
         </ui:Card>
 
+        <!-- A specific category is selected and it genuinely has no phrases (search is blank) —
+             distinct from the search-driven no-match card below. Remember: any new Run.Text bound
+             to Category.Name needs Mode=OneWay (Name is init-only — see Global Constraints). -->
+        <ui:Card VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24" MaxWidth="320"
+                 Visibility="{Binding CategoryIsEmpty, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+                <TextBlock HorizontalAlignment="Center"
+                           FontSize="{StaticResource FontSize.SectionTitle}" FontWeight="SemiBold">
+                    <Run Text="No phrases in " /><Run Text="{Binding SelectedCategoryFilter.Name, Mode=OneWay}" /><Run Text=" yet." />
+                </TextBlock>
+                <ui:Button Appearance="Primary" HorizontalAlignment="Center" Margin="0,12,0,0"
+                           Command="{Binding RecordIntoCategoryCommand}">
+                    <TextBlock><Run Text="Record into " /><Run Text="{Binding SelectedCategoryFilter.Name, Mode=OneWay}" /></TextBlock>
+                </ui:Button>
+            </StackPanel>
+        </ui:Card>
+
         <!-- Phrases exist, but the current search/filter hides them all (distinct from first-run) -->
         <ui:Card VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24" MaxWidth="320"
                  Visibility="{Binding NoMatches, Converter={StaticResource BoolToVis}}">
