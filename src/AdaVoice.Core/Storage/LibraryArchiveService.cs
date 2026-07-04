@@ -74,11 +74,23 @@ public sealed class LibraryArchiveService(string root, IPhraseRepository reposit
             return new ImportResult(false, 0, 0, $"unsupported library version {imported.Version} (expected {SupportedVersion})");
 
         // Flatten every file name at ingest, so a crafted entry can never put a path-traversal value
-        // into the WAV lookup, the extraction destination, OR the persisted metadata — all three then
-        // agree on a bare file name inside audio\. Legitimate archives (e.g. "p-1.wav") are unchanged.
+        // into the WAV lookup — the zip entry is looked up by this bare name.
         imported = imported with
         {
             Phrases = imported.Phrases.Select(p => p with { FileName = Path.GetFileName(p.FileName) }).ToList(),
+        };
+
+        // Re-key every imported WAV to the phrase's own "{id}.wav" (the same convention Add uses).
+        // An archive-supplied file name may collide with a WAV that belongs to a DIFFERENT existing
+        // phrase — extraction would silently overwrite an irreplaceable recording. Keyed to the id,
+        // a new-id phrase can never target a kept phrase's file. The archive name survives only as
+        // the lookup key for extraction. Path.GetFileName also guards against a crafted id.
+        var archiveNames = imported.Phrases
+            .GroupBy(p => p.Id)
+            .ToDictionary(g => g.Key, g => g.First().FileName);
+        imported = imported with
+        {
+            Phrases = imported.Phrases.Select(p => p with { FileName = Path.GetFileName($"{p.Id}.wav") }).ToList(),
         };
 
         var current = repository.Load().Library;
@@ -87,7 +99,7 @@ public sealed class LibraryArchiveService(string root, IPhraseRepository reposit
         // WAV-first: land the audio before committing metadata, so a failed extract catalogues nothing
         // (the same ordering rule as PhraseLibraryService.Add).
         foreach (var phrase in added)
-            ExtractAudio(zip, phrase.FileName);
+            ExtractAudio(zip, archiveNames[phrase.Id], phrase.FileName);
 
         repository.Save(result);
         return new ImportResult(true, added.Count, imported.Phrases.Count - added.Count);
@@ -125,15 +137,17 @@ public sealed class LibraryArchiveService(string root, IPhraseRepository reposit
         }
     }
 
-    private void ExtractAudio(ZipArchive zip, string fileName)
+    private void ExtractAudio(ZipArchive zip, string archiveFileName, string destFileName)
     {
-        var source = zip.GetEntry("audio/" + fileName);
+        var source = zip.GetEntry("audio/" + archiveFileName);
         if (source is null)
             return; // archive without this WAV (e.g. a broken phrase) — metadata still imports
 
         Directory.CreateDirectory(AdaVoicePaths.AudioDir(root));
         // Zip-slip guard: flatten to a bare file name so a crafted entry can never escape audio\.
-        var dest = AdaVoicePaths.AudioPath(root, Path.GetFileName(fileName));
+        // Overwrite is safe here: dest is "{id}.wav" and the id is new to this library (Merge adds
+        // only new ids; Replace swaps the whole catalogue), so it never clobbers a kept phrase.
+        var dest = AdaVoicePaths.AudioPath(root, Path.GetFileName(destFileName));
         source.ExtractToFile(dest, overwrite: true);
     }
 

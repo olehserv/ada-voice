@@ -47,6 +47,20 @@ public sealed class PhraseLibraryService
     /// reflects the new state without a restart.</summary>
     public void Reload() => Load();
 
+    /// <summary>False while the load failed transiently (<see cref="LibraryLoadStatus.ReadError"/>):
+    /// the in-memory library is then an empty stand-in for a good-but-locked file, and persisting any
+    /// change would overwrite the real library with it (design 04 §3). Every mutator refuses in this
+    /// state; a successful <see cref="Reload"/> clears it.</summary>
+    public bool IsWritable => LoadStatus != LibraryLoadStatus.ReadError;
+
+    private void EnsureWritable()
+    {
+        if (!IsWritable)
+            throw new InvalidOperationException(
+                "The phrase library could not be read (another program may be holding the file), " +
+                "so changes are disabled to protect it. Restart AdaVoice or try again later.");
+    }
+
     private void Load()
     {
         var result = _repository.Load();
@@ -91,6 +105,7 @@ public sealed class PhraseLibraryService
     /// </summary>
     public PhraseEntry Add(string title, string categoryId, int durationMs, double gainDb, Action<string> writeAudio)
     {
+        EnsureWritable();
         var id = NewId();
         var fileName = $"{id}.wav";
         writeAudio(fileName);
@@ -126,6 +141,7 @@ public sealed class PhraseLibraryService
     /// </summary>
     public PhraseEntry? Delete(string phraseId, Action<string, string> orphanAudio)
     {
+        EnsureWritable();
         var entry = _library.Phrases.FirstOrDefault(p => p.Id == phraseId);
         if (entry is null)
             return null;
@@ -142,6 +158,7 @@ public sealed class PhraseLibraryService
     /// <summary>Create a category at the end of the list and persist. Throws if the name is blank.</summary>
     public Category AddCategory(string name, string color)
     {
+        EnsureWritable();
         var trimmed = RequireName(name);
         var category = new Category
         {
@@ -160,6 +177,7 @@ public sealed class PhraseLibraryService
     /// that id. Throws if the new name is blank.</summary>
     public Category? UpdateCategory(string id, string name, string color)
     {
+        EnsureWritable();
         var index = _library.Categories.FindIndex(c => c.Id == id);
         if (index < 0)
             return null;
@@ -174,6 +192,7 @@ public sealed class PhraseLibraryService
     /// false if the id is unknown or is the protected default category.</summary>
     public bool DeleteCategory(string id)
     {
+        EnsureWritable();
         if (id == Category.DefaultId)
             return false; // Uncategorized is the fallback and cannot be removed.
 
@@ -230,8 +249,10 @@ public sealed class PhraseLibraryService
         return EditPhrase(phraseId, p => p with { Tags = normalized });
     }
 
+    // All three public phrase edits funnel through here, so one guard covers them.
     private PhraseEntry? EditPhrase(string phraseId, Func<PhraseEntry, PhraseEntry> edit)
     {
+        EnsureWritable();
         var index = _library.Phrases.FindIndex(p => p.Id == phraseId);
         if (index < 0)
             return null;

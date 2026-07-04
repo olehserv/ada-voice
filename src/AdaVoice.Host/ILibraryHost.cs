@@ -24,6 +24,11 @@ public interface ILibraryHost
     /// crashing playback.</summary>
     IReadOnlyList<string> BrokenPhraseIds { get; }
 
+    /// <summary>Operator-readable warning about how the library loaded (locked file, corrupt file,
+    /// restored backup), or null when the load was clean. The board shows it at startup so an empty
+    /// board is never mistaken for an empty library (design 04 §3).</summary>
+    string? LibraryWarning { get; }
+
     /// <summary>Rename a phrase. Returns the updated entry, or null if the id is unknown.</summary>
     PhraseEntry? SetPhraseTitle(string phraseId, string title);
 

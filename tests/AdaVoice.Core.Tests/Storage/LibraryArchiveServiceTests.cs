@@ -143,11 +143,39 @@ public class LibraryArchiveServiceTests : IDisposable
         var result = Archive(dest).Import(zip, ImportMode.Merge);
 
         Assert.True(result.Success);
-        // The WAV is contained in audio\, and the persisted metadata no longer carries the traversal.
-        Assert.True(File.Exists(AdaVoicePaths.AudioPath(dest, "escape.wav")));
-        Assert.Equal("escape.wav", Assert.Single(new JsonPhraseRepository(dest).Load().Library.Phrases).FileName);
+        // The WAV is contained in audio\ under the phrase's own re-keyed name, and the persisted
+        // metadata no longer carries the traversal.
+        Assert.True(File.Exists(AdaVoicePaths.AudioPath(dest, "p-x.wav")));
+        Assert.Equal("p-x.wav", Assert.Single(new JsonPhraseRepository(dest).Load().Library.Phrases).FileName);
         Assert.False(File.Exists(Path.Combine(dest, "escape.wav"))); // never escaped to the root
         Assert.False(File.Exists(Path.Combine(_work, "escape.wav"))); // nor above it
+    }
+
+    // H9 regression: an archive phrase with a NEW id but an existing phrase's file name must not
+    // overwrite that phrase's WAV — recordings are irreplaceable (design 04 §3). Import re-keys
+    // every incoming WAV to "{id}.wav", so a collision is impossible by construction.
+    [Fact]
+    public void Merge_never_overwrites_an_existing_phrases_wav_on_a_file_name_collision()
+    {
+        var dest = Root("dest");
+        Seed(dest, "p-local", [9]);
+
+        var zip = Zip("collide");
+        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
+        {
+            using (var w = new StreamWriter(archive.CreateEntry("library.json").Open()))
+                w.Write("{\"version\":1,\"categories\":[],\"phrases\":[{\"id\":\"p-import\",\"fileName\":\"p-local.wav\"}]}");
+            using var audio = archive.CreateEntry("audio/p-local.wav").Open();
+            audio.Write([1, 2, 3]);
+        }
+
+        var result = Archive(dest).Import(zip, ImportMode.Merge);
+
+        Assert.True(result.Success);
+        Assert.Equal(new byte[] { 9 }, File.ReadAllBytes(AdaVoicePaths.AudioPath(dest, "p-local.wav"))); // kept intact
+        Assert.Equal(new byte[] { 1, 2, 3 }, File.ReadAllBytes(AdaVoicePaths.AudioPath(dest, "p-import.wav")));
+        var imported = new JsonPhraseRepository(dest).Load().Library.Phrases.Single(p => p.Id == "p-import");
+        Assert.Equal("p-import.wav", imported.FileName); // metadata matches the re-keyed WAV
     }
 
     private static void WriteZipWithLibraryJson(string zipPath, string libraryJson)

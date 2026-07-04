@@ -152,6 +152,21 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     public IReadOnlyList<TagInfo> Tags => _library.Tags;
     public IReadOnlyList<string> BrokenPhraseIds => _library.BrokenPhraseIds;
 
+    /// <summary>Maps the load status to operator text. Mirrors the log warnings in the constructor,
+    /// but reaches the board — an operator never reads the log.</summary>
+    public string? LibraryWarning => _library.LoadStatus switch
+    {
+        LibraryLoadStatus.ReadError =>
+            "Your phrase library could not be read (another program may be holding the file). " +
+            "Your phrases are safe, but changes are disabled — restart AdaVoice to try again.",
+        LibraryLoadStatus.Corrupt =>
+            "Your phrase library file was unreadable and has been set aside, so the board starts empty. " +
+            "Your recordings are still on disk.",
+        LibraryLoadStatus.RecoveredFromBackup =>
+            "Your phrase library was restored from the latest daily backup — very recent changes may be missing.",
+        _ => null,
+    };
+
     public PhraseEntry? SetPhraseTitle(string phraseId, string title) => _library.SetPhraseTitle(phraseId, title);
     public PhraseEntry? SetPhraseCategory(string phraseId, string categoryId) => _library.SetPhraseCategory(phraseId, categoryId);
     public PhraseEntry? SetPhraseTags(string phraseId, IEnumerable<string> tags) => _library.SetPhraseTags(phraseId, tags);

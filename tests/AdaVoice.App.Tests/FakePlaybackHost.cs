@@ -25,6 +25,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     public IReadOnlyList<Category> Categories { get; set; } = [];
     public IReadOnlyList<TagInfo> Tags { get; set; } = [];
     public IReadOnlyList<string> BrokenPhraseIds { get; set; } = [];
+    public string? LibraryWarning { get; set; }
     public List<PhraseEntry> Deleted { get; } = [];
 
     public event EventHandler<EngineStateChangedEventArgs>? StateChanged;

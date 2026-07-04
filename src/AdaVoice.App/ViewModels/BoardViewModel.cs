@@ -100,6 +100,9 @@ public partial class BoardViewModel : ObservableObject
         Phrases = new ObservableCollection<PhraseItemViewModel>(
             _library.Phrases.Select(e => new PhraseItemViewModel(e) { IsBroken = broken.Contains(e.Id) }));
 
+        // A problem loading the library must be visible, or an empty board looks like an empty library.
+        _notice = library.LibraryWarning;
+
         ApplyColors(); // tint each tile with its category colour and resolve its tag chips
 
         // "All categories" + the real categories drive the filter dropdown; default to All.

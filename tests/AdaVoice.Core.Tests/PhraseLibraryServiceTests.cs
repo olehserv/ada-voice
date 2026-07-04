@@ -117,6 +117,52 @@ public class PhraseLibraryServiceTests : IDisposable
         Assert.Equal("p-ext", Assert.Single(service.Phrases).Id);
     }
 
+    // C2 regression: ReadError means the in-memory library is an empty stand-in for a good-but-locked
+    // file. Every mutator must refuse — one Save would replace the operator's real library with it.
+    [Fact]
+    public void Mutators_refuse_while_the_library_is_a_read_error_stand_in_and_never_save()
+    {
+        var repo = new StubRepository(new LibraryLoadResult(new Library(), LibraryLoadStatus.ReadError, "locked"));
+        var service = new PhraseLibraryService(repo);
+
+        Assert.False(service.IsWritable);
+        var audioWritten = false;
+        Assert.Throws<InvalidOperationException>(() => service.Add("t", "c-default", 100, 0, _ => audioWritten = true));
+        Assert.Throws<InvalidOperationException>(() => service.Delete("p-1", (_, _) => { }));
+        Assert.Throws<InvalidOperationException>(() => service.AddCategory("Openers", "#ffffff"));
+        Assert.Throws<InvalidOperationException>(() => service.UpdateCategory("c-x", "n", "#ffffff"));
+        Assert.Throws<InvalidOperationException>(() => service.DeleteCategory("c-x"));
+        Assert.Throws<InvalidOperationException>(() => service.SetPhraseTitle("p-1", "t"));
+
+        Assert.False(audioWritten); // the guard runs before the WAV write, so nothing lands on disk
+        Assert.Equal(0, repo.SaveCount);
+    }
+
+    [Fact]
+    public void A_successful_reload_makes_the_library_writable_again()
+    {
+        var repo = new StubRepository(new LibraryLoadResult(new Library(), LibraryLoadStatus.ReadError, "locked"));
+        var service = new PhraseLibraryService(repo);
+        Assert.False(service.IsWritable);
+
+        // The lock is gone: the next load succeeds and mutations work again.
+        repo.Result = new LibraryLoadResult(new Library(), LibraryLoadStatus.Loaded);
+        service.Reload();
+
+        Assert.True(service.IsWritable);
+        service.AddCategory("Openers", "#ffffff");
+        Assert.Equal(1, repo.SaveCount);
+    }
+
+    private sealed class StubRepository(LibraryLoadResult result) : IPhraseRepository
+    {
+        public LibraryLoadResult Result { get; set; } = result;
+        public int SaveCount { get; private set; }
+
+        public LibraryLoadResult Load() => Result;
+        public void Save(Library library) => SaveCount++;
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))
