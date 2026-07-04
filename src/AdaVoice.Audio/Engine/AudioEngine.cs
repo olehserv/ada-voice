@@ -41,6 +41,7 @@ public sealed class AudioEngine : IDisposable
     private IAudioCaptureDevice? _capture;
     private IAudioRenderDevice? _cableRender;
     private MicPassthrough? _passthrough;
+    private MicDuckRelay? _micDuck; // the player's stable duck target across mic rebuilds (C1)
     private MixingSampleProvider? _mixer;
     private PhrasePlayer? _player;
     private CableGate? _gate;
@@ -120,6 +121,7 @@ public sealed class AudioEngine : IDisposable
             case EngineCommand.StreamFaulted f: HandleStreamFaulted(f.Role, f.Error); break;
             case EngineCommand.WatchdogTick: HandleWatchdogTick(); break;
             case EngineCommand.DeviceChanged dc: HandleDeviceChanged(dc.Role, dc.Kind); break;
+            case EngineCommand.DriftNoticed d: Raise(new EngineEvent.DriftLogged(d.Kind)); break;
         }
     }
 
@@ -249,6 +251,18 @@ public sealed class AudioEngine : IDisposable
             SetState(EngineState.Stopped, ex.Message);
             return;
         }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // Not an AudioDeviceException — e.g. Init refusing a wrong-rate cable
+            // (NotSupportedException) or a raw COMException from seam construction. Escaping here
+            // would leave the backoff schedule unadvanced and turn the 100 ms watchdog into a
+            // tight rebuild loop. Treat unknown errors as transient: keep the alarm, keep backing
+            // off, and let a replug (or the steady 5 s poll) recover.
+            Raise(new EngineEvent.RebuildResult(_faultedRole, Success: false, _attempt));
+            _attempt++;
+            _nextAttemptMs = _clock.NowMs + Backoff[Math.Min(_attempt, Backoff.Length - 1)];
+            return;
+        }
 
         StopAlarm();
         Raise(new EngineEvent.RebuildResult(_faultedRole, Success: true, _attempt));
@@ -273,6 +287,7 @@ public sealed class AudioEngine : IDisposable
         _passthrough = new MicPassthrough(_capture);
         _passthrough.Drift += OnDrift;
         _mixer!.AddMixerInput(_passthrough.Output);
+        _micDuck!.Retarget(_passthrough); // the player must duck the NEW passthrough, not the disposed one
         _capture.Start();
     }
 
@@ -364,7 +379,10 @@ public sealed class AudioEngine : IDisposable
         _mixer = new MixingSampleProvider(AudioFormats.Engine) { ReadFully = true };
         _mixer.AddMixerInput(_passthrough.Output);
 
-        _player = new PhrasePlayer(_mixer, _passthrough, _playerOptions);
+        // The player ducks through the relay, never the passthrough directly: RebuildMic replaces
+        // the passthrough, and the player's duck target must follow it (C1).
+        _micDuck = new MicDuckRelay(_passthrough);
+        _player = new PhrasePlayer(_mixer, _micDuck, _playerOptions);
         _player.SetDuck(_duckGain, _duckRampMs); // keep a slider-set level across a Stop/Start rebuild
         _player.ActivePhraseChanged += OnActivePhraseChanged;
         _gate = new CableGate(_mixer, _clock);
@@ -390,8 +408,12 @@ public sealed class AudioEngine : IDisposable
             Post(new EngineCommand.StreamFaulted(DeviceRole.Cable, e.Error));
     }
 
+    // Drift fires on the capture thread (overrun) or the render thread under the mixer lock
+    // (underrun). Post — never Raise — so the host's file logging runs on the control thread,
+    // honoring the Events contract and keeping I/O off the audio hot path (H10). Mirrors the
+    // StreamFaulted pattern above.
     private void OnDrift(object? sender, DriftEventArgs e)
-        => Raise(new EngineEvent.DriftLogged(e.Kind));
+        => Post(new EngineCommand.DriftNoticed(e.Kind));
 
     private void OnActivePhraseChanged(object? sender, string? phraseId)
         => Raise(new EngineEvent.PhraseChanged(phraseId));
@@ -424,6 +446,7 @@ public sealed class AudioEngine : IDisposable
 
         _player?.Dispose();
         _player = null;
+        _micDuck = null;
         _mixer = null;
         _gate = null;
     }

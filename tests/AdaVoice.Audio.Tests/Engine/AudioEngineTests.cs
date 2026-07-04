@@ -190,6 +190,11 @@ public class AudioEngineTests
         mic.Push(new float[TestAudio.SampleRate]);
         mic.Push(new float[TestAudio.SampleRate]);
 
+        // Drift is POSTED from the audio thread (never raised inline — the host logs to a file
+        // on this event), so the DriftLogged re-raise happens when the control thread drains.
+        Assert.DoesNotContain(events, e => e is EngineEvent.DriftLogged);
+        engine.DrainPending();
+
         Assert.Contains(events, e => e is EngineEvent.DriftLogged);
     }
 
@@ -321,6 +326,39 @@ public class AudioEngineTests
         Assert.Contains(factory.LastCable!.Captured, s => s != 0f);
     }
 
+    // C1 regression: the player captures its duck target once, but RebuildMic replaces the
+    // passthrough. Without the relay, ducking lands on the disposed old passthrough and the live
+    // mic plays at full volume under every phrase for the rest of the session.
+    [Fact]
+    public void Mic_rebuild_keeps_the_playing_phrase_ducking_the_new_mic()
+    {
+        // Duck to silence with no ramp, so any mic leak-through is a hard failure.
+        var factory = new FakeDeviceFactory();
+        var clock = new ManualEngineClock();
+        using var engine = new AudioEngine(factory, clock, new PhrasePlayerOptions { DuckGain = 0f, DuckRampMs = 0 });
+        var events = new List<EngineEvent>();
+        engine.Events += (_, e) => events.Add(e);
+        engine.Start();
+        engine.DrainPending();
+
+        engine.Play(new Phrase("p", Enumerable.Repeat(0.25f, 48_000).ToArray()));
+        engine.DrainPending();
+
+        factory.LastMic!.Fault(new InvalidOperationException("mic died"));
+        engine.DrainPending();
+        clock.Advance(FirstBackoffMs);
+        clock.FireTicks();
+        engine.DrainPending();
+        Assert.Equal(EngineState.Live, engine.State);
+
+        // Push voice into the REBUILT mic and pull the cable while the phrase still plays:
+        // only the phrase (constant 0.25) may come out — the new mic must be fully ducked.
+        factory.LastMic!.Push(TestAudio.Sine(440, 4800));
+        factory.LastCable!.Pull(4800);
+        Assert.NotEmpty(factory.LastCable!.Captured);
+        Assert.All(factory.LastCable!.Captured, s => Assert.Equal(0.25f, s, precision: 3));
+    }
+
     [Fact]
     public void Rebuild_after_a_fault_in_off_air_returns_to_off_air()
     {
@@ -392,6 +430,45 @@ public class AudioEngineTests
         Assert.Equal(EngineState.Degraded, engine.State);
 
         // After the longer backoff it succeeds.
+        clock.Advance(400);
+        clock.FireTicks();
+        engine.DrainPending();
+        Assert.Equal(EngineState.Live, engine.State);
+    }
+
+    // H1 regression: seam construction and Init/Start run outside the factory's guarded region,
+    // so a rebuild can throw something that is NOT an AudioDeviceException (e.g. a replugged
+    // cable at the wrong rate → NotSupportedException from Init). That must behave like a
+    // transient failure with backoff — before the fix it escaped AttemptRebuild, the schedule
+    // never advanced, and the 100 ms watchdog became a tight device-churn loop.
+    [Fact]
+    public void Non_device_exception_during_rebuild_backs_off_instead_of_churning()
+    {
+        var (engine, factory, clock, events) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+        factory.LastCable!.Fault(new InvalidOperationException("cable died"));
+        engine.DrainPending();
+        Assert.Equal(1, factory.CableCreateCount);
+
+        // The cable comes back at 44.1 kHz: Init throws NotSupportedException.
+        factory.CableFormat = WaveFormat.CreateIeeeFloatWaveFormat(44_100, 1);
+        clock.Advance(FirstBackoffMs);
+        clock.FireTicks();
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.Degraded, engine.State);
+        Assert.Contains(events, e => e is EngineEvent.RebuildResult { Success: false });
+        Assert.Equal(2, factory.CableCreateCount);
+
+        // Ticks inside the next backoff window must NOT attempt again — no 10 Hz churn.
+        clock.Advance(100);
+        clock.FireTicks();
+        engine.DrainPending();
+        Assert.Equal(2, factory.CableCreateCount);
+
+        // After the longer backoff the cable is back at the right rate → normal recovery.
+        factory.CableFormat = null;
         clock.Advance(400);
         clock.FireTicks();
         engine.DrainPending();

@@ -1,4 +1,5 @@
 using AdaVoice.Audio.Abstractions;
+using AdaVoice.Audio.Passthrough;
 using AdaVoice.Audio.Playback;
 
 namespace AdaVoice.Audio.Engine;
@@ -28,4 +29,9 @@ public abstract record EngineCommand
 
     /// <summary>Periodic watchdog/rebuild tick.</summary>
     public sealed record WatchdogTick : EngineCommand;
+
+    /// <summary>The mic buffer overran or underran. Posted from the audio threads so the
+    /// <see cref="EngineEvent.DriftLogged"/> re-raise (and the host's file logging behind it)
+    /// happens on the control thread, never on the audio hot path.</summary>
+    public sealed record DriftNoticed(DriftKind Kind) : EngineCommand;
 }

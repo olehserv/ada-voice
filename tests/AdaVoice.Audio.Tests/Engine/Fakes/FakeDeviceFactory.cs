@@ -23,6 +23,11 @@ public sealed class FakeDeviceFactory : IAudioDeviceFactory
     /// system default output that is not 48 kHz.</summary>
     public WaveFormat? AlarmFormat { get; set; }
 
+    /// <summary>Format the next Cable device reports (null = engine format). Lets a test simulate a
+    /// cable replugged at the wrong sample rate — its Init then throws NotSupportedException, which
+    /// is NOT an AudioDeviceException (the H1 escape path).</summary>
+    public WaveFormat? CableFormat { get; set; }
+
     /// <summary>Make the next create for <paramref name="role"/> throw.</summary>
     public void FailNext(DeviceRole role, bool transient, string message = "fake failure")
         => _failNext[role] = (transient, message);
@@ -36,9 +41,12 @@ public sealed class FakeDeviceFactory : IAudioDeviceFactory
     public IAudioRenderDevice CreateRender(DeviceRole role)
     {
         ThrowIfArmed(role);
-        var device = role == DeviceRole.Alarm
-            ? new ControllableRenderDevice(AlarmFormat)
-            : new ControllableRenderDevice();
+        var device = role switch
+        {
+            DeviceRole.Alarm => new ControllableRenderDevice(AlarmFormat),
+            DeviceRole.Cable => new ControllableRenderDevice(CableFormat),
+            _ => new ControllableRenderDevice(),
+        };
         if (role == DeviceRole.Cable) { LastCable = device; CableCreateCount++; }
         else if (role == DeviceRole.Alarm) LastAlarm = device;
         return device;
