@@ -230,6 +230,15 @@ public sealed class AudioEngine : IDisposable
     /// </summary>
     private void AttemptRebuild()
     {
+        // The alarm is best-effort and may have failed at fault time (device gone) or faulted
+        // since. Retry it here — on the same backoff schedule as the rebuild, never per 100 ms
+        // tick, so a missing default output does not become its own device-churn loop (M7).
+        if (_alarmRender is null || _alarmRender.State == DeviceState.Faulted)
+        {
+            StopAlarm();
+            StartAlarm();
+        }
+
         try
         {
             if (_faultedRole == DeviceRole.Cable)
@@ -267,6 +276,9 @@ public sealed class AudioEngine : IDisposable
         StopAlarm();
         Raise(new EngineEvent.RebuildResult(_faultedRole, Success: true, _attempt));
         _gate!.IsOpen = _restoreState == EngineState.Live; // keep silence if we return to OFF AIR
+        // The gate's stall stamp is necessarily pre-fault-stale (>500 ms); without a reset the
+        // very next watchdog tick would re-degrade before the render thread's first pull (M6).
+        _gate.MarkAlive();
         SetState(_restoreState);
     }
 
@@ -335,7 +347,9 @@ public sealed class AudioEngine : IDisposable
 
     private void HandleStopPhrase()
     {
-        if (State != EngineState.Live)
+        // Live or OFF AIR: off air a phrase can only be mid-fade, but the operator's STOP
+        // must never be refused while the graph is up (M4).
+        if (State is not (EngineState.Live or EngineState.OffAir))
             return;
 
         _player!.Stop();
@@ -352,15 +366,32 @@ public sealed class AudioEngine : IDisposable
 
     private void HandleEnterOffAir()
     {
+        // While Degraded, honor the request across the outage: recovery must return to what
+        // the operator last asked for, not to the state snapshotted at fault time (M5).
+        if (State == EngineState.Degraded)
+        {
+            _restoreState = EngineState.OffAir;
+            return;
+        }
+
         if (State != EngineState.Live)
             return;
 
+        // Going OFF AIR ends the phrase. Left alone it keeps consuming inaudibly (mic ducked
+        // the whole time) and its tail would surprise the call when the operator returns (M4).
+        _player!.Stop();
         _gate!.IsOpen = false; // stream keeps pulling; the gate just emits silence
         SetState(EngineState.OffAir);
     }
 
     private void HandleExitOffAir()
     {
+        if (State == EngineState.Degraded)
+        {
+            _restoreState = EngineState.Live; // see HandleEnterOffAir — honored on recovery (M5)
+            return;
+        }
+
         if (State != EngineState.OffAir)
             return;
 

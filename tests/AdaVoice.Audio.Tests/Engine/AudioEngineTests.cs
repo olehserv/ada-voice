@@ -287,7 +287,8 @@ public class AudioEngineTests
         var (engine, factory, clock, events) = NewEngine();
         engine.Start();
         engine.DrainPending();
-        factory.LastCable!.Fault(new InvalidOperationException("cable died"));
+        var oldCable = factory.LastCable!;
+        oldCable.Fault(new InvalidOperationException("cable died"));
         engine.DrainPending();
         Assert.Equal(EngineState.Degraded, engine.State);
 
@@ -297,6 +298,7 @@ public class AudioEngineTests
 
         Assert.Equal(EngineState.Live, engine.State);
         Assert.Equal(2, factory.CableCreateCount);               // a fresh cable was built
+        Assert.Equal(1, oldCable.DisposeCount);                  // and the dead one was released
         Assert.Equal(DeviceState.Stopped, factory.LastAlarm!.State); // alarm silenced
         Assert.Contains(events, e => e is EngineEvent.RebuildResult { Role: DeviceRole.Cable, Success: true });
     }
@@ -308,7 +310,8 @@ public class AudioEngineTests
         engine.Start();
         engine.DrainPending();
 
-        factory.LastMic!.Fault(new InvalidOperationException("mic died"));
+        var oldMic = factory.LastMic!;
+        oldMic.Fault(new InvalidOperationException("mic died"));
         engine.DrainPending();
         Assert.Equal(EngineState.Degraded, engine.State);
 
@@ -317,6 +320,7 @@ public class AudioEngineTests
         engine.DrainPending();
 
         Assert.Equal(EngineState.Live, engine.State);
+        Assert.Equal(1, oldMic.DisposeCount); // the dead capture was released, exactly once
         Assert.Contains(events, e => e is EngineEvent.RebuildResult { Role: DeviceRole.Mic, Success: true });
 
         // The cardinal assertion: the rebuilt mic must be re-wired into the mixer. Push to the NEW
@@ -381,6 +385,152 @@ public class AudioEngineTests
         factory.LastMic!.Push(TestAudio.Sine(440, 4800));
         cable.Pull(4800);
         Assert.All(cable.Captured, s => Assert.Equal(0f, s));
+    }
+
+    // M4: OFF AIR must end the phrase. Left alone it keeps consuming inaudibly and its tail
+    // would play into the call when the operator returns on air.
+    [Fact]
+    public void Entering_off_air_stops_the_active_phrase()
+    {
+        var (engine, factory, _, events) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+        engine.Play(new Phrase("p", Enumerable.Repeat(0.5f, 48_000).ToArray()));
+        engine.DrainPending();
+
+        engine.EnterOffAir();
+        engine.DrainPending();
+
+        // The gate keeps pulling while OFF AIR, so the stop-fade drains and the phrase ends —
+        // the UI glow clears via PhraseChanged(null).
+        factory.LastCable!.Pull(48_000);
+        Assert.Contains(events, e => e is EngineEvent.PhraseChanged { PhraseId: null });
+
+        // Back on air: nothing of the phrase may remain — only silence (no mic pushed).
+        engine.ExitOffAir();
+        engine.DrainPending();
+        var alreadyCaptured = factory.LastCable!.Captured.Count;
+        factory.LastCable!.Pull(4800);
+        Assert.All(factory.LastCable!.Captured.Skip(alreadyCaptured), s => Assert.Equal(0f, s));
+    }
+
+    // M5: OFF AIR requests made while Degraded must be honored on recovery — the operator who
+    // pressed "back on air" during the outage must not silently return muted.
+    [Fact]
+    public void Exit_off_air_requested_while_degraded_is_honored_on_recovery()
+    {
+        var (engine, factory, clock, _) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+        engine.EnterOffAir();
+        engine.DrainPending();
+
+        factory.LastCable!.Fault(new InvalidOperationException("cable died"));
+        engine.DrainPending();
+        Assert.Equal(EngineState.Degraded, engine.State);
+
+        engine.ExitOffAir(); // e.g. StopRecording while degraded
+        engine.DrainPending();
+
+        clock.Advance(FirstBackoffMs);
+        clock.FireTicks();
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.Live, engine.State); // not silently back to OFF AIR
+        factory.LastMic!.Push(TestAudio.Sine(440, 4800));
+        factory.LastCable!.Pull(4800);
+        Assert.Contains(factory.LastCable!.Captured, s => s != 0f); // and the gate is open
+    }
+
+    [Fact]
+    public void Enter_off_air_requested_while_degraded_is_honored_on_recovery()
+    {
+        var (engine, factory, clock, _) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+
+        factory.LastCable!.Fault(new InvalidOperationException("cable died"));
+        engine.DrainPending();
+
+        engine.EnterOffAir(); // operator starts a recording flow during the outage
+        engine.DrainPending();
+
+        clock.Advance(FirstBackoffMs);
+        clock.FireTicks();
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.OffAir, engine.State);
+    }
+
+    // M6: the gate survives a cable rebuild with a pre-fault read stamp (necessarily older
+    // than the stall threshold). Without a reset, the next watchdog tick would immediately
+    // re-degrade — alarm blip, attempt-counter reset, flapping on slow drivers.
+    [Fact]
+    public void Recovered_cable_is_not_re_degraded_by_the_stale_stall_stamp()
+    {
+        var (engine, factory, clock, _) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+        factory.LastCable!.Pull(480); // one real read stamps the gate at t=0
+        factory.LastCable!.Fault(new InvalidOperationException("cable died"));
+        engine.DrainPending();
+
+        clock.Advance(StallMs + FirstBackoffMs + 100); // well past both backoff and threshold
+        clock.FireTicks();
+        engine.DrainPending();
+        Assert.Equal(EngineState.Live, engine.State); // rebuilt
+
+        // The next tick fires before the new render thread's first pull.
+        clock.Advance(100);
+        clock.FireTicks();
+        engine.DrainPending();
+        Assert.Equal(EngineState.Live, engine.State); // no flap
+    }
+
+    // M7: the alarm is retried on the backoff schedule while Degraded — a failed first start
+    // (default output busy/gone at fault time) must not mean a silent DEGRADED forever.
+    [Fact]
+    public void Failed_alarm_is_retried_on_the_rebuild_schedule()
+    {
+        var (engine, factory, clock, _) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+
+        factory.FailNext(DeviceRole.Alarm, transient: true); // first StartAlarm fails
+        factory.FailNext(DeviceRole.Cable, transient: true); // and the first rebuild fails too
+        factory.LastCable!.Fault(new InvalidOperationException("cable died"));
+        engine.DrainPending();
+        Assert.Null(factory.LastAlarm); // silent DEGRADED right now
+
+        clock.Advance(FirstBackoffMs);
+        clock.FireTicks();
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.Degraded, engine.State); // rebuild failed as armed…
+        Assert.NotNull(factory.LastAlarm);                // …but the alarm sounds now
+        Assert.Equal(DeviceState.Running, factory.LastAlarm!.State);
+    }
+
+    [Fact]
+    public void Faulted_alarm_is_rebuilt_on_the_next_attempt()
+    {
+        var (engine, factory, clock, _) = NewEngine();
+        engine.Start();
+        engine.DrainPending();
+
+        factory.FailNext(DeviceRole.Cable, transient: true); // keep the spell Degraded
+        factory.LastCable!.Fault(new InvalidOperationException("cable died"));
+        engine.DrainPending();
+        var firstAlarm = factory.LastAlarm!;
+        Assert.Equal(DeviceState.Running, firstAlarm.State);
+
+        firstAlarm.Fault(new InvalidOperationException("alarm device unplugged"));
+        clock.Advance(FirstBackoffMs);
+        clock.FireTicks();
+        engine.DrainPending();
+
+        Assert.NotSame(firstAlarm, factory.LastAlarm); // a fresh alarm was built
+        Assert.Equal(DeviceState.Running, factory.LastAlarm!.State);
     }
 
     [Fact]

@@ -19,6 +19,10 @@ public sealed class ControllableRenderDevice : IAudioRenderDevice
     public WaveFormat Format { get; }
     public DeviceState State { get; private set; } = DeviceState.Stopped;
 
+    /// <summary>How many times Dispose ran — rebuild tests assert the old device was released
+    /// exactly once (the device-lifecycle bug class the fakes were previously blind to).</summary>
+    public int DisposeCount { get; private set; }
+
     public event EventHandler<DeviceStateChangedEventArgs>? StateChanged;
 
     public IReadOnlyList<float> Captured => _captured;
@@ -37,7 +41,15 @@ public sealed class ControllableRenderDevice : IAudioRenderDevice
         _source = source;
     }
 
-    public void Start() => State = DeviceState.Running;
+    /// <summary>Mirrors the real seam's guard (<c>WasapiRenderDevice.Start</c> throws
+    /// "Call Init before Start.") so ordering bugs are visible to unit tests.</summary>
+    public void Start()
+    {
+        if (_source is null)
+            throw new InvalidOperationException("Call Init before Start.");
+        State = DeviceState.Running;
+    }
+
     public void Stop() => State = DeviceState.Stopped;
 
     /// <summary>Act as the render thread: pull <paramref name="count"/> samples from the source.</summary>
@@ -59,5 +71,5 @@ public sealed class ControllableRenderDevice : IAudioRenderDevice
         StateChanged?.Invoke(this, new DeviceStateChangedEventArgs(DeviceState.Faulted, error));
     }
 
-    public void Dispose() { }
+    public void Dispose() => DisposeCount++;
 }

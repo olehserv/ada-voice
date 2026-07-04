@@ -30,6 +30,11 @@ public sealed class CableGate : ISampleProvider
     /// <summary>Clock time of the last read. The watchdog compares this to now.</summary>
     public long LastReadMs => Interlocked.Read(ref _lastReadMs);
 
+    /// <summary>Restart the stall clock. Called on rebuild success: the surviving gate's stamp
+    /// is from before the fault, and without a reset the watchdog would re-degrade on its next
+    /// tick, before the new render thread's first pull.</summary>
+    public void MarkAlive() => Interlocked.Exchange(ref _lastReadMs, _clock.NowMs);
+
     public int Read(float[] buffer, int offset, int count)
     {
         // Stamp before pulling the source: record the moment the render thread reached us,

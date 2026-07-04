@@ -27,6 +27,22 @@ public class ChannelAdapterTests
         Assert.Equal([0.5f, 0.5f, -0.3f, -0.3f], buffer);
     }
 
+    // The alarm device is the system default output, which can be a 5.1/7.1 surround device.
+    // Mono must up-mix to any channel count, or those machines get no audible alarm, ever.
+    [Fact]
+    public void Mono_is_upmixed_to_surround_by_replicating_the_channel()
+    {
+        var surround = ChannelAdapter.Match(ArraySampleProvider.Mono48k([0.5f, -0.3f]), targetChannels: 6);
+
+        Assert.Equal(6, surround.WaveFormat.Channels);
+        var buffer = new float[12];
+        var read = surround.Read(buffer, 0, 12);
+
+        Assert.Equal(12, read);
+        Assert.All(buffer[..6], s => Assert.Equal(0.5f, s));
+        Assert.All(buffer[6..], s => Assert.Equal(-0.3f, s));
+    }
+
     [Fact]
     public void Unsupported_conversion_throws()
     {

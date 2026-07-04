@@ -10,6 +10,10 @@ public sealed class ControllableCaptureDevice : IAudioCaptureDevice
     public WaveFormat Format => TestAudio.EngineFormat;
     public DeviceState State { get; private set; } = DeviceState.Stopped;
 
+    /// <summary>How many times Dispose ran — rebuild tests assert the old device was released
+    /// exactly once (the device-lifecycle bug class the fakes were previously blind to).</summary>
+    public int DisposeCount { get; private set; }
+
     public event EventHandler<CaptureBufferEventArgs>? DataAvailable;
     public event EventHandler<DeviceStateChangedEventArgs>? StateChanged;
 
@@ -30,5 +34,5 @@ public sealed class ControllableCaptureDevice : IAudioCaptureDevice
         StateChanged?.Invoke(this, new DeviceStateChangedEventArgs(DeviceState.Faulted, error));
     }
 
-    public void Dispose() { }
+    public void Dispose() => DisposeCount++;
 }
