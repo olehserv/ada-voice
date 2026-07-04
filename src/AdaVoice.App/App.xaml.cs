@@ -69,7 +69,8 @@ public partial class App : Application
             pickImportFile: window.PickImportFile,
             confirmAndRestart: window.ConfirmAndRestart,
             showError: window.ShowError,
-            showSettingsInfo: window.ShowInfo);
+            showSettingsInfo: window.ShowInfo,
+            showRepairDialog: window.ShowRepairDialog);
 
         window.DataContext = board;
         window.Show(); // triggers OnLoaded: wires Saved/Deleted AND registers the stop hotkey

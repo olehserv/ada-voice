@@ -1,0 +1,23 @@
+<Window x:Class="AdaVoice.App.RepairPhraseDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="Repair phrase"
+        Width="360" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
+        Background="{StaticResource Surface.Window}"
+        TextElement.Foreground="{StaticResource Text.Primary}"
+        FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
+    <StackPanel Margin="16">
+        <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                   FontSize="{StaticResource FontSize.SectionTitle}" TextWrapping="Wrap" />
+        <TextBlock Text="⚠ This phrase's audio file is missing." Foreground="{StaticResource Text.Secondary}"
+                   TextWrapping="Wrap" Margin="0,8,0,0" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <ui:Button Content="Cancel" Appearance="Secondary" IsCancel="True" Margin="0,0,8,0" />
+            <ui:Button Content="Remove" Appearance="Secondary" Margin="0,0,8,0" Click="Remove_Click" />
+            <ui:Button Content="Re-record" Appearance="Primary" IsDefault="True" Click="ReRecord_Click" />
+        </StackPanel>
+    </StackPanel>
+</Window>

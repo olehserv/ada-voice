@@ -15,12 +15,13 @@ public class BoardViewModelTests
         Action<CategoriesViewModel>? showManageCategories = null,
         Action<SetupWizardViewModel>? showSetupWizard = null,
         ISettingsHost? settingsHost = null,
-        Action<SettingsWindowViewModel>? showSettings = null) =>
+        Action<SettingsWindowViewModel>? showSettings = null,
+        Func<RepairPhraseViewModel, bool>? showRepairDialog = null) =>
         new(host, host, host, host, settingsHost ?? new FakeSettingsHost(), new StatusViewModel(host),
             new SettingsViewModel(new FakeSettingsHost()),
             getActiveHotkey: () => "Pause", confirmDelete: confirmDelete, showEditDialog: showEditDialog,
             showManageCategories: showManageCategories, showSetupWizard: showSetupWizard,
-            showSettings: showSettings);
+            showSettings: showSettings, showRepairDialog: showRepairDialog);
 
     private static RecordingResult Take() => new(new float[10], GainDb: -3, DurationMs: 1000, PeakDbfs: -6);
 
@@ -66,20 +67,77 @@ public class BoardViewModelTests
     }
 
     [Fact]
-    public void Play_a_broken_phrase_shows_a_notice_and_does_not_play()
+    public void Play_a_broken_phrase_opens_the_repair_dialog_instead_of_a_notice()
     {
         var host = new FakePlaybackHost
         {
             State = EngineState.Live,
-            Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav" }],
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", FileName = "p-1.wav" }],
             BrokenPhraseIds = ["p-1"],
         };
-        var board = NewBoard(host);
+        RepairPhraseViewModel? shown = null;
+        var board = NewBoard(host, showRepairDialog: repair => { shown = repair; return false; }); // cancelled
 
         board.PlayCommand.Execute(board.Phrases[0]);
 
         Assert.DoesNotContain("PlayEntry", host.Calls);
-        Assert.NotNull(board.Notice);
+        Assert.NotNull(shown);
+        Assert.Equal("Hi", shown!.Title);
+        Assert.Single(board.Phrases); // cancelled — nothing removed
+    }
+
+    [Fact]
+    public void Repair_dialog_remove_deletes_the_broken_phrase()
+    {
+        var host = new FakePlaybackHost
+        {
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi" }],
+            BrokenPhraseIds = ["p-1"],
+        };
+        string? deleted = null;
+        var board = NewBoard(host, showRepairDialog: repair => { repair.ChooseRemove(); return true; });
+        board.Deleted += (_, title) => deleted = title;
+
+        board.PlayCommand.Execute(board.Phrases[0]);
+
+        Assert.Empty(board.Phrases);
+        Assert.Equal("Hi", deleted);
+    }
+
+    [Fact]
+    public void Repair_dialog_re_record_removes_the_old_entry_and_starts_recording_prefilled()
+    {
+        var host = new FakePlaybackHost
+        {
+            CanRecord = true,
+            Categories = [new Category { Id = "c-2", Name = "Closers" }],
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = "c-2", Tags = ["urgent"] }],
+            BrokenPhraseIds = ["p-1"],
+        };
+        var board = NewBoard(host, showRepairDialog: repair => { repair.ChooseReRecord(); return true; });
+
+        // Block instead of `await`: awaiting here would resume this test method's continuation on
+        // whatever threadpool thread completed StartRecording's Task.Run (no SynchronizationContext
+        // in this headless xunit host) — and the SaveTake below touches the Phrases ObservableCollection,
+        // which WPF's CollectionView ties to the thread that first created it (here, this test's own
+        // thread). GetAwaiter().GetResult() waits for the same full completion but keeps running on
+        // this thread, avoiding the "different thread" CollectionView exception (same hazard the
+        // Save/RecordIntoCategory tests above avoid by using .Execute() instead of awaiting). No
+        // deadlock risk: nothing downstream marshals back to this (blocked) thread.
+#pragma warning disable xUnit1031
+        board.PlayCommand.ExecuteAsync(board.Phrases[0]).GetAwaiter().GetResult();
+#pragma warning restore xUnit1031
+
+        Assert.Empty(board.Phrases); // old broken entry removed
+        Assert.Equal("Hi", board.NewTitle); // pre-filled from the broken entry
+        Assert.True(board.IsRecording);
+
+        board.PendingTake = Take();
+        board.SaveTakeCommand.Execute(null);
+
+        var saved = host.Phrases.Single(p => p.Title == "Hi");
+        Assert.Equal("c-2", saved.CategoryId);
+        Assert.Equal(["urgent"], saved.Tags);
     }
 
     [Fact]

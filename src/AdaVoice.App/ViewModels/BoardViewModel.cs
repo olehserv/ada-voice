@@ -35,6 +35,7 @@ public partial class BoardViewModel : ObservableObject
     private readonly Action<string> _showSettingsInfo;
     private readonly Func<PhraseItemViewModel, bool> _confirmDelete;
     private readonly Func<PhraseEditViewModel, bool> _showEditDialog;
+    private readonly Func<RepairPhraseViewModel, bool> _showRepairDialog;
     private readonly Action<CategoriesViewModel> _showManageCategories;
     private readonly Action<Action> _onUiThread;
 
@@ -77,6 +78,7 @@ public partial class BoardViewModel : ObservableObject
         Action<Action>? onUiThread = null,
         Func<PhraseItemViewModel, bool>? confirmDelete = null,
         Func<PhraseEditViewModel, bool>? showEditDialog = null,
+        Func<RepairPhraseViewModel, bool>? showRepairDialog = null,
         Action<CategoriesViewModel>? showManageCategories = null,
         Action<SetupWizardViewModel>? showSetupWizard = null,
         Action<SettingsWindowViewModel>? showSettings = null,
@@ -95,6 +97,7 @@ public partial class BoardViewModel : ObservableObject
         _onUiThread = onUiThread ?? (action => action()); // default: inline (unit tests)
         _confirmDelete = confirmDelete ?? (_ => true);     // default: confirm (unit tests)
         _showEditDialog = showEditDialog ?? (_ => false);  // default: cancel (unit tests opt in)
+        _showRepairDialog = showRepairDialog ?? (_ => false); // default: cancel (unit tests opt in)
         _showManageCategories = showManageCategories ?? (_ => { }); // default: no-op (unit tests)
         _showSetupWizard = showSetupWizard ?? (_ => { });  // default: no-op (unit tests)
         _showSettings = showSettings ?? (_ => { });        // default: no-op (unit tests)
@@ -285,22 +288,44 @@ public partial class BoardViewModel : ObservableObject
     // ---- Playback -------------------------------------------------------------------------------
 
     /// <summary>Left-click a phrase: play it to the call. The action is gated (not the button), so the
-    /// button still opens its right-click menu when the engine is stopped or the audio is missing.</summary>
+    /// button still opens its right-click menu when the engine is stopped or the audio is missing.
+    /// A broken phrase opens the repair dialog instead of playing.</summary>
     [RelayCommand]
-    private void Play(PhraseItemViewModel? item)
+    private async Task Play(PhraseItemViewModel? item)
     {
         if (item is null)
             return;
 
         if (item.IsBroken)
-            Notice = "This phrase's audio file is missing — it can't be played.";
-        else if (_playback.State != EngineState.Live)
-            Notice = "Start the engine (and be ON AIR) to play to the call.";
-        else
         {
-            Notice = null;
-            _playback.PlayEntry(item.Entry);
+            var repair = new RepairPhraseViewModel(item.Entry);
+            if (_showRepairDialog(repair) && repair.Choice is { } choice)
+            {
+                _library.DeleteEntry(item.Entry);
+                Phrases.Remove(item);
+
+                if (choice == RepairChoice.ReRecord)
+                {
+                    NewTitle = item.Entry.Title;
+                    _pendingMetadata = (item.Entry.CategoryId, item.Entry.Tags);
+                    await StartRecording();
+                }
+                else
+                {
+                    Deleted?.Invoke(this, item.Title);
+                }
+            }
+            return;
         }
+
+        if (_playback.State != EngineState.Live)
+        {
+            Notice = "Start the engine (and be ON AIR) to play to the call.";
+            return;
+        }
+
+        Notice = null;
+        _playback.PlayEntry(item.Entry);
     }
 
     /// <summary>Right-click "Test on headphones": preview a phrase on the monitor output, engine or not.

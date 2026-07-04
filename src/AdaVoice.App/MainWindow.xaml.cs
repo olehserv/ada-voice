@@ -86,6 +86,11 @@ public partial class MainWindow : FluentWindow
     public bool ShowEditDialog(PhraseEditViewModel edit) =>
         new PhraseEditDialog { DataContext = edit, Owner = this }.ShowDialog() == true;
 
+    /// <summary>Show the modal repair-phrase prompt; returns true if the operator chose an action
+    /// (Re-record or Remove), false if they cancelled.</summary>
+    public bool ShowRepairDialog(RepairPhraseViewModel repair) =>
+        new RepairPhraseDialog { DataContext = repair, Owner = this }.ShowDialog() == true;
+
     /// <summary>Show the modal category manager (changes persist live, so nothing is returned).</summary>
     public void ShowManageCategories(CategoriesViewModel categories) =>
         new ManageCategoriesDialog { DataContext = categories, Owner = this }.ShowDialog();
