@@ -8,7 +8,19 @@ back up. It answers one question: *where are we right now?*
   the strategy (see [roadmap](docs/roadmaps/mvp-roadmap.md)), or the decision record
   (canonical table in [design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
 
-_Last updated: 2026-07-04._  
+_Last updated: 2026-07-04 (second batch)._  
+_"Next touch" review fixes implemented per
+[`docs/plans/2026-07-04-next-touch-fixes.md`](docs/plans/2026-07-04-next-touch-fixes.md):
+M4–M7 (engine recovery: OFF AIR stops the phrase, Degraded honors OFF AIR requests, no
+stall-stamp flap after rebuild, mono→N alarm + backoff-paced alarm retry), M1/M2 (recording
+and calibration can no longer strand the engine OFF AIR or leak calibration speech into the
+call; VM commands async), M9/M10 (transactional import with normalization + zip resource
+caps), M13 (WASAPI COM-leak and notification-path hygiene), H11 items 2–4 (two NEW test
+projects: `AdaVoice.Host.Tests` — EngineHost is now injectable — and
+`AdaVoice.Audio.Wasapi.Tests` for the device monitor; fakes track disposal and enforce
+Init-before-Start). 335 tests green (72 Core + 97 Audio + 8 Wasapi + 5 Host + 153 App).
+Earlier the same day: top-10 risk fixes below._
+
 _Top-10 risk fixes from the full codebase review
 ([`docs/reviews/2026-07-04-full-codebase-review.md`](docs/reviews/2026-07-04-full-codebase-review.md))
 implemented per [`docs/plans/2026-07-04-top10-risk-fixes.md`](docs/plans/2026-07-04-top10-risk-fixes.md):
@@ -40,7 +52,31 @@ then slice 2 (interaction-state gaps) of the UI/UX pass + localization.
 
 ## Done
 
-- ✅ **Top-10 risk fixes — implemented, all tests green (2026-07-04, uncommitted).** The full
+- ✅ **"Next touch" review fixes — implemented, all 335 tests green (2026-07-04).** The second
+  batch from the review (plan:
+  [`docs/plans/2026-07-04-next-touch-fixes.md`](docs/plans/2026-07-04-next-touch-fixes.md)):
+  - **Engine recovery (M4–M7):** entering OFF AIR now stops the active phrase (no surprise
+    tail on return); OFF AIR / back-on-air requests made while Degraded are honored on
+    recovery via `_restoreState`; `CableGate.MarkAlive()` prevents an instant re-degrade off
+    the pre-fault stall stamp; `ChannelAdapter` up-mixes mono to any channel count (surround
+    default outputs get an audible alarm) and a dead alarm is retried on the backoff schedule.
+  - **Recording/calibration (M1/M2):** `TryStartRecording`/`StopRecording` restore the live
+    state on every failure path; `Calibrate` refuses during a take and runs OFF AIR while
+    Live (restoring in `finally`); the Board's record commands are async with broad catches.
+  - **Import (M9/M10):** WAVs stage to `.importing` temps and move into place only when all
+    extracted — a mid-loop failure returns `ImportResult(false, …)` with nothing changed;
+    archives are normalized (blank/duplicate ids, dangling categories → default, default
+    category guaranteed on Replace, tag colours survive a Merge); resource caps reject
+    oversized/over-count archives; `BackupService` skips absurd backup entries.
+  - **WASAPI hygiene (M13):** `AudioClient` RCWs disposed at all three access sites;
+    `WasapiDevices` scans dispose non-matches and skip flaky endpoints; `WasapiDeviceMonitor`
+    contains subscriber exceptions on the COM callback thread; the wrong "host dedupes by id"
+    comment fixed.
+  - **Testability (H11 2–4):** `EngineHost` ctor now accepts injected factory/monitor/clock/
+    dataRoot; NEW `tests/AdaVoice.Host.Tests` (recording/calibration state safety, library
+    warnings) and NEW `tests/AdaVoice.Audio.Wasapi.Tests` (device-monitor mapping, throw
+    containment); engine fakes count disposals and enforce Init-before-Start.
+- ✅ **Top-10 risk fixes — implemented, all tests green (2026-07-04, committed).** The full
   codebase review ([`docs/reviews/2026-07-04-full-codebase-review.md`](docs/reviews/2026-07-04-full-codebase-review.md))
   scored Reliability 5/10 with the bugs clustered in the recovery paths; all ten top risks plus
   three tiny riders are now fixed (plan:
