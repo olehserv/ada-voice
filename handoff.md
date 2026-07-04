@@ -9,14 +9,17 @@ back up. It answers one question: *where are we right now?*
   (canonical table in [design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
 
 _Last updated: 2026-07-04._  
-_Settings window (slice 1 of the UI/UX + localization scope) built via subagent-driven development
-— 7 tasks, each independently reviewed, plus a final whole-branch review — and merged to `main`.
-Manual GUI smoke test caught a crash on open (`Run.Text` TwoWay-binds to the read-only
-`LastBackupDate`, throwing `InvalidOperationException`) — fixed with `Mode=OneWay`
-(commit `05d2f26`). All 302 tests green (63 Core + 88 Audio + 151 App). Remaining GUI checklist
-items still to click through — see Next action. Next arc slice 2 (interaction-state gaps) not yet
-started — see
-[`docs/plans/ui-ux-localization-scope.md`](docs/plans/ui-ux-localization-scope.md)._
+_Top-10 risk fixes from the full codebase review
+([`docs/reviews/2026-07-04-full-codebase-review.md`](docs/reviews/2026-07-04-full-codebase-review.md))
+implemented per [`docs/plans/2026-07-04-top10-risk-fixes.md`](docs/plans/2026-07-04-top10-risk-fixes.md):
+C1 (mic-duck relay across rebuilds), C2 (ReadError write guard + startup warning), H1 (rebuild
+catch-all + backoff), H2/H3/H4 (global exception handlers, crash restart, single-instance mutex),
+H5/H6 (async PreviewTake + broad preview catches), H7 (StateChanged now carries the error to the
+status bar), H8 ([PreserveSig] on the ducking interop), H9 (import re-keys WAVs to {id}.wav),
+H10 (drift posted off the audio threads), plus riders M3 (duration overflow) and M11 (logs to
+%LOCALAPPDATA%). 308 tests green (66 Core + 90 Audio + 152 App), 6 new regression tests.
+Not yet committed or user-smoke-tested. Settings-window slice-1 GUI checklist still open — see
+Next action._
 
 ---
 
@@ -37,6 +40,41 @@ then slice 2 (interaction-state gaps) of the UI/UX pass + localization.
 
 ## Done
 
+- ✅ **Top-10 risk fixes — implemented, all tests green (2026-07-04, uncommitted).** The full
+  codebase review ([`docs/reviews/2026-07-04-full-codebase-review.md`](docs/reviews/2026-07-04-full-codebase-review.md))
+  scored Reliability 5/10 with the bugs clustered in the recovery paths; all ten top risks plus
+  three tiny riders are now fixed (plan:
+  [`docs/plans/2026-07-04-top10-risk-fixes.md`](docs/plans/2026-07-04-top10-risk-fixes.md)).
+  - **C1:** new `MicDuckRelay` — the phrase player's duck target now follows a mic rebuild
+    (before: ducking landed on the disposed passthrough forever after a headset replug).
+  - **C2:** `PhraseLibraryService` mutators refuse while `LoadStatus == ReadError`
+    (`IsWritable`/`EnsureWritable`), so a transiently locked `library.json` can no longer be
+    overwritten by the seeded stand-in; `ILibraryHost.LibraryWarning` surfaces
+    ReadError/Corrupt/RecoveredFromBackup as a Board notice at startup.
+  - **H1:** `AttemptRebuild` catches non-`AudioDeviceException` failures as transient-with-backoff
+    (before: a wrong-rate cable replug became a 10 Hz rebuild churn loop); `FakeDeviceFactory`
+    gained `CableFormat` to arm the scenario.
+  - **H2/H3/H4 (App.xaml.cs):** all three global exception handlers (UI errors: log + dialog +
+    keep running; fatal: log + flush), `RegisterApplicationRestart` (NativeMethods made public),
+    and a single-instance mutex (second launch shows a message and exits).
+  - **H5/H6:** `PreviewTake` is async (`Task.Run`, mirrors `TestOnHeadphones`) — no more frozen
+    window/STOP/hotkey for the take's length; both preview commands got the broad
+    `catch (Exception) when (not OOM)` → Notice pattern.
+  - **H7:** `IPlaybackHost.StateChanged` widened to `EngineStateChangedEventArgs(State, Error)`;
+    `StatusViewModel.StateError` + a red status-bar TextBlock show why a Start failed
+    (e.g. "cable not at 48 kHz") instead of "button does nothing".
+  - **H8:** `[PreserveSig]` on all 20 methods of the `DuckingOptOut` COM interfaces — the
+    HRESULT checks now actually check HRESULTs; x86 would have been a stack imbalance.
+  - **H9:** import re-keys every incoming WAV to `{phrase.Id}.wav` and rewrites `FileName`, so an
+    archive file name can never overwrite a different existing phrase's recording.
+  - **H10:** drift events are posted through the command queue (`EngineCommand.DriftNoticed`) —
+    host file logging no longer runs on the capture/render threads (or under the mixer lock).
+  - **Riders:** M3 (`Recorder` duration math no longer overflows at ~44.7 s), M11 (both hosts log
+    to `%LOCALAPPDATA%\AdaVoice\logs`, not the install dir).
+  - 308 tests green (66 Core + 90 Audio + 152 App); 6 new regression tests (C1 rebuild-duck,
+    H1 churn, C2 ×2, H7 error surface, H9 collision). **Not yet committed; needs a user smoke
+    test** (launch twice → second instance message; preview a take → UI responsive; logs under
+    `%LOCALAPPDATA%\AdaVoice\logs`).
 - ✅ **Settings window — merged to `main`, pushed (2026-07-02).** Slice 1 of the UI/UX +
   localization scope
   ([`docs/plans/ui-ux-localization-scope.md`](docs/plans/ui-ux-localization-scope.md)). Design
