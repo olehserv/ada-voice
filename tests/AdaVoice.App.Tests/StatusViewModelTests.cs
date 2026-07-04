@@ -76,4 +76,19 @@ public class StatusViewModelTests
         Assert.Contains(nameof(StatusViewModel.CanStart), changed);
         Assert.Contains(nameof(StatusViewModel.IsEngineRunning), changed);
     }
+
+    // The engine attaches a reason to failure transitions (e.g. "cable not at 48 kHz" on a refused
+    // Start). The VM must surface it — otherwise a failed Start looks like "button does nothing".
+    [Fact]
+    public void State_error_is_surfaced_and_cleared_with_the_next_clean_transition()
+    {
+        var host = new FakePlaybackHost { State = EngineState.Stopped };
+        var vm = new StatusViewModel(host);
+
+        host.RaiseStateChanged(EngineState.Stopped, "cable not at 48 kHz");
+        Assert.Equal("cable not at 48 kHz", vm.StateError);
+
+        host.RaiseStateChanged(EngineState.Live);
+        Assert.Null(vm.StateError);
+    }
 }

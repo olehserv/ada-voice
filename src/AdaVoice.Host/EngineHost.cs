@@ -180,7 +180,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
 
     /// <summary>Raised when the engine state changes. Fires on the engine control thread — a UI
     /// handler must marshal to its own thread (e.g. the WPF Dispatcher).</summary>
-    public event EventHandler<EngineState>? StateChanged;
+    public event EventHandler<EngineStateChangedEventArgs>? StateChanged;
 
     /// <summary>Raised with the playing phrase's id (null when playback stops). Fires off the UI
     /// thread — a UI handler must marshal.</summary>
@@ -475,7 +475,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
 
         _log(Describe(e));
         if (e is EngineEvent.StateChanged s)
-            StateChanged?.Invoke(this, s.State);
+            StateChanged?.Invoke(this, new EngineStateChangedEventArgs(s.State, s.Error));
     }
 
     private static string Describe(EngineEvent e) => e switch

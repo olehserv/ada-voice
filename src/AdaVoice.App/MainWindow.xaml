@@ -48,6 +48,11 @@
                 <TextBlock Text="{Binding Status.StateLabel}" FontWeight="SemiBold"
                            FontSize="{StaticResource FontSize.SectionTitle}"
                            VerticalAlignment="Center" MinWidth="90" />
+                <!-- Why the engine landed here (e.g. a failed Start's reason). Empty = collapsed-looking. -->
+                <TextBlock Text="{Binding Status.StateError}" Foreground="#C42B1C"
+                           VerticalAlignment="Center" Margin="8,0,0,0" MaxWidth="420"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding Status.StateError}" />
                 <ui:Button Content="Start" Appearance="Secondary" Command="{Binding StartEngineCommand}" Margin="8,0,0,0"
                            IsEnabled="{Binding Status.CanStart}" />
                 <ui:Button Content="Stop engine" Appearance="Secondary" Command="{Binding StopEngineCommand}" Margin="8,0,0,0"

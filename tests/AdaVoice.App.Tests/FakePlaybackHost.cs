@@ -27,7 +27,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     public IReadOnlyList<string> BrokenPhraseIds { get; set; } = [];
     public List<PhraseEntry> Deleted { get; } = [];
 
-    public event EventHandler<EngineState>? StateChanged;
+    public event EventHandler<EngineStateChangedEventArgs>? StateChanged;
     public event EventHandler<string?>? PlayingPhraseChanged;
 
     public List<string> Calls { get; } = [];
@@ -82,10 +82,10 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
         return PreviewEntryResult;
     }
 
-    public void RaiseStateChanged(EngineState state)
+    public void RaiseStateChanged(EngineState state, string? error = null)
     {
         State = state;
-        StateChanged?.Invoke(this, state);
+        StateChanged?.Invoke(this, new EngineStateChangedEventArgs(state, error));
     }
 
     public void RaisePlayingPhraseChanged(string? id) => PlayingPhraseChanged?.Invoke(this, id);

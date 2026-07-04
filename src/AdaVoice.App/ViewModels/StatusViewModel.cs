@@ -22,6 +22,11 @@ public partial class StatusViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsEngineRunning))]
     private EngineState _state;
 
+    /// <summary>Why the engine landed in the current state (e.g. a failed Start's reason), or null.
+    /// Without this, "VB-Cable missing" looks like "the Start button does nothing".</summary>
+    [ObservableProperty]
+    private string? _stateError;
+
     public StatusViewModel(IPlaybackHost host, Action<Action>? onUiThread = null)
     {
         _host = host;
@@ -52,7 +57,11 @@ public partial class StatusViewModel : ObservableObject, IDisposable
     /// so keeping it live costs nothing and matches operators' expectations.</summary>
     public bool IsEngineRunning => State != EngineState.Stopped;
 
-    private void OnStateChanged(object? sender, EngineState state) => _onUiThread(() => State = state);
+    private void OnStateChanged(object? sender, EngineStateChangedEventArgs e) => _onUiThread(() =>
+    {
+        State = e.State;
+        StateError = e.Error;
+    });
 
     public void Dispose() => _host.StateChanged -= OnStateChanged;
 }
