@@ -8,8 +8,17 @@ back up. It answers one question: *where are we right now?*
   the strategy (see [roadmap](docs/roadmaps/mvp-roadmap.md)), or the decision record
   (canonical table in [design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
 
-_Last updated: 2026-07-04 (second batch)._  
-_"Next touch" review fixes implemented per
+_Last updated: 2026-07-05._  
+_Slice 2 of the UI/UX + localization scope (interaction-state gaps) shipped: repair dialog for
+broken phrases, category-empty CTA, search Clear + query echo, Recorder Processing state +
+hardened `SaveTake` (closes review finding M15), and a cosmetic wizard per-check spinner. Built
+via subagent-driven development — 5 tasks each independently reviewed, plus a final whole-branch
+review that caught and fixed 2 Important issues (repair-dialog re-record silently lost the
+original title; `_pendingMetadata` could leak into an unrelated future recording). 360 tests green
+(72 Core + 97 Audio + 8 Wasapi + 5 Host + 178 App). Pushed to `main`. Not yet manually
+smoke-tested by the user. Next: smoke-test slice 2, then slice 3 (Full/Docked responsive layout)._
+
+_The day before (2026-07-04): "Next touch" review fixes implemented per
 [`docs/plans/2026-07-04-next-touch-fixes.md`](docs/plans/2026-07-04-next-touch-fixes.md):
 M4–M7 (engine recovery: OFF AIR stops the phrase, Degraded honors OFF AIR requests, no
 stall-stamp flap after rebuild, mono→N alarm + backoff-paced alarm retry), M1/M2 (recording
@@ -46,12 +55,46 @@ end by the user and merged + pushed to `main` (2026-07-02). The setup-wizard UI 
 checks, voice calibration, hotkey status, instructions, first-call card, VB-CABLE download link,
 calibration countdown ring) is also built, smoke-tested by the user, and merged + pushed to
 `main` (2026-07-02). The Settings window (Levels/Behavior/Language & Backup groups — slice 1 of
-the UI/UX + localization scope) is also built, fully reviewed, and merged to `main` (2026-07-02),
-but not yet manually smoke-tested by the user.** Next real step: smoke-test the Settings window,
-then slice 2 (interaction-state gaps) of the UI/UX pass + localization.
+the UI/UX + localization scope) is built, smoke-tested by the user (caught and fixed a
+crash-on-open bug), and merged to `main` (2026-07-02/04). Slice 2 (interaction-state gaps — repair
+dialog, category-empty CTA, search Clear + query echo, Recorder Processing state, wizard spinner)
+is also built, fully reviewed, and pushed to `main` (2026-07-05), but not yet manually
+smoke-tested by the user.** Next real step: smoke-test slice 2, then slice 3 (Full/Docked
+responsive layout) of the UI/UX pass + localization.
 
 ## Done
 
+- ✅ **Interaction-state gaps (slice 2 of the UI/UX + localization scope) — pushed to `main`
+  (2026-07-05).** Design spec:
+  [`docs/superpowers/specs/2026-07-04-interaction-state-gaps-design.md`](docs/superpowers/specs/2026-07-04-interaction-state-gaps-design.md);
+  plan: [`docs/superpowers/plans/2026-07-04-interaction-state-gaps.md`](docs/superpowers/plans/2026-07-04-interaction-state-gaps.md).
+  - **Repair dialog** for broken (audio-missing) phrases: clicking one now opens a Re-record/
+    Remove/Cancel dialog instead of a dead-end notice. Re-record deletes the broken entry and
+    starts a fresh recording pre-filled with the original title/category/tags.
+  - **Category-empty CTA:** selecting a category with zero phrases (and no active search) shows
+    "No phrases in {category} yet." plus a "Record into {category}" button that lands the new
+    phrase straight into it.
+  - **Search Clear button + query echo:** the no-match card now echoes the search text
+    ("No phrases match '{query}'") and offers a one-click Clear; an inline ✕ button next to the
+    search box does the same.
+  - **Recorder Processing state:** a "Processing…" label now bridges the gap between clicking
+    Stop and the Save/Discard bar appearing, closing a UI flicker where the idle Record button
+    briefly reappeared. `SaveTake` gained a `CanExecute` guard (blank title) and a disk-full
+    try/catch — closes the `SaveTake` half of the codebase review's **M15** finding.
+  - **Wizard per-check spinner:** a brief "Checking…" spinner shows before the setup wizard's
+    environment-check results reveal (cosmetic, View-owned — same recipe as the calibration
+    countdown ring).
+  - **Deliberately deferred** (own future slice, needs new audio capability, same reason the
+    Settings window's Devices group was deferred): the recorder's live level meter and live
+    "mic dropped mid-recording" detection.
+  - Built via subagent-driven development: 5 tasks, each independently implemented and reviewed
+    (one task-level review caught and fixed a duplicate-phrase-entry bug in `SaveTake`), plus a
+    final whole-branch review that caught and fixed 2 more real gaps: the repair dialog's
+    re-record silently lost the original title (`StopRecording` always overwrote it with a
+    timestamp), and the shared pending-metadata field could leak into an unrelated future
+    recording if a record attempt failed partway through.
+  - 360 tests green (72 Core + 97 Audio + 8 Wasapi + 5 Host + 178 App) at merge. **Not yet
+    manually smoke-tested by the user.**
 - ✅ **"Next touch" review fixes — implemented, all 335 tests green (2026-07-04).** The second
   batch from the review (plan:
   [`docs/plans/2026-07-04-next-touch-fixes.md`](docs/plans/2026-07-04-next-touch-fixes.md)):
@@ -274,39 +317,25 @@ then slice 2 (interaction-state gaps) of the UI/UX pass + localization.
 
 ## In progress / interrupted
 
-Settings window (slice 1) is code-complete, fully reviewed, and merged. **Manual smoke test is
-under way (2026-07-04):** opening the window via **Settings…** immediately threw
-`InvalidOperationException` — `Run.Text` defaults to a `TwoWay` binding in WPF (unlike
-`TextBlock.Text`, which is `OneWay`), and it was bound to the read-only `LastBackupDate`. Fixed with
-an explicit `Mode=OneWay` in `SettingsWindow.xaml` (commit `05d2f26`); 302 tests still green. The
-plan's final step
-([`docs/superpowers/plans/2026-07-02-settings-window.md`](docs/superpowers/plans/2026-07-02-settings-window.md),
-Task 7 Step 14) is an 11-item interactive GUI checklist (duck slider from its new home, recalibrate,
-live always-on-top, restart-required labels, language + restart, export/import round-trip,
-open-backup-folder) — window now opens, but the rest of the checklist still needs to be clicked
-through before calling slice 1 fully done.
+Slice 2 (interaction-state gaps) is code-complete, fully reviewed, and pushed to `main`
+(2026-07-05). **Not yet manually smoke-tested by the user.** Suggested checklist (from the plan's
+own "After all 5 tasks" section,
+[`docs/superpowers/plans/2026-07-04-interaction-state-gaps.md`](docs/superpowers/plans/2026-07-04-interaction-state-gaps.md)):
+record into an empty category from its CTA; search for a no-match term and use both Clear buttons;
+click a broken phrase (temporarily rename its WAV to force this) and try Cancel/Remove/Re-record;
+watch for "Processing…" after Stop with no Record-button flash; try to Save with a blank title
+(button should be disabled); run Setup and watch the environment-checks spinner on load and on
+Re-check.
 
 ## Next action
 
 **1) UI/UX pass + localization — scoped into 4 ordered slices.** Full audit + rationale in
 [`docs/plans/ui-ux-localization-scope.md`](docs/plans/ui-ux-localization-scope.md):
 
-1. ✅ **Settings window** — built (2026-07-02): Levels (duck slider moved here from the Board status
-   bar, re-run voice calibration reusing the wizard's step), Behavior (always-on-top, "new phrase
-   stops current" toggle, read-only hotkey status), Language & Backup (language picker — persists
-   now, `.resx` retrofit is slice 4 — manual export/import, backup-folder access, last-backup-date).
-   Device pickers/live meters and true hotkey reassignment deliberately deferred (design spec:
-   [`docs/superpowers/specs/2026-07-02-settings-window-design.md`](docs/superpowers/specs/2026-07-02-settings-window-design.md));
-   plan: [`docs/superpowers/plans/2026-07-02-settings-window.md`](docs/superpowers/plans/2026-07-02-settings-window.md).
-   Built via subagent-driven development — 7 tasks each independently implemented + reviewed, one
-   final whole-branch review that caught and fixed a real gap (`BackupSettingsViewModel.Import` was
-   missing the same unexpected-exception catch-all `Export` already had — a genuine crash path for
-   an operator importing a slightly-bad backup, since the app has no global unhandled-exception
-   handler). 302 tests green (63 Core + 88 Audio + 151 App) at merge. **Manual smoke test in
-   progress (2026-07-04):** found and fixed a crash-on-open bug (see "In progress" above); the rest
-   of the 11-item checklist above still needs to be run before considering slice 1 fully done.
-2. **Interaction-state gaps** on the existing Board (repair dialog, category-empty CTA, search
-   Clear button, recorder level meter/processing state, wizard per-row spinner) — not started.
+1. ✅ **Settings window** — built and smoke-tested by the user (2026-07-02/04, see the Done section
+   above for detail). Fully done.
+2. ✅ **Interaction-state gaps** — built, fully reviewed, pushed (2026-07-05, see the Done section
+   above for detail). **Needs a manual smoke test** (checklist above) before calling it fully done.
 3. **Full/Docked responsive layout** — currently unbuilt (single layout at all widths); needs a
    design decision (bring back the category rail at ≥720px, or keep dropdown-only and update
    design 05) before implementation. Not started.
@@ -319,17 +348,20 @@ retrofit (slice 4).
 **Open follow-ups (named so they're not lost):**
 - **Configurable monitor device:** preview currently uses the default output as the monitor
   stand-in; a real monitor device selection comes with `settings.json`.
+- **Recorder live level meter + live no-signal detection:** deferred out of slice 2 for the same
+  reason the Settings window's Devices group was deferred in slice 1 — no live audio-capture
+  polling capability exists anywhere in the app yet. Bundle this with the Devices group when that
+  capability finally gets built.
 - **2nd-capture fallback:** the Recorder opens its own mic capture; if a driver refuses a second
   WASAPI capture client, the fallback is tapping the engine's existing capture. Watch for it on the
   hardware run.
 - Cold-start auto-retry into Degraded (a failed `Start` currently just stays Stopped, error surfaced).
 - Doc task: create `spike/PHASE0-RESULTS.md` with the measured Phase 0 numbers.
 - **UI/UX pass for the WPF Board — mostly done, one piece remains.** WPF-UI Fluent chrome, `ui:Button`
-  styling (incl. engine controls), design-09 dark tokens, colour-filled phrase tiles, and coloured tag
-  chips all landed across the duck-slider/WPF-UI-polish and board-library-ui work. Still outstanding:
-  the named **Full/Docked layouts** and the [design 05 §2](docs/design/05-ui-design.md) interaction
-  states (hover/press/focus specifics beyond what WPF-UI gives for free) — pick this up alongside or
-  after the setup-wizard UI.
+  styling (incl. engine controls), design-09 dark tokens, colour-filled phrase tiles, coloured tag
+  chips, and the slice-2 interaction states (repair dialog, category-empty CTA, search Clear,
+  recorder Processing state, wizard spinner) have all landed. Still outstanding: the named
+  **Full/Docked layouts** (slice 3).
 
 ## Open questions
 
