@@ -113,6 +113,7 @@ public class BoardViewModelTests
             Categories = [new Category { Id = "c-2", Name = "Closers" }],
             Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = "c-2", Tags = ["urgent"] }],
             BrokenPhraseIds = ["p-1"],
+            NextStopResult = Take(),
         };
         var board = NewBoard(host, showRepairDialog: repair => { repair.ChooseReRecord(); return true; });
 
@@ -126,18 +127,49 @@ public class BoardViewModelTests
         // deadlock risk: nothing downstream marshals back to this (blocked) thread.
 #pragma warning disable xUnit1031
         board.PlayCommand.ExecuteAsync(board.Phrases[0]).GetAwaiter().GetResult();
-#pragma warning restore xUnit1031
 
         Assert.Empty(board.Phrases); // old broken entry removed
-        Assert.Equal("Hi", board.NewTitle); // pre-filled from the broken entry
         Assert.True(board.IsRecording);
 
-        board.PendingTake = Take();
+        // Go through the real Stop path (not a direct PendingTake assignment) so this test would
+        // actually catch a regression where StopRecording overwrites the pre-filled title.
+        board.StopRecordingCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+#pragma warning restore xUnit1031
+
+        Assert.Equal("Hi", board.NewTitle); // pre-filled from the broken entry, preserved through Stop
+
         board.SaveTakeCommand.Execute(null);
 
         var saved = host.Phrases.Single(p => p.Title == "Hi");
         Assert.Equal("c-2", saved.CategoryId);
         Assert.Equal(["urgent"], saved.Tags);
+    }
+
+    // Dedicated, minimal reproduction of the same bug: the repair dialog's Re-record path must
+    // survive the real Stop path, not just a directly-assigned PendingTake (which would mask the
+    // bug, since StopRecording is the only place that actually sets NewTitle in production).
+    [Fact]
+    public void Repair_dialog_re_record_title_survives_the_real_stop_recording_path()
+    {
+        var host = new FakePlaybackHost
+        {
+            CanRecord = true,
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi" }],
+            BrokenPhraseIds = ["p-1"],
+            NextStopResult = Take(),
+        };
+        var board = NewBoard(host, showRepairDialog: repair => { repair.ChooseReRecord(); return true; });
+
+#pragma warning disable xUnit1031
+        board.PlayCommand.ExecuteAsync(board.Phrases[0]).GetAwaiter().GetResult();
+        board.StopRecordingCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+#pragma warning restore xUnit1031
+
+        Assert.Equal("Hi", board.NewTitle); // not overwritten with a "Take <timestamp>" default
+
+        board.SaveTakeCommand.Execute(null);
+
+        Assert.Contains(host.Phrases, p => p.Title == "Hi");
     }
 
     [Fact]
@@ -875,6 +907,71 @@ public class BoardViewModelTests
 
         var saved = host.Phrases.Single(p => p.Title == "Unrelated");
         Assert.Equal(Category.DefaultId, saved.CategoryId);
+    }
+
+    // A recording attempt that never actually starts (host says not live) never creates a
+    // PendingTake, so SaveTake/DiscardTake — the only places that normally clear _pendingMetadata —
+    // never run. The stash must still be cleared by the failed StartRecording itself, or it would
+    // silently misfile the operator's next, unrelated recording.
+    [Fact]
+    public void Failed_record_into_category_does_not_leak_pending_metadata_into_the_next_save()
+    {
+        var host = new FakePlaybackHost { CanRecord = false, Categories = [new Category { Id = "c-2", Name = "Closers" }] };
+        var board = NewBoard(host);
+        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
+
+        // Block instead of `await` — see the comment on the repair-dialog re-record test above for
+        // why: this keeps the assertions below on the thread that owns the Phrases CollectionView.
+#pragma warning disable xUnit1031
+        board.RecordIntoCategoryCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+#pragma warning restore xUnit1031
+
+        Assert.False(board.IsRecording);
+        Assert.NotNull(board.Notice); // "Press Start to go Live before recording."
+
+        // A later, unrelated save must NOT pick up the stale pending category from the failed attempt.
+        board.PendingTake = Take();
+        board.NewTitle = "Unrelated";
+        board.SaveTakeCommand.Execute(null);
+
+        var saved = host.Phrases.Single(p => p.Title == "Unrelated");
+        Assert.Equal(Category.DefaultId, saved.CategoryId);
+    }
+
+    // A re-record that starts fine but then stops with no signal also never creates a PendingTake,
+    // so — same as the failed-start case above — the stash must be cleared by StopRecording itself,
+    // or it would misfile (title, category, and tags) the operator's next, unrelated take.
+    [Fact]
+    public void Re_record_that_stops_with_no_signal_does_not_leak_the_title_into_the_next_save()
+    {
+        var host = new FakePlaybackHost
+        {
+            CanRecord = true,
+            Categories = [new Category { Id = "c-2", Name = "Closers" }],
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = "c-2", Tags = ["urgent"] }],
+            BrokenPhraseIds = ["p-1"],
+            NextStopResult = RecordingResult.NoSignal,
+        };
+        var board = NewBoard(host, showRepairDialog: repair => { repair.ChooseReRecord(); return true; });
+
+#pragma warning disable xUnit1031
+        board.PlayCommand.ExecuteAsync(board.Phrases[0]).GetAwaiter().GetResult();
+        board.StopRecordingCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+        Assert.False(board.HasPendingTake); // no signal — nothing to save from this attempt
+
+        // A later, unrelated record + save must not pick up the stale title/category/tags.
+        host.NextStopResult = Take();
+        board.StartRecordingCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+        board.StopRecordingCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+#pragma warning restore xUnit1031
+
+        Assert.NotEqual("Hi", board.NewTitle); // fresh timestamp default, not the leaked title
+        board.NewTitle = "Unrelated";
+        board.SaveTakeCommand.Execute(null);
+
+        var saved = host.Phrases.Single(p => p.Title == "Unrelated");
+        Assert.Equal(Category.DefaultId, saved.CategoryId);
+        Assert.Empty(saved.Tags);
     }
 
     [Fact]

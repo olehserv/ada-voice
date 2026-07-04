@@ -203,11 +203,14 @@ public partial class BoardViewModel : ObservableObject
     private string? EffectiveCategoryId =>
         string.IsNullOrEmpty(SelectedCategoryFilter?.Id) ? null : SelectedCategoryFilter.Id;
 
-    /// <summary>Category and/or tags to apply to the next take <see cref="SaveTake"/> creates —
+    /// <summary>Title/category/tags to apply to the next take <see cref="SaveTake"/> creates —
     /// set by <see cref="RecordIntoCategory"/> (category only) or the repair dialog's Re-record
-    /// path (category and tags), and always cleared after Save or Discard so it can never leak
-    /// into an unrelated future save.</summary>
-    private (string? CategoryId, IReadOnlyList<string>? Tags) _pendingMetadata;
+    /// path (title, category and tags), and always cleared after Save or Discard so it can never
+    /// leak into an unrelated future save. Also cleared by every path in <see cref="StartRecording"/>
+    /// and <see cref="StopRecording"/> that ends without a <see cref="PendingTake"/> (failed start,
+    /// no signal, or a mid-stop exception) — none of those paths ever reach Save/Discard, so this
+    /// is the only place left to stop a stash from surviving into an unrelated future recording.</summary>
+    private (string? Title, string? CategoryId, IReadOnlyList<string>? Tags) _pendingMetadata;
 
     /// <summary>A phrase matches when its category passes the filter and the search text appears in its
     /// title or any tag. Pure, so it is unit-testable without WPF.</summary>
@@ -306,8 +309,7 @@ public partial class BoardViewModel : ObservableObject
 
                 if (choice == RepairChoice.ReRecord)
                 {
-                    NewTitle = item.Entry.Title;
-                    _pendingMetadata = (item.Entry.CategoryId, item.Entry.Tags);
+                    _pendingMetadata = (item.Entry.Title, item.Entry.CategoryId, item.Entry.Tags);
                     await StartRecording();
                 }
                 else
@@ -428,14 +430,27 @@ public partial class BoardViewModel : ObservableObject
             _onUiThread(() =>
             {
                 if (started)
+                {
                     IsRecording = true;
+                }
                 else
+                {
+                    // No take will ever be created for this attempt (StopRecording never runs) — a
+                    // stash made before this call (RecordIntoCategory / repair dialog Re-record)
+                    // must not survive to misfile the operator's next, unrelated recording.
+                    _pendingMetadata = default;
                     Notice = "Press Start to go Live before recording.";
+                }
             });
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            _onUiThread(() => Notice = "Could not start recording — check the microphone and try again.");
+            // Same reasoning as above: the mic failed, so no take — and no pending stash — exists.
+            _onUiThread(() =>
+            {
+                _pendingMetadata = default;
+                Notice = "Could not start recording — check the microphone and try again.";
+            });
         }
     }
 
@@ -445,7 +460,7 @@ public partial class BoardViewModel : ObservableObject
     [RelayCommand]
     private async Task RecordIntoCategory()
     {
-        _pendingMetadata = (EffectiveCategoryId, _pendingMetadata.Tags);
+        _pendingMetadata = (_pendingMetadata.Title, EffectiveCategoryId, _pendingMetadata.Tags);
         await StartRecording();
     }
 
@@ -465,12 +480,18 @@ public partial class BoardViewModel : ObservableObject
                 if (take is { HasSignal: true })
                 {
                     PendingTake = take;
-                    NewTitle = $"Take {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                    // A repair-dialog Re-record (or RecordIntoCategory) may have stashed the
+                    // original title before recording started; fall back to a timestamp otherwise.
+                    NewTitle = _pendingMetadata.Title ?? $"Take {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
                     Notice = null;
                 }
                 else
                 {
+                    // No take was created — SaveTake/DiscardTake will never run for this attempt,
+                    // so any stash from a repair-dialog Re-record or RecordIntoCategory must be
+                    // cleared here or it would leak into the operator's next, unrelated recording.
                     PendingTake = null;
+                    _pendingMetadata = default;
                     Notice = "No signal — nothing recorded.";
                 }
             });
@@ -479,7 +500,9 @@ public partial class BoardViewModel : ObservableObject
         {
             _onUiThread(() =>
             {
+                // Same reasoning as the no-signal branch above: no take, so no stash may survive.
                 PendingTake = null;
+                _pendingMetadata = default;
                 Notice = "Could not finish the recording — the take was lost.";
             });
         }
