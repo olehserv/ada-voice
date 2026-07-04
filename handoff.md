@@ -8,12 +8,14 @@ back up. It answers one question: *where are we right now?*
   the strategy (see [roadmap](docs/roadmaps/mvp-roadmap.md)), or the decision record
   (canonical table in [design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
 
-_Last updated: 2026-07-02._  
+_Last updated: 2026-07-04._  
 _Settings window (slice 1 of the UI/UX + localization scope) built via subagent-driven development
 — 7 tasks, each independently reviewed, plus a final whole-branch review — and merged to `main`.
-All 302 tests green (63 Core + 88 Audio + 151 App). Not yet manually smoke-tested by the user (the
-plan's Step 14 GUI checklist is still open — see Next action). Next arc slice 2 (interaction-state
-gaps) not yet started — see
+Manual GUI smoke test caught a crash on open (`Run.Text` TwoWay-binds to the read-only
+`LastBackupDate`, throwing `InvalidOperationException`) — fixed with `Mode=OneWay`
+(commit `05d2f26`). All 302 tests green (63 Core + 88 Audio + 151 App). Remaining GUI checklist
+items still to click through — see Next action. Next arc slice 2 (interaction-state gaps) not yet
+started — see
 [`docs/plans/ui-ux-localization-scope.md`](docs/plans/ui-ux-localization-scope.md)._
 
 ---
@@ -198,13 +200,17 @@ then slice 2 (interaction-state gaps) of the UI/UX pass + localization.
 
 ## In progress / interrupted
 
-Nothing in progress or interrupted. Settings window (slice 1) is code-complete, fully reviewed, and
-merged. **Not yet manually smoke-tested by the user** — the plan's final step
+Settings window (slice 1) is code-complete, fully reviewed, and merged. **Manual smoke test is
+under way (2026-07-04):** opening the window via **Settings…** immediately threw
+`InvalidOperationException` — `Run.Text` defaults to a `TwoWay` binding in WPF (unlike
+`TextBlock.Text`, which is `OneWay`), and it was bound to the read-only `LastBackupDate`. Fixed with
+an explicit `Mode=OneWay` in `SettingsWindow.xaml` (commit `05d2f26`); 302 tests still green. The
+plan's final step
 ([`docs/superpowers/plans/2026-07-02-settings-window.md`](docs/superpowers/plans/2026-07-02-settings-window.md),
 Task 7 Step 14) is an 11-item interactive GUI checklist (duck slider from its new home, recalibrate,
 live always-on-top, restart-required labels, language + restart, export/import round-trip,
-open-backup-folder) that no subagent could run in a non-interactive environment. Do this before
-calling slice 1 fully done.
+open-backup-folder) — window now opens, but the rest of the checklist still needs to be clicked
+through before calling slice 1 fully done.
 
 ## Next action
 
@@ -222,8 +228,9 @@ calling slice 1 fully done.
    final whole-branch review that caught and fixed a real gap (`BackupSettingsViewModel.Import` was
    missing the same unexpected-exception catch-all `Export` already had — a genuine crash path for
    an operator importing a slightly-bad backup, since the app has no global unhandled-exception
-   handler). 302 tests green (63 Core + 88 Audio + 151 App) at merge. **Needs the manual GUI smoke
-   test above before considering it fully done.**
+   handler). 302 tests green (63 Core + 88 Audio + 151 App) at merge. **Manual smoke test in
+   progress (2026-07-04):** found and fixed a crash-on-open bug (see "In progress" above); the rest
+   of the 11-item checklist above still needs to be run before considering slice 1 fully done.
 2. **Interaction-state gaps** on the existing Board (repair dialog, category-empty CTA, search
    Clear button, recorder level meter/processing state, wizard per-row spinner) — not started.
 3. **Full/Docked responsive layout** — currently unbuilt (single layout at all widths); needs a
