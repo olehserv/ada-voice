@@ -271,9 +271,17 @@ public partial class BoardViewModel : ObservableObject
             return;
 
         Notice = null; // clear any stale notice from a prior action before we preview
-        var error = await Task.Run(() => _playback.PreviewEntry(item.Entry));
-        if (error is not null)
-            _onUiThread(() => Notice = error);
+        try
+        {
+            var error = await Task.Run(() => _playback.PreviewEntry(item.Entry));
+            if (error is not null)
+                _onUiThread(() => Notice = error);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // Corrupt WAV, no output device, COM failure — surface it instead of crashing the app.
+            _onUiThread(() => Notice = "Could not play the preview — check the playback device and try again.");
+        }
     }
 
     [RelayCommand]
@@ -370,11 +378,27 @@ public partial class BoardViewModel : ObservableObject
         }
     }
 
+    /// <summary>Preview the pending take on the monitor output. Preview blocks until playback
+    /// ends, so it runs off the UI thread (same rule as <see cref="TestOnHeadphones"/>) —
+    /// a synchronous call would freeze the window, STOP, and the global hotkey for the
+    /// take's full length.</summary>
     [RelayCommand]
-    private void PreviewTake()
+    private async Task PreviewTake()
     {
-        if (PendingTake is { } take)
-            Notice = _recorder.Preview(take.Samples, take.GainDb) ?? "Previewing…";
+        if (PendingTake is not { } take)
+            return;
+
+        Notice = "Previewing…";
+        try
+        {
+            var error = await Task.Run(() => _recorder.Preview(take.Samples, take.GainDb));
+            if (error is not null)
+                _onUiThread(() => Notice = error);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _onUiThread(() => Notice = "Could not play the preview — check the playback device and try again.");
+        }
     }
 
     [RelayCommand]

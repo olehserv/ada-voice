@@ -292,14 +292,14 @@ public class BoardViewModelTests
     }
 
     [Fact]
-    public void Preview_take_plays_the_pending_samples_to_the_monitor()
+    public async Task Preview_take_plays_the_pending_samples_to_the_monitor()
     {
         var take = Take();
         var host = new FakePlaybackHost { NextStopResult = take };
         var board = NewBoard(host);
         board.StopRecordingCommand.Execute(null);
 
-        board.PreviewTakeCommand.Execute(null);
+        await board.PreviewTakeCommand.ExecuteAsync(null);
 
         Assert.Contains("Preview", host.Calls);
         Assert.Same(take.Samples, host.PreviewedSamples);
