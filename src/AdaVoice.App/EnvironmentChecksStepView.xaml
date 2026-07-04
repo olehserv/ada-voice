@@ -5,7 +5,17 @@
     <StackPanel>
         <TextBlock Text="Environment checks" FontWeight="SemiBold"
                    FontSize="{StaticResource FontSize.SectionTitle}" Margin="0,0,0,8" />
-        <ItemsControl ItemsSource="{Binding Checks}">
+
+        <!-- Brief spinner shown before results appear. The checks actually run instantly — this is
+             a deliberate cosmetic pause (design 05 §2: "each row: spinner → ✓/✗").
+             Swapped for ChecksList by the timer in EnvironmentChecksStepView.xaml.cs. -->
+        <StackPanel x:Name="SpinnerPanel" Orientation="Horizontal" Margin="0,0,0,8">
+            <ProgressBar IsIndeterminate="True" Width="16" Height="16" />
+            <TextBlock Text="Checking…" Margin="8,0,0,0" VerticalAlignment="Center"
+                       Foreground="{StaticResource Text.Secondary}" />
+        </StackPanel>
+
+        <ItemsControl x:Name="ChecksList" Visibility="Collapsed" ItemsSource="{Binding Checks}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Border Background="{StaticResource Surface.Raised}" CornerRadius="{StaticResource Radius.Control}"
