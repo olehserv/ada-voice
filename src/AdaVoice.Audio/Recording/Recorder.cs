@@ -76,7 +76,7 @@ public sealed class Recorder
 
         var referenceRms = _options.ReferenceRms ?? RampGain.DbToLinear(_options.ReferenceDbfs);
         var gainDb = LoudnessMatch.ComputeGainDb(trimmed, referenceRms, _options.PeakCeilingDbfs);
-        var durationMs = trimmed.Length * 1000 / AudioFormats.SampleRate;
+        var durationMs = (int)(trimmed.Length * 1000L / AudioFormats.SampleRate); // long math: int overflows at ~44.7 s
         var peakDbfs = 20 * Math.Log10(Math.Max(Loudness.Peak(trimmed), 1e-9));
 
         return new RecordingResult(trimmed, gainDb, durationMs, peakDbfs);

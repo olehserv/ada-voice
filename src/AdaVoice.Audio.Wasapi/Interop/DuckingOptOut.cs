@@ -55,18 +55,22 @@ internal class MMDeviceEnumeratorComObject
 {
 }
 
+// Every method carries [PreserveSig]: we declare `int` returns and check the HRESULT ourselves
+// via Marshal.ThrowExceptionForHR. Without it the marshaler rewrites each signature (HRESULT
+// hidden, `int` return remapped to an extra retval argument), so the native call sites no longer
+// match the real vtable and the returned "HRESULT" is garbage the callee never wrote.
 [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal interface IMMDeviceEnumerator
 {
-    int EnumAudioEndpoints(int dataFlow, int stateMask, out IntPtr devices);
-    int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice device);
-    int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IMMDevice device);
+    [PreserveSig] int EnumAudioEndpoints(int dataFlow, int stateMask, out IntPtr devices);
+    [PreserveSig] int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice device);
+    [PreserveSig] int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IMMDevice device);
 }
 
 [ComImport, Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal interface IMMDevice
 {
-    int Activate(ref Guid iid, int clsCtx, IntPtr activationParams,
+    [PreserveSig] int Activate(ref Guid iid, int clsCtx, IntPtr activationParams,
         [MarshalAs(UnmanagedType.IUnknown)] out object iface);
 }
 
@@ -75,27 +79,27 @@ internal interface IAudioSessionManager
 {
     // Declared to return IAudioSessionControl2: the marshaler asks the returned
     // IAudioSessionControl* for the v2 interface, which WASAPI sessions implement.
-    int GetAudioSessionControl(ref Guid sessionGuid, int streamFlags, out IAudioSessionControl2 sessionControl);
-    int GetSimpleAudioVolume(ref Guid sessionGuid, int streamFlags, out IntPtr audioVolume);
+    [PreserveSig] int GetAudioSessionControl(ref Guid sessionGuid, int streamFlags, out IAudioSessionControl2 sessionControl);
+    [PreserveSig] int GetSimpleAudioVolume(ref Guid sessionGuid, int streamFlags, out IntPtr audioVolume);
 }
 
 [ComImport, Guid("bfb7ff88-7239-4fc9-8fa2-07c950be9c6d"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal interface IAudioSessionControl2
 {
     // IAudioSessionControl members first (the vtable order matters).
-    int GetState(out int state);
-    int GetDisplayName([MarshalAs(UnmanagedType.LPWStr)] out string name);
-    int SetDisplayName([MarshalAs(UnmanagedType.LPWStr)] string value, ref Guid eventContext);
-    int GetIconPath([MarshalAs(UnmanagedType.LPWStr)] out string path);
-    int SetIconPath([MarshalAs(UnmanagedType.LPWStr)] string value, ref Guid eventContext);
-    int GetGroupingParam(out Guid param);
-    int SetGroupingParam(ref Guid param, ref Guid eventContext);
-    int RegisterAudioSessionNotification(IntPtr client);
-    int UnregisterAudioSessionNotification(IntPtr client);
+    [PreserveSig] int GetState(out int state);
+    [PreserveSig] int GetDisplayName([MarshalAs(UnmanagedType.LPWStr)] out string name);
+    [PreserveSig] int SetDisplayName([MarshalAs(UnmanagedType.LPWStr)] string value, ref Guid eventContext);
+    [PreserveSig] int GetIconPath([MarshalAs(UnmanagedType.LPWStr)] out string path);
+    [PreserveSig] int SetIconPath([MarshalAs(UnmanagedType.LPWStr)] string value, ref Guid eventContext);
+    [PreserveSig] int GetGroupingParam(out Guid param);
+    [PreserveSig] int SetGroupingParam(ref Guid param, ref Guid eventContext);
+    [PreserveSig] int RegisterAudioSessionNotification(IntPtr client);
+    [PreserveSig] int UnregisterAudioSessionNotification(IntPtr client);
     // IAudioSessionControl2 members.
-    int GetSessionIdentifier([MarshalAs(UnmanagedType.LPWStr)] out string id);
-    int GetSessionInstanceIdentifier([MarshalAs(UnmanagedType.LPWStr)] out string id);
-    int GetProcessId(out uint pid);
-    int IsSystemSoundsSession();
-    int SetDuckingPreference([MarshalAs(UnmanagedType.Bool)] bool optOut);
+    [PreserveSig] int GetSessionIdentifier([MarshalAs(UnmanagedType.LPWStr)] out string id);
+    [PreserveSig] int GetSessionInstanceIdentifier([MarshalAs(UnmanagedType.LPWStr)] out string id);
+    [PreserveSig] int GetProcessId(out uint pid);
+    [PreserveSig] int IsSystemSoundsSession();
+    [PreserveSig] int SetDuckingPreference([MarshalAs(UnmanagedType.Bool)] bool optOut);
 }
