@@ -73,7 +73,7 @@
 
                 <TextBlock Foreground="{StaticResource Text.Secondary}">
                     <Run Text="Last backup: " />
-                    <Run Text="{Binding LastBackupDate, StringFormat='{}{0:yyyy-MM-dd}', TargetNullValue='never'}" />
+                    <Run Text="{Binding LastBackupDate, Mode=OneWay, StringFormat='{}{0:yyyy-MM-dd}', TargetNullValue='never'}" />
                 </TextBlock>
             </StackPanel>
         </Border>
