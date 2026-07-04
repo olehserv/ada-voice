@@ -36,6 +36,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
 
     // Recording knobs/results the tests configure or inspect.
     public bool CanRecord { get; set; } = true;
+    public bool TryStartRecordingThrows { get; set; }
     public RecordingResult? NextStopResult { get; set; }
     public string? SavedTitle { get; private set; }
     public float[]? PreviewedSamples { get; private set; }
@@ -171,6 +172,8 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     public bool TryStartRecording()
     {
         Calls.Add("TryStartRecording");
+        if (TryStartRecordingThrows)
+            throw new InvalidOperationException("mic vanished (simulated)");
         return CanRecord;
     }
 

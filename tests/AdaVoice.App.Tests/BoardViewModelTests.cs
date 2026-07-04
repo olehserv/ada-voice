@@ -178,56 +178,72 @@ public class BoardViewModelTests
     }
 
     [Fact]
-    public void Start_recording_enters_recording_when_the_host_allows_it()
+    public async Task Start_recording_enters_recording_when_the_host_allows_it()
     {
         var board = NewBoard(new FakePlaybackHost { CanRecord = true });
 
-        board.StartRecordingCommand.Execute(null);
+        await board.StartRecordingCommand.ExecuteAsync(null);
 
         Assert.True(board.IsRecording);
     }
 
     [Fact]
-    public void Start_recording_shows_a_notice_when_not_live()
+    public async Task Start_recording_shows_a_notice_when_not_live()
     {
         var board = NewBoard(new FakePlaybackHost { CanRecord = false });
 
-        board.StartRecordingCommand.Execute(null);
+        await board.StartRecordingCommand.ExecuteAsync(null);
+
+        Assert.False(board.IsRecording);
+        Assert.NotNull(board.Notice);
+    }
+
+    // The host can throw (e.g. the mic vanished between OFF AIR and opening the capture) — the
+    // command must surface a notice, never crash the app.
+    [Fact]
+    public async Task Start_recording_failure_becomes_a_notice()
+    {
+        var board = NewBoard(new FakePlaybackHost { TryStartRecordingThrows = true });
+
+        await board.StartRecordingCommand.ExecuteAsync(null);
 
         Assert.False(board.IsRecording);
         Assert.NotNull(board.Notice);
     }
 
     [Fact]
-    public void Stop_recording_with_signal_holds_a_pending_take()
+    public async Task Stop_recording_with_signal_holds_a_pending_take()
     {
         var host = new FakePlaybackHost { NextStopResult = Take() };
         var board = NewBoard(host);
 
-        board.StopRecordingCommand.Execute(null);
+        await board.StopRecordingCommand.ExecuteAsync(null);
 
         Assert.True(board.HasPendingTake);
         Assert.False(board.IsRecording);
     }
 
     [Fact]
-    public void Stop_recording_with_no_signal_keeps_nothing_and_notices()
+    public async Task Stop_recording_with_no_signal_keeps_nothing_and_notices()
     {
         var host = new FakePlaybackHost { NextStopResult = RecordingResult.NoSignal };
         var board = NewBoard(host);
 
-        board.StopRecordingCommand.Execute(null);
+        await board.StopRecordingCommand.ExecuteAsync(null);
 
         Assert.False(board.HasPendingTake);
         Assert.NotNull(board.Notice);
     }
 
+    // Save tests arrange the pending take directly: awaiting the async stop command would hop
+    // the test off the thread that owns the Phrases CollectionView (a WPF test artifact — in
+    // the app the await resumes on the dispatcher). The stop flow has its own tests above.
     [Fact]
     public void Save_take_saves_with_the_title_and_refreshes_the_board()
     {
-        var host = new FakePlaybackHost { NextStopResult = Take() };
+        var host = new FakePlaybackHost();
         var board = NewBoard(host);
-        board.StopRecordingCommand.Execute(null);
+        board.PendingTake = Take();
         board.NewTitle = "Greeting";
 
         board.SaveTakeCommand.Execute(null);
@@ -248,9 +264,9 @@ public class BoardViewModelTests
     [Fact]
     public void Saving_the_first_take_clears_the_empty_state_and_notifies()
     {
-        var host = new FakePlaybackHost { NextStopResult = Take() };
+        var host = new FakePlaybackHost();
         var board = NewBoard(host);
-        board.StopRecordingCommand.Execute(null);
+        board.PendingTake = Take();
         Assert.True(board.IsEmpty);
 
         var changed = new List<string?>();
@@ -265,9 +281,9 @@ public class BoardViewModelTests
     [Fact]
     public void Saving_a_take_raises_the_Saved_event_with_the_title()
     {
-        var host = new FakePlaybackHost { NextStopResult = Take() };
+        var host = new FakePlaybackHost();
         var board = NewBoard(host);
-        board.StopRecordingCommand.Execute(null);
+        board.PendingTake = Take();
         board.NewTitle = "Hello";
 
         string? saved = null;
@@ -279,11 +295,11 @@ public class BoardViewModelTests
     }
 
     [Fact]
-    public void Discard_take_clears_it_without_saving()
+    public async Task Discard_take_clears_it_without_saving()
     {
         var host = new FakePlaybackHost { NextStopResult = Take() };
         var board = NewBoard(host);
-        board.StopRecordingCommand.Execute(null);
+        await board.StopRecordingCommand.ExecuteAsync(null);
 
         board.DiscardTakeCommand.Execute(null);
 
@@ -297,7 +313,7 @@ public class BoardViewModelTests
         var take = Take();
         var host = new FakePlaybackHost { NextStopResult = take };
         var board = NewBoard(host);
-        board.StopRecordingCommand.Execute(null);
+        await board.StopRecordingCommand.ExecuteAsync(null);
 
         await board.PreviewTakeCommand.ExecuteAsync(null);
 
@@ -445,10 +461,9 @@ public class BoardViewModelTests
         var host = new FakePlaybackHost
         {
             Categories = [new Category { Id = Category.DefaultId, Name = "Uncategorized", Color = "#808080" }],
-            NextStopResult = Take(),
         };
         var board = NewBoard(host);
-        board.StopRecordingCommand.Execute(null);
+        board.PendingTake = Take();
 
         board.SaveTakeCommand.Execute(null);
 

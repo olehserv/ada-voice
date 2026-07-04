@@ -34,8 +34,8 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     private readonly WasapiAudioOptions _options;
     private RecorderOptions _recorderOptions; // re-set when calibration changes the mic reference
     private readonly Action<string> _log;
-    private readonly WasapiDeviceFactory _factory;
-    private readonly WasapiDeviceMonitor _monitor;
+    private readonly IAudioDeviceFactory _factory;
+    private readonly IDeviceMonitor _monitor;
     private readonly AudioEngine _engine;
     private readonly Thread _controlThread;
     private readonly string _dataRoot;
@@ -49,23 +49,28 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     private Recorder? _recorder;
     private IAudioCaptureDevice? _recordingCapture;
 
-    public EngineHost(WasapiAudioOptions options, Action<string>? log = null, RecorderOptions? recorderOptions = null)
+    /// <param name="factory">Device factory override — tests inject a fake; null = real WASAPI.</param>
+    /// <param name="monitor">Device monitor override — tests inject a fake; null = real COM monitor.</param>
+    /// <param name="clock">Engine clock override — tests inject a manual clock; null = system clock.</param>
+    /// <param name="dataRoot">Data root override — tests use a temp dir; null = %LOCALAPPDATA%\AdaVoice.</param>
+    public EngineHost(WasapiAudioOptions options, Action<string>? log = null, RecorderOptions? recorderOptions = null,
+        IAudioDeviceFactory? factory = null, IDeviceMonitor? monitor = null, IEngineClock? clock = null,
+        string? dataRoot = null)
     {
         _options = options;
         _recorderOptions = recorderOptions ?? new RecorderOptions();
         _log = log ?? (_ => { });
 
         // Settings load first: the engine's duck level/ramp are fixed when the phrase player is built.
-        _dataRoot = AdaVoicePaths.DefaultRoot;
+        _dataRoot = dataRoot ?? AdaVoicePaths.DefaultRoot;
         _settingsRepository = new JsonSettingsRepository(_dataRoot);
         _settings = _settingsRepository.Load();
         // The wizard-calibrated mic reference (if any) drives the recorder's loudness-match.
         _recorderOptions = _recorderOptions with { ReferenceRms = _settings.MicReferenceRms };
 
-        var clock = new SystemEngineClock();
-        _factory = new WasapiDeviceFactory(options);
-        _monitor = new WasapiDeviceMonitor();
-        _engine = new AudioEngine(_factory, clock, PlayerOptionsFromSettings());
+        _factory = factory ?? new WasapiDeviceFactory(options);
+        _monitor = monitor ?? new WasapiDeviceMonitor();
+        _engine = new AudioEngine(_factory, clock ?? new SystemEngineClock(), PlayerOptionsFromSettings());
 
         _engine.Events += OnEngineEvent;
         _monitor.DeviceChanged += OnDeviceChanged;
@@ -114,30 +119,54 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
 
     /// <summary>Voice-calibration step: record <paramref name="seconds"/> of the mic, measure the
     /// reference level, and on success persist it so the recorder loudness-matches future takes to it
-    /// (no restart needed). Returns the result, including a too-quiet retry message.</summary>
+    /// (no restart needed). Returns the result, including a too-quiet retry message. If the engine
+    /// is Live, the calibration runs OFF AIR (and restores afterwards) — the person on the call
+    /// must never hear the calibration speech (review M2, same rule as recording, decision #11).</summary>
     public CalibrationResult Calibrate(int seconds = 5)
     {
-        var capture = _factory.CreateCapture(DeviceRole.Mic);
+        if (_recorder is not null)
+            return new CalibrationResult(false, 0, "A recording is in progress — stop it first.");
+
+        var wasLive = State == EngineState.Live;
+        if (wasLive)
+        {
+            EnterOffAir();
+            if (!WaitForState(EngineState.OffAir, TimeSpan.FromSeconds(2)))
+            {
+                ExitOffAir(); // a late transition must not strand the engine OFF AIR
+                return new CalibrationResult(false, 0, "Could not pause the call feed — try again.");
+            }
+        }
+
         try
         {
-            var recorder = new Recorder(capture, _recorderOptions);
-            recorder.Start();
-            Thread.Sleep(TimeSpan.FromSeconds(seconds));
-            var take = recorder.Stop();
-
-            var result = VoiceCalibration.FromTrimmedSamples(take.Samples);
-            if (result.Ok)
+            var capture = _factory.CreateCapture(DeviceRole.Mic);
+            try
             {
-                _settings = _settings with { MicReferenceRms = result.MicReferenceRms };
-                _settingsRepository.Save(_settings);
-                _recorderOptions = _recorderOptions with { ReferenceRms = _settings.MicReferenceRms };
-            }
+                var recorder = new Recorder(capture, _recorderOptions);
+                recorder.Start();
+                Thread.Sleep(TimeSpan.FromSeconds(seconds));
+                var take = recorder.Stop();
 
-            return result;
+                var result = VoiceCalibration.FromTrimmedSamples(take.Samples);
+                if (result.Ok)
+                {
+                    _settings = _settings with { MicReferenceRms = result.MicReferenceRms };
+                    _settingsRepository.Save(_settings);
+                    _recorderOptions = _recorderOptions with { ReferenceRms = _settings.MicReferenceRms };
+                }
+
+                return result;
+            }
+            finally
+            {
+                capture.Dispose();
+            }
         }
         finally
         {
-            capture.Dispose();
+            if (wasLive)
+                ExitOffAir();
         }
     }
 
@@ -239,13 +268,31 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
             return false; // already recording
 
         EnterOffAir();
-        if (!WaitForState(EngineState.OffAir, TimeSpan.FromSeconds(2)))
-            return false;
+        try
+        {
+            if (!WaitForState(EngineState.OffAir, TimeSpan.FromSeconds(2)))
+            {
+                // The enter may still land late on the control thread; queue the exit either
+                // way so a slow transition can never strand the engine OFF AIR (review M1).
+                ExitOffAir();
+                return false;
+            }
 
-        _recordingCapture = _factory.CreateCapture(DeviceRole.Mic);
-        _recorder = new Recorder(_recordingCapture, _recorderOptions);
-        _recorder.Start();
-        return true;
+            _recordingCapture = _factory.CreateCapture(DeviceRole.Mic);
+            _recorder = new Recorder(_recordingCapture, _recorderOptions);
+            _recorder.Start();
+            return true;
+        }
+        catch
+        {
+            // e.g. the mic vanished between OFF AIR and CreateCapture. Undo the OFF AIR before
+            // rethrowing — a failed recording start must never leave the operator muted (M1).
+            _recordingCapture?.Dispose();
+            _recordingCapture = null;
+            _recorder = null;
+            ExitOffAir();
+            throw;
+        }
     }
 
     /// <summary>Stop the current take, restore the live state, and return the processed result.</summary>
@@ -254,13 +301,27 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
         if (_recorder is null)
             return null;
 
-        var result = _recorder.Stop();
-        _recordingCapture!.Dispose();
-        _recorder = null;
-        _recordingCapture = null;
+        try
+        {
+            return _recorder.Stop();
+        }
+        finally
+        {
+            // Going back on air must happen no matter what — a dead capture's Dispose throwing
+            // must not leave the operator muted (M1).
+            try
+            {
+                _recordingCapture!.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _log($"recording capture dispose failed: {ex.Message}");
+            }
 
-        ExitOffAir();
-        return result;
+            _recorder = null;
+            _recordingCapture = null;
+            ExitOffAir();
+        }
     }
 
     /// <summary>Catalogue a recorded take: write its WAV under the data root, then add the metadata

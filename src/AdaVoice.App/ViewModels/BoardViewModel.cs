@@ -353,31 +353,60 @@ public partial class BoardViewModel : ObservableObject
 
     // ---- Recording ------------------------------------------------------------------------------
 
+    /// <summary>Start a take. TryStartRecording blocks up to 2 s waiting for OFF AIR (and opens a
+    /// capture device), so it runs off the UI thread — same rule as <see cref="PreviewTake"/>.</summary>
     [RelayCommand]
-    private void StartRecording()
+    private async Task StartRecording()
     {
         Notice = null;
-        if (_recorder.TryStartRecording())
-            IsRecording = true;
-        else
-            Notice = "Press Start to go Live before recording.";
+        try
+        {
+            var started = await Task.Run(() => _recorder.TryStartRecording());
+            _onUiThread(() =>
+            {
+                if (started)
+                    IsRecording = true;
+                else
+                    Notice = "Press Start to go Live before recording.";
+            });
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _onUiThread(() => Notice = "Could not start recording — check the microphone and try again.");
+        }
     }
 
+    /// <summary>Stop the take. StopRecording trims/loudness-matches the audio and waits for the
+    /// engine to go back on air, so it runs off the UI thread too.</summary>
     [RelayCommand]
-    private void StopRecording()
+    private async Task StopRecording()
     {
         IsRecording = false;
-        var take = _recorder.StopRecording();
-        if (take is { HasSignal: true })
+        try
         {
-            PendingTake = take;
-            NewTitle = $"Take {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
-            Notice = null;
+            var take = await Task.Run(() => _recorder.StopRecording());
+            _onUiThread(() =>
+            {
+                if (take is { HasSignal: true })
+                {
+                    PendingTake = take;
+                    NewTitle = $"Take {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                    Notice = null;
+                }
+                else
+                {
+                    PendingTake = null;
+                    Notice = "No signal — nothing recorded.";
+                }
+            });
         }
-        else
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            PendingTake = null;
-            Notice = "No signal — nothing recorded.";
+            _onUiThread(() =>
+            {
+                PendingTake = null;
+                Notice = "Could not finish the recording — the take was lost.";
+            });
         }
     }
 

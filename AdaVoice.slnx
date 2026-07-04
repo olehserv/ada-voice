@@ -9,6 +9,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/AdaVoice.Audio.Tests/AdaVoice.Audio.Tests.csproj" />
     <Project Path="tests/AdaVoice.Core.Tests/AdaVoice.Core.Tests.csproj" />
+    <Project Path="tests/AdaVoice.Host.Tests/AdaVoice.Host.Tests.csproj" />
     <Project Path="tests/AdaVoice.App.Tests/AdaVoice.App.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
