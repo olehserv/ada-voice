@@ -466,9 +466,9 @@ public class BoardViewModelTests
 
         Assert.Empty(VisibleTitles(board)); // moved out of the filtered view
         // The category is now genuinely empty (not just search-filtered) — CategoryIsEmpty owns
-        // this case; NoMatches is deliberately false here after this task's change.
+        // this case; SearchNoMatch is deliberately false here (it requires an active search).
         Assert.True(board.CategoryIsEmpty);
-        Assert.False(board.NoMatches);
+        Assert.False(board.SearchNoMatch);
     }
 
     [Fact]
@@ -671,7 +671,7 @@ public class BoardViewModelTests
         board.SearchText = "hell";
 
         Assert.Equal(["Hello"], VisibleTitles(board));
-        Assert.False(board.NoMatches);
+        Assert.False(board.SearchNoMatch);
     }
 
     [Fact]
@@ -825,13 +825,53 @@ public class BoardViewModelTests
         var board = NewBoard(new FakePlaybackHost { Phrases = [new PhraseEntry { Id = "p-1", Title = "Hello" }] });
         board.SearchText = "zzz";
 
-        Assert.True(board.NoMatches);  // phrases exist, none match
+        Assert.True(board.SearchNoMatch);  // phrases exist, none match
         Assert.False(board.IsEmpty);   // not the first-run welcome
         Assert.False(board.HasMatches);
 
         var firstRun = NewBoard(new FakePlaybackHost());
         Assert.True(firstRun.IsEmpty);     // first-run welcome
-        Assert.False(firstRun.NoMatches);  // not a "no matches" result
+        Assert.False(firstRun.SearchNoMatch);  // not a "no matches" result
+    }
+
+    [Fact]
+    public void Search_no_match_is_true_even_with_a_category_selected()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-1", Name = "Openers" }],
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hello", CategoryId = "c-1" }],
+        };
+        var board = NewBoard(host);
+        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-1");
+
+        board.SearchText = "zzz";
+
+        Assert.True(board.SearchNoMatch);
+        Assert.False(board.CategoryIsEmpty); // the category itself isn't empty — the search is
+    }
+
+    [Fact]
+    public void Has_search_text_reflects_whether_a_query_is_active()
+    {
+        var board = NewBoard(new FakePlaybackHost());
+        Assert.False(board.HasSearchText);
+
+        board.SearchText = "x";
+
+        Assert.True(board.HasSearchText);
+    }
+
+    [Fact]
+    public void Clear_search_resets_the_search_text()
+    {
+        var board = NewBoard(new FakePlaybackHost());
+        board.SearchText = "xyz";
+
+        board.ClearSearchCommand.Execute(null);
+
+        Assert.Equal("", board.SearchText);
+        Assert.False(board.HasSearchText);
     }
 
     [Fact]

@@ -64,6 +64,7 @@ public partial class BoardViewModel : ObservableObject
 
     /// <summary>Live title/tag search. Empty matches everything.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSearchText))]
     private string _searchText = "";
 
     /// <summary>The category to show, or the "All categories" sentinel for no category filter.</summary>
@@ -126,7 +127,7 @@ public partial class BoardViewModel : ObservableObject
             OnPropertyChanged(nameof(IsEmpty));
             OnPropertyChanged(nameof(HasPhrases));
             OnPropertyChanged(nameof(CategoryIsEmpty));
-            OnPropertyChanged(nameof(NoMatches));
+            OnPropertyChanged(nameof(SearchNoMatch));
             OnPropertyChanged(nameof(HasMatches));
         };
         _playback.PlayingPhraseChanged += OnPlayingPhraseChanged;
@@ -174,12 +175,16 @@ public partial class BoardViewModel : ObservableObject
     /// <summary>Inverse of <see cref="IsEmpty"/>.</summary>
     public bool HasPhrases => !IsEmpty;
 
-    /// <summary>Phrases exist but the current search/filter hides them all, and it isn't because
-    /// the selected category is itself empty (see <see cref="CategoryIsEmpty"/>) — a distinct "no
-    /// matches" state, separate from the first-run welcome (<see cref="IsEmpty"/>). Task 3 narrows
-    /// this further into a search-specific state; left as-is here since Task 2 only needs to carve
-    /// the category-empty case out of it.</summary>
-    public bool NoMatches => HasPhrases && PhrasesView.IsEmpty && !CategoryIsEmpty;
+    /// <summary>Phrases exist and a search is active, but it matches nothing — a distinct "no
+    /// matches" state, separate from the first-run welcome (<see cref="IsEmpty"/>) and from
+    /// <see cref="CategoryIsEmpty"/> (which owns the case with no search text). Mutually exclusive
+    /// with CategoryIsEmpty by construction: this requires SearchText non-blank, that requires it
+    /// blank.</summary>
+    public bool SearchNoMatch => HasPhrases && !string.IsNullOrWhiteSpace(SearchText) && PhrasesView.IsEmpty;
+
+    /// <summary>True once the operator has typed something into the search box — drives the inline
+    /// Clear-search button next to the box itself.</summary>
+    public bool HasSearchText => !string.IsNullOrEmpty(SearchText);
 
     /// <summary>At least one phrase is visible under the current filter — the grid binds to this.</summary>
     public bool HasMatches => HasPhrases && !PhrasesView.IsEmpty;
@@ -228,6 +233,11 @@ public partial class BoardViewModel : ObservableObject
         SelectedCategoryFilter = AllCategories; // also refreshes the filter
     }
 
+    /// <summary>Clear the search box — used by the inline Clear button and the search-no-match
+    /// card's Clear-search button.</summary>
+    [RelayCommand]
+    private void ClearSearch() => SearchText = "";
+
     /// <summary>Open the setup wizard on demand (re-run entry point). Always builds a fresh wizard
     /// so a re-run never shows stale check results from a previous run.</summary>
     [RelayCommand]
@@ -247,7 +257,7 @@ public partial class BoardViewModel : ObservableObject
     {
         PhrasesView.Refresh();
         OnPropertyChanged(nameof(CategoryIsEmpty));
-        OnPropertyChanged(nameof(NoMatches));
+        OnPropertyChanged(nameof(SearchNoMatch));
         OnPropertyChanged(nameof(HasMatches));
     }
 
