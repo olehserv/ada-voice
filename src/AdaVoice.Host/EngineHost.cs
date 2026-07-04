@@ -477,7 +477,10 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
 
         _log($"preview → {device.FriendlyName}"); // so the operator can see which device it played to
 
-        var deviceRate = device.AudioClient.MixFormat.SampleRate;
+        // AudioClient is a fresh RCW per access — dispose it (one leak per preview otherwise).
+    int deviceRate;
+    using (var audioClient = device.AudioClient)
+        deviceRate = audioClient.MixFormat.SampleRate;
         ISampleProvider source = new PhraseSampleProvider(samples, AudioFormats.Engine, "preview");
         source = new VolumeSampleProvider(source) { Volume = RampGain.DbToLinear(gainDb) };
         if (deviceRate != AudioFormats.SampleRate)

@@ -23,8 +23,10 @@ public sealed class WasapiEnvironmentProbe : IEnvironmentProbe
         {
             try
             {
+                // AudioClient is a fresh RCW per access — dispose it (one leak per endpoint per probe).
+                using var audioClient = device.AudioClient;
                 endpoints.Add(new AudioEndpointInfo(
-                    device.FriendlyName, device.AudioClient.MixFormat.SampleRate, device.ID == defaultId));
+                    device.FriendlyName, audioClient.MixFormat.SampleRate, device.ID == defaultId));
             }
             catch
             {

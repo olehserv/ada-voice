@@ -32,7 +32,10 @@ public sealed class WasapiRenderDevice : IAudioRenderDevice
         _device = device;
         _optOutOfDucking = optOutOfDucking;
         _latencyMs = latencyMs;
-        Format = device.AudioClient.MixFormat;
+        // NAudio's MMDevice.AudioClient allocates a NEW AudioClient RCW on every access —
+        // dispose it, or every device build/rebuild leaks one COM object.
+        using var audioClient = device.AudioClient;
+        Format = audioClient.MixFormat;
     }
 
     /// <summary>The device's own format. The source is matched to this before it is sent.</summary>

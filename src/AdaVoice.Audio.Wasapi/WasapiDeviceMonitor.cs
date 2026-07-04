@@ -65,8 +65,9 @@ public sealed class WasapiDeviceMonitor : IDeviceMonitor, IMMNotificationClient
     {
         // Windows fires this up to three times per change (Console/Multimedia/Communications). We do
         // NOT filter by role: the mic is the communications default and the cable a different role,
-        // so dropping a role here could miss a real change on the cardinal mic path. The host dedupes
-        // by device id (same id → one action). defaultDeviceId is null when there is no default.
+        // so dropping a role here could miss a real change on the cardinal mic path. The duplicates
+        // are harmless downstream: the engine's state guard makes a redundant DeviceChanged a no-op
+        // (there is no id-dedup in the host — do not rely on one). Null id = no default exists.
         if (defaultDeviceId is not null)
             Raise(DeviceChangeKind.DefaultChanged, defaultDeviceId);
     }
@@ -80,6 +81,19 @@ public sealed class WasapiDeviceMonitor : IDeviceMonitor, IMMNotificationClient
         _ => null,
     };
 
-    private void Raise(DeviceChangeKind kind, string deviceId) =>
-        DeviceChanged?.Invoke(this, new DeviceChangeEventArgs(kind, deviceId));
+    private void Raise(DeviceChangeKind kind, string deviceId)
+    {
+        // These run on the COM notification thread. A subscriber exception thrown back through
+        // the CCW is swallowed by COM and can stop further notifications — losing e.g. the
+        // device-arrived fast path and degrading recovery to the slow poll. Never let it escape.
+        try
+        {
+            DeviceChanged?.Invoke(this, new DeviceChangeEventArgs(kind, deviceId));
+        }
+        catch
+        {
+            // Subscribers own their errors (the host already guards its handler); nothing useful
+            // to do here — there is no logger on this seam, and the notification must survive.
+        }
+    }
 }

@@ -28,19 +28,41 @@ public static class WasapiDevices
         return enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
     }
 
-    public static MMDevice? FindByName(DataFlow flow, string nameSubstring)
-    {
-        using var enumerator = new MMDeviceEnumerator();
-        return enumerator.EnumerateAudioEndPoints(flow, DeviceState.Active)
-            .FirstOrDefault(d => d.FriendlyName.Contains(nameSubstring, StringComparison.OrdinalIgnoreCase));
-    }
+    public static MMDevice? FindByName(DataFlow flow, string nameSubstring) =>
+        FirstOrDefaultDisposing(flow, d => d.FriendlyName.Contains(nameSubstring, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>The active device with this endpoint id, or null. Used by the host to classify a
     /// device-monitor event's id (which flow / role it belongs to).</summary>
-    public static MMDevice? ById(string id)
+    public static MMDevice? ById(string id) =>
+        FirstOrDefaultDisposing(DataFlow.All, d => d.ID == id);
+
+    /// <summary>
+    /// Scan the active endpoints for the first match, disposing every non-match (they are COM
+    /// RCWs — a plain LINQ FirstOrDefault leaked all of them). One flaky endpoint whose property
+    /// getter throws is skipped, not fatal — it must not hide a real match later in the list.
+    /// </summary>
+    private static MMDevice? FirstOrDefaultDisposing(DataFlow flow, Func<MMDevice, bool> matches)
     {
         using var enumerator = new MMDeviceEnumerator();
-        return enumerator.EnumerateAudioEndPoints(DataFlow.All, DeviceState.Active)
-            .FirstOrDefault(d => d.ID == id);
+        MMDevice? found = null;
+        foreach (var device in enumerator.EnumerateAudioEndPoints(flow, DeviceState.Active))
+        {
+            var keep = false;
+            try
+            {
+                keep = found is null && matches(device);
+            }
+            catch
+            {
+                // Flaky endpoint (e.g. FriendlyName read fails) — skip it, keep scanning.
+            }
+
+            if (keep)
+                found = device;
+            else
+                device.Dispose();
+        }
+
+        return found;
     }
 }
