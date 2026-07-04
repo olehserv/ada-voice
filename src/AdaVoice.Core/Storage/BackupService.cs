@@ -57,6 +57,8 @@ public sealed class BackupService(string root, int keep = 7)
                 var entry = zip.GetEntry("library.json");
                 if (entry is null)
                     continue;
+                if (entry.Length > LibraryArchiveService.MaxLibraryJsonBytes)
+                    continue; // absurd size = not a backup we wrote; never read it into memory
 
                 using var reader = new StreamReader(entry.Open());
                 var library = LibraryJson.TryParse(reader.ReadToEnd());

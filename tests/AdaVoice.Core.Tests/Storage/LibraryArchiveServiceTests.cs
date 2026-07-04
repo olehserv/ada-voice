@@ -178,6 +178,125 @@ public class LibraryArchiveServiceTests : IDisposable
         Assert.Equal("p-import.wav", imported.FileName); // metadata matches the re-keyed WAV
     }
 
+    // M9: the ImportResult contract says "Success false means nothing was changed". A failed
+    // extract mid-loop (corrupt entry, disk full, blocked path) must fail the whole import —
+    // not land some WAVs and then throw out of Import.
+    [Fact]
+    public void A_failed_extract_mid_loop_fails_the_import_and_changes_nothing()
+    {
+        var dest = Root("dest");
+        Seed(dest, "p-keep", [7]);
+
+        var zip = Zip("blocked");
+        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
+        {
+            using (var w = new StreamWriter(archive.CreateEntry("library.json").Open()))
+                w.Write("{\"version\":1,\"categories\":[],\"phrases\":[" +
+                    "{\"id\":\"p-a\",\"fileName\":\"p-a.wav\"},{\"id\":\"p-b\",\"fileName\":\"p-b.wav\"}]}");
+            using (var a = archive.CreateEntry("audio/p-a.wav").Open())
+                a.Write([1, 2, 3]);
+            using (var b = archive.CreateEntry("audio/p-b.wav").Open())
+                b.Write([4, 5, 6]);
+        }
+
+        // Block the SECOND phrase's temp path with a directory, so its extract throws after the
+        // first WAV was already staged — the classic mid-loop failure.
+        Directory.CreateDirectory(AdaVoicePaths.AudioPath(dest, "p-b.wav.importing"));
+
+        var result = Archive(dest).Import(zip, ImportMode.Merge);
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.Error);
+        var library = new JsonPhraseRepository(dest).Load().Library;
+        Assert.Equal("p-keep", Assert.Single(library.Phrases).Id);              // metadata unchanged
+        Assert.False(File.Exists(AdaVoicePaths.AudioPath(dest, "p-a.wav")));    // staged WAV never moved
+        Assert.False(File.Exists(AdaVoicePaths.AudioPath(dest, "p-b.wav")));
+        Assert.Empty(Directory.GetFiles(AdaVoicePaths.AudioDir(dest), "*.importing")); // temps cleaned
+    }
+
+    [Fact]
+    public void Duplicate_ids_inside_the_archive_import_only_once()
+    {
+        var dest = Root("dest");
+        var zip = Zip("dupes");
+        WriteZipWithLibraryJson(zip, "{\"version\":1,\"categories\":[],\"phrases\":[" +
+            "{\"id\":\"p-1\",\"title\":\"first\",\"fileName\":\"a.wav\"}," +
+            "{\"id\":\"p-1\",\"title\":\"second\",\"fileName\":\"b.wav\"}]}");
+
+        var result = Archive(dest).Import(zip, ImportMode.Merge);
+
+        Assert.True(result.Success);
+        var phrase = Assert.Single(new JsonPhraseRepository(dest).Load().Library.Phrases);
+        Assert.Equal("first", phrase.Title); // keep-first rule
+    }
+
+    [Fact]
+    public void A_dangling_category_id_is_remapped_to_the_default()
+    {
+        var dest = Root("dest");
+        var zip = Zip("dangling");
+        WriteZipWithLibraryJson(zip,
+            "{\"version\":1,\"categories\":[],\"phrases\":[{\"id\":\"p-1\",\"categoryId\":\"c-gone\",\"fileName\":\"p-1.wav\"}]}");
+
+        var result = Archive(dest).Import(zip, ImportMode.Merge);
+
+        Assert.True(result.Success);
+        var phrase = Assert.Single(new JsonPhraseRepository(dest).Load().Library.Phrases);
+        Assert.Equal(Category.DefaultId, phrase.CategoryId); // no phrase may dangle
+    }
+
+    // DeleteCategory moves phrases to the default category and the UI protects it by id —
+    // a Replace archive from another tool must not be able to remove it.
+    [Fact]
+    public void Replace_import_always_keeps_the_default_category()
+    {
+        var dest = Root("dest");
+        Seed(dest, "p-old", [1]);
+        var zip = Zip("nodefault");
+        WriteZipWithLibraryJson(zip,
+            "{\"version\":1,\"categories\":[{\"id\":\"c-x\",\"name\":\"Custom\"}]," +
+            "\"phrases\":[{\"id\":\"p-1\",\"categoryId\":\"c-x\",\"fileName\":\"p-1.wav\"}]}");
+
+        var result = Archive(dest).Import(zip, ImportMode.Replace);
+
+        Assert.True(result.Success);
+        var library = new JsonPhraseRepository(dest).Load().Library;
+        Assert.Contains(library.Categories, c => c.Id == Category.DefaultId);
+        Assert.Contains(library.Categories, c => c.Id == "c-x");
+    }
+
+    [Fact]
+    public void Merge_keeps_the_archives_tag_colours_for_new_tag_names()
+    {
+        var dest = Root("dest");
+        Seed(dest, "p-local", [1]);
+        var zip = Zip("tags");
+        WriteZipWithLibraryJson(zip, "{\"version\":1,\"categories\":[]," +
+            "\"phrases\":[{\"id\":\"p-new\",\"fileName\":\"p-new.wav\",\"tags\":[\"warm\"]}]," +
+            "\"tags\":[{\"name\":\"warm\",\"color\":\"#FF6B6B\"}]}");
+
+        var result = Archive(dest).Import(zip, ImportMode.Merge);
+
+        Assert.True(result.Success);
+        var tag = Assert.Single(new JsonPhraseRepository(dest).Load().Library.Tags, t => t.Name == "warm");
+        Assert.Equal("#FF6B6B", tag.Color); // the archive's chip colour survives the merge
+    }
+
+    // M10: resource caps — a crafted archive must not OOM the app or fill the disk.
+    [Fact]
+    public void An_oversized_library_json_is_rejected()
+    {
+        var dest = Root("dest");
+        var zip = Zip("huge");
+        WriteZipWithLibraryJson(zip,
+            "{\"version\":1,\"categories\":[],\"phrases\":[],\"padding\":\"" + new string('x', 17 * 1024 * 1024) + "\"}");
+
+        var result = Archive(dest).Import(zip, ImportMode.Merge);
+
+        Assert.False(result.Success);
+        Assert.Contains("large", result.Error!);
+    }
+
     private static void WriteZipWithLibraryJson(string zipPath, string libraryJson)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(zipPath)!);
