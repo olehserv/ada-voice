@@ -490,27 +490,40 @@ public partial class BoardViewModel : ObservableObject
         if (PendingTake is not { } take)
             return;
 
+        PhraseEntry entry;
         try
         {
-            var entry = _recorder.SaveTake(take, NewTitle);
+            entry = _recorder.SaveTake(take, NewTitle);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // Nothing persisted yet — keep PendingTake (and the pending metadata) set so the
+            // operator can retry Save or Discard instead of silently losing the recording.
+            Notice = "Could not save the recording — check disk space and try again.";
+            return;
+        }
+
+        // The recorder save above already succeeded (WAV written, entry created). A failure here
+        // must not send the operator back to Save — that would call _recorder.SaveTake again and
+        // create a duplicate entry. Downgrade to a warning instead; the take is still saved.
+        try
+        {
             if (_pendingMetadata.CategoryId is { } categoryId)
                 entry = _library.SetPhraseCategory(entry.Id, categoryId) ?? entry;
             if (_pendingMetadata.Tags is { } tags)
                 entry = _library.SetPhraseTags(entry.Id, tags) ?? entry;
-            _pendingMetadata = default;
-
-            PendingTake = null;
             Notice = null; // the "Saved" feedback is now a toast (see Saved)
-            Phrases.Add(new PhraseItemViewModel(entry)); // appears on the board immediately
-            ApplyColors(); // tint the new tile (falls back to its default category colour)
-            Saved?.Invoke(this, entry.Title);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // Keep PendingTake (and the pending metadata) set so the operator can retry Save or
-            // Discard instead of silently losing the recording.
-            Notice = "Could not save the recording — check disk space and try again.";
+            Notice = "Saved, but could not apply the category/tags — edit it manually.";
         }
+        _pendingMetadata = default;
+
+        PendingTake = null;
+        Phrases.Add(new PhraseItemViewModel(entry)); // appears on the board immediately
+        ApplyColors(); // tint the new tile (falls back to its default category colour)
+        Saved?.Invoke(this, entry.Title);
     }
 
     [RelayCommand]

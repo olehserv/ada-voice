@@ -97,8 +97,14 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     public PhraseEntry? SetPhraseTitle(string phraseId, string title) =>
         Edit(phraseId, p => p with { Title = title.Trim() });
 
-    public PhraseEntry? SetPhraseCategory(string phraseId, string categoryId) =>
-        Edit(phraseId, p => p with { CategoryId = categoryId });
+    public bool SetPhraseCategoryThrows { get; set; }
+
+    public PhraseEntry? SetPhraseCategory(string phraseId, string categoryId)
+    {
+        if (SetPhraseCategoryThrows)
+            throw new IOException("library index locked (simulated)");
+        return Edit(phraseId, p => p with { CategoryId = categoryId });
+    }
 
     public PhraseEntry? SetPhraseTags(string phraseId, IEnumerable<string> tags)
     {

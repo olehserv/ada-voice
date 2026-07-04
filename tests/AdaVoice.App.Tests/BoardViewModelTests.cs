@@ -291,6 +291,30 @@ public class BoardViewModelTests
         Assert.NotNull(board.Notice);
     }
 
+    // The recorder save (WAV write + entry creation) already succeeded before the category/tag
+    // step fails — retrying Save would call _recorder.SaveTake again and create a duplicate entry.
+    // The take must be treated as saved; only a warning notice tells the operator to fix it manually.
+    [Fact]
+    public void Save_take_with_a_pending_category_that_fails_to_apply_still_completes_the_save()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-2", Name = "Closers" }],
+            SetPhraseCategoryThrows = true,
+        };
+        var board = NewBoard(host);
+        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
+        board.RecordIntoCategoryCommand.Execute(null); // arranges _pendingMetadata.CategoryId synchronously (before its await)
+        board.PendingTake = Take();
+        board.NewTitle = "Greeting";
+
+        board.SaveTakeCommand.Execute(null);
+
+        Assert.False(board.HasPendingTake); // the take IS considered saved, not lost
+        Assert.Contains(board.Phrases, p => p.Title == "Greeting"); // it's on the board
+        Assert.NotNull(board.Notice); // but the operator is warned
+    }
+
     // IsProcessing is set synchronously before the first `await` inside StopRecording, so it is
     // already true the instant ExecuteAsync returns its (still-running) Task — this is not a race,
     // it's how C# async methods run their pre-await prefix on the caller's thread.
@@ -757,13 +781,17 @@ public class BoardViewModelTests
     }
 
     [Fact]
-    public async Task Record_into_category_applies_the_category_to_the_saved_take()
+    public void Record_into_category_applies_the_category_to_the_saved_take()
     {
         var host = new FakePlaybackHost { CanRecord = true, Categories = [new Category { Id = "c-2", Name = "Closers" }] };
         var board = NewBoard(host);
         board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
 
-        await board.RecordIntoCategoryCommand.ExecuteAsync(null);
+        // Execute (not ExecuteAsync + await) — RecordIntoCategory stashes the pending category
+        // synchronously before its first await, and awaiting the full command here would hop this
+        // test off the thread that owns the Phrases CollectionView (the same WPF test artifact the
+        // Save tests above avoid).
+        board.RecordIntoCategoryCommand.Execute(null);
         board.PendingTake = Take();
         board.NewTitle = "Greeting";
 
@@ -774,12 +802,12 @@ public class BoardViewModelTests
     }
 
     [Fact]
-    public async Task Discarding_a_take_clears_any_pending_category()
+    public void Discarding_a_take_clears_any_pending_category()
     {
         var host = new FakePlaybackHost { CanRecord = true, Categories = [new Category { Id = "c-2", Name = "Closers" }] };
         var board = NewBoard(host);
         board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
-        await board.RecordIntoCategoryCommand.ExecuteAsync(null);
+        board.RecordIntoCategoryCommand.Execute(null); // synchronous — see comment above
         board.DiscardTakeCommand.Execute(null);
 
         // A later, unrelated save must NOT pick up the stale pending category.
