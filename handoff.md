@@ -9,6 +9,18 @@ back up. It answers one question: *where are we right now?*
   (canonical table in [design 01 §4](docs/design/01-overview.md#4-confirmed-decisions-canonical)).
 
 _Last updated: 2026-07-05._  
+_Monetization design docs added (2026-07-05): full architecture/design documentation for the
+B2B licensing + billing system in [`docs/monetize/`](docs/monetize/README.md) (11 docs:
+canonical brief/README, architecture overview, licensing, billing, security, database, API,
+WPF client integration, admin panel, implementation roadmap phases 0–12, open questions) plus
+6 ADRs in [`docs/adr/`](docs/adr/). Design only — no production code yet. Key decisions:
+ASP.NET Core backend in a new `server/` folder, PostgreSQL + EF Core, ES256-signed 24-hour
+license tickets with offline grace (7 days paid / 2 days trial), DPAPI client storage, refresh
+token rotation, manual invoice billing v1 (FOP bank transfer), payment provider webhooks v2.
+Next for monetization: answer OQ-12/OC-06 (per-seat vs per-device limits) in
+[`docs/monetize/open-questions.md`](docs/monetize/open-questions.md), then Phase 0 of
+[`docs/monetize/implementation-roadmap.md`](docs/monetize/implementation-roadmap.md)._
+
 _Slice 2 of the UI/UX + localization scope (interaction-state gaps) shipped: repair dialog for
 broken phrases, category-empty CTA, search Clear + query echo, Recorder Processing state +
 hardened `SaveTake` (closes review finding M15), and a cosmetic wizard per-check spinner. Built
