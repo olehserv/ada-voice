@@ -12,13 +12,14 @@ microphone. Her real voice keeps flowing between phrases, and one key stops play
 
 ## Status
 
-**Design complete and reviewed. Phase 0 go/no-go gate passed on the target machine
-(Architecture A confirmed). Phase 1 audio core is partly built — the device seams,
-mic passthrough, and phrase player exist with 23 passing tests, and the WASAPI seam is
-hardware-validated.**
+**The app is built and in daily-use shape.** Audio engine, recorder, phrase library, Board UI,
+setup wizard, Settings window, stop hotkey, backups, and export/import are all shipped and
+verified on the target machine. 360 tests green across 5 test projects.
 
 The single source of live status is **[handoff.md](handoff.md)** — read it first.
-Next real step: finish the Phase 1 engine (orchestrator, recorder, device monitor).
+Open work: responsive Full/Docked layout, localization, installer (see the
+[roadmap](docs/roadmaps/mvp-roadmap.md)), and the monetization build
+(design in [docs/monetize/](docs/monetize/README.md), no code yet).
 
 ## How it works (the core idea)
 
@@ -36,8 +37,8 @@ through and mixes a phrase in when triggered. Full reasoning:
 
 ## Tech stack
 
-- **.NET 10 · WPF · C#** (MVVM via CommunityToolkit.Mvvm)
-- **NAudio** (WASAPI capture/render, mixing)
+- **.NET 10 · WPF · C#** (MVVM via CommunityToolkit.Mvvm, WPF-UI Fluent theme)
+- **NAudio** (WASAPI capture/render, mixing) · **Serilog** (rolling file logs)
 - **VB-CABLE** virtual audio device (user-installed; cannot be bundled — licensing)
 - **JSON** metadata + **WAV** audio (48 kHz mono), fully **offline**, no cloud, no accounts
 
@@ -48,29 +49,29 @@ ada-voice/
 ├── README.md              You are here
 ├── handoff.md             Live status: done / in-progress / next / open questions
 ├── CLAUDE.md              Working agreement for AI-assisted development
-├── docs/
-│   ├── design/            The design (01–08) + 09 design system + README index
-│   ├── plans/             implementation-plan.md · production-readiness-plan.md
-│   └── roadmaps/          mvp-roadmap.md (phases, timeline, go/no-go gates)
-└── spike/                 Phase 0 throwaway prototype (see spike/README.md)
+├── src/                   App code: App (WPF) · Host · Audio · Audio.Wasapi · Core
+├── tests/                 5 xUnit test projects (one per src project)
+├── tools/                 AudioSeamCheck hardware-check utility
+├── spike/                 Phase 0 prototype (gate PASSED — historical record)
+└── docs/
+    ├── design/            The design (01–08) + 09 design system + README index
+    ├── plans/             production-readiness-plan · operator-pilot · ui-ux-localization-scope
+    ├── roadmaps/          mvp-roadmap.md (phases, gates, what is left)
+    ├── reviews/           2026-07-04 full codebase review (point-in-time)
+    ├── monetize/          B2B licensing/billing design (start at its README)
+    └── adr/               Architecture Decision Records
 ```
 
-The four planning docs form a ladder, each with one job:
+The planning docs form a ladder, each with one job:
 
 | Doc | Answers |
 |-----|---------|
 | [handoff.md](handoff.md) | Where are we right now? |
-| [roadmap](docs/roadmaps/mvp-roadmap.md) | What order, how long, which gates? |
-| [implementation plan](docs/plans/implementation-plan.md) | How do I build each phase? |
+| [roadmap](docs/roadmaps/mvp-roadmap.md) | What order, which gates, what is left? |
 | [production-readiness plan](docs/plans/production-readiness-plan.md) | What must be true before she relies on it? |
+| [monetize/implementation-roadmap](docs/monetize/implementation-roadmap.md) | How do we build the paid product? |
 
 Start with the [design docs README](docs/design/README.md) for the full picture.
-
-## Phase 0 spike
-
-A throwaway console prototype that tests the riskiest part (mic→CABLE passthrough + phrase
-mixing + ducking) on real hardware before any production code is written. Setup, run
-instructions, and the test matrix are in **[spike/README.md](spike/README.md)**.
 
 ## Ethics & privacy
 

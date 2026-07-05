@@ -5,6 +5,11 @@
 ```mermaid
 erDiagram
     CATEGORY ||--o{ PHRASE : contains
+    TAG ||--o{ PHRASE : "colours tags on"
+    TAG {
+        string name PK "tag registry (Library.Tags)"
+        string color
+    }
     CATEGORY {
         string id PK
         string name
@@ -24,20 +29,22 @@ erDiagram
         datetime updatedAt
     }
     SETTINGS {
-        string captureDeviceId "MMDevice ID + friendly-name fallback"
-        string cableDeviceId
-        string monitorDeviceId
-        bool monitorEnabled
+        string monitorDeviceName "friendly-name substring; null = OS default output"
+        bool monitorEnabled "default true"
         float micDuckDb "default -12"
-        float monitorPhraseDb "default -6"
         int duckRampMs "default 50"
-        bool stopOnNewPhrase "default true"
-        string stopHotkey "default Pause (Ctrl+F12 fallback)"
-        string uiLanguage "uk | pl | en — applies on restart"
-        bool boardTopmost "default true"
-        float micReferenceRms "set by wizard calibration"
+        float micReferenceRms "nullable; set by wizard calibration"
+        bool replaceOnRetrigger "default true — new trigger replaces the playing phrase"
+        bool alwaysOnTop "default true"
+        string language "en | uk | pl — applies on restart; English-only today"
+        bool wizardCompleted "drives wizard auto-show on startup"
+        float windowWidthHeightLeftTop "4 nullable fields — last window placement"
     }
 ```
+
+The SETTINGS block mirrors `src/AdaVoice.Core/Domain/Settings.cs`. The mic and cable devices
+are **not stored**: the engine resolves them by role at runtime (see notes below). There is no
+stop-hotkey or monitor-phrase-level setting yet; those land with their consumers.
 
 ### `library.json` example
 
@@ -60,15 +67,22 @@ erDiagram
       "createdAt": "2026-06-09T10:00:00Z",
       "updatedAt": "2026-06-09T10:00:00Z"
     }
+  ],
+  "tags": [
+    { "name": "opening", "color": "#4F8EF7" }
   ]
 }
 ```
 
 Notes:
 
-- Audio devices are stored by **MMDevice ID with a friendly-name fallback** — this survives
-  Windows re-enumerating/renumbering devices after reboots or USB replugs (a classic failure
-  mode of audio apps). If neither matches, the app prompts instead of guessing.
+- The mic, cable, and alarm devices are **resolved by role at runtime**
+  (`WasapiDeviceFactory`), not stored — this survives Windows re-enumerating devices after
+  reboots or USB replugs (a classic failure mode of audio apps). Only the monitor device is
+  persisted, as a friendly-name substring; if it is absent, previews fall back to the OS
+  default output.
+- The `tags` array is the tag registry (`Library.Tags`): one colour per tag name, so a tag
+  keeps a stable colour across phrases. It grows as tags are used.
 - `gainDb` is set automatically on save: the recorder loudness-matches the take to the
   wizard-calibrated live-mic RMS reference (`micReferenceRms`), so phrases and her live voice
   reach the client at the same perceived level (decision #13).
@@ -78,13 +92,13 @@ Notes:
 ## 2. Folder structure
 
 ```
-%LOCALAPPDATA%\AdaVoice\          (root configurable in settings)
+%LOCALAPPDATA%\AdaVoice\          (fixed root; making it configurable is a possible future setting)
 ├── library.json                  metadata (atomic write: tmp + rename)
 ├── settings.json
 ├── audio\                        p-{id}.wav — 48 kHz / 16-bit / mono PCM
 │                                 deleted-{id}.wav — orphaned recordings (kept, see §3)
 ├── backups\                      adavoice-backup-YYYY-MM-DD.zip (daily, keep 7)
-└── logs\                         app-YYYYMMDD.log (Serilog rolling)
+└── logs\                         adavoice-YYYYMMDD.log (Serilog rolling)
 ```
 
 ## 3. Persistence rules
@@ -111,13 +125,13 @@ Notes:
 | Import | Validates schema version, then user chooses **merge** (skip duplicate IDs) or **replace** |
 | Encryption | Not in v1 — backups are plain zips; documented in [07-risks-security.md](07-risks-security.md). Encrypted export is a future enhancement |
 
-## 5. Phrase RAM cache
+## 5. Phrase RAM cache (planned optimization — not built)
 
-Per confirmed decision (few dozen phrases × 5–15 s): **all phrases are pre-decoded to
-48 kHz float arrays** (~3 MB per 15-second phrase, ≈ 100 MB worst case). No streaming path,
-no cache eviction in v1 — this guarantees zero disk I/O on the playback hot path.
+**Current behavior:** every trigger loads the phrase's WAV from disk (`WavFile.Load` in
+`EngineHost.PlayEntry`) and applies its gain before playback. At a few dozen short phrases
+this is fast enough; there is no cache.
 
-**Decode runs on a background thread at startup** (decision via perf review): the window and
-the audio engine come up immediately; phrase buttons show greyed/loading and enable
-individually as each decode completes (typically < 1 s on an SSD, but launch never blocks on
-a cold or busy disk).
+**Planned:** pre-decode all phrases to 48 kHz float arrays (~3 MB per 15-second phrase,
+≈ 100 MB worst case) on a background thread at startup, with buttons enabling as each decode
+completes. This would remove disk I/O from the playback hot path. Deferred until the library
+size or a slow disk makes it worth building.

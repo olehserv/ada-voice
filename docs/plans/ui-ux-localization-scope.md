@@ -1,8 +1,8 @@
 # AdaVoice — UI/UX pass + localization: scope & slice order
 
-_Written 2026-07-02._ Scopes out the "next action" named in
-[handoff.md](../../handoff.md): the remaining Phase 3/4 work from
-[implementation-plan.md](implementation-plan.md) and [design 05](../design/05-ui-design.md) that
+_Written 2026-07-02; slice statuses updated 2026-07-05._ Scopes out the "next action" named in
+[handoff.md](../../handoff.md): the remaining Phase 3/4 UI work from the
+[roadmap](../roadmaps/mvp-roadmap.md) and [design 05](../design/05-ui-design.md) that
 wasn't covered by the Board library UI or setup-wizard UI builds.
 
 ## Why one label was hiding four different jobs
@@ -11,7 +11,11 @@ wasn't covered by the Board library UI or setup-wizard UI builds.
 below are missing **features** (no Settings window exists; backup/export has no UI at all), not
 missing visual states. Treating them as one pass risks underscoping the actual work.
 
-## Current-state audit (2026-07-02)
+## Current-state audit (2026-07-02 — superseded by slices 1–2)
+
+> This table is the snapshot that justified the slice order. Slices 1 and 2 have shipped
+> since: Settings window, backup/export UI, repair dialog, category-empty CTA, search Clear +
+> query echo, Recorder Processing state, and the wizard per-check spinner are all done.
 
 Checked the real `src/AdaVoice.App` tree against [design 05](../design/05-ui-design.md) §1
 (window sizing) and §2 (interaction states).
@@ -41,12 +45,13 @@ and correctly block below-minimum resizing — that part is done.
 
 Four independently shippable slices, in this order:
 
-1. **Settings window** — device pickers (mic/cable/monitor + meters), language choice, hotkey
-   reassignment, backup/export UI. Biggest unblock: it's also the largest surface of new
-   user-facing strings, so it should land before localization.
-2. **Interaction-state gaps on the existing Board** — repair dialog for broken phrases,
-   category-empty CTA, search Clear button + query echo, recorder level meter + processing state,
-   wizard per-row spinner. Contained, low-risk, fits screens that already exist.
+1. ✅ **Settings window** — shipped 2026-07-02/04 (Levels / Behavior / Language & Backup,
+   incl. backup/export UI). Deferred to a future slice: the Devices group (pickers + meters —
+   needs live audio metering, which does not exist yet) and true hotkey reassignment.
+2. ✅ **Interaction-state gaps on the existing Board** — shipped 2026-07-05 (repair dialog,
+   category-empty CTA, search Clear + query echo, Recorder Processing state, wizard per-check
+   spinner). Pending the user's smoke test. Deferred with the Devices group: the recorder
+   live level meter (same missing live-metering capability).
 3. **Full/Docked responsive layout** — needs a design decision first: does the category rail
    come back at ≥720px, or do we keep the dropdown-only layout and update design 05 to match
    reality? Implementation follows once that's decided.

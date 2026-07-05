@@ -22,7 +22,7 @@ mixing is the heart of AdaVoice's audio engine.
 | # | Approach | How it works | Verdict |
 |---|----------|--------------|---------|
 | A | **VB-CABLE virtual cable** | Driver exposes a render endpoint ("CABLE Input") whose audio appears on a paired capture endpoint ("CABLE Output"). App plays into the render side; Chrome uses the capture side as its mic. | ✅ **Recommended.** Free (donationware), ubiquitous, stable, built exactly for this. |
-| B | Voicemeeter (Banana) | Full virtual mixer: hardware mic + app audio mixed inside Voicemeeter; Chrome uses "Voicemeeter Out" as mic. AdaVoice would only play phrases to a Voicemeeter input. | Solid fallback — **rehearsed in Phase 0** (~half a day) so switching is a known-good move, not a theory. Mixing happens outside our app (robust, removes the single point of failure in §5), but the operator must run and configure a second, complex application. |
+| B | Voicemeeter (Banana) | Full virtual mixer: hardware mic + app audio mixed inside Voicemeeter; Chrome uses "Voicemeeter Out" as mic. AdaVoice would only play phrases to a Voicemeeter input. | Solid fallback — **was rehearsed in Phase 0**, so switching is a known-good move, not a theory. Mixing happens outside our app (robust, removes the single point of failure in §5), but the operator must run and configure a second, complex application. |
 | C | Windows "Listen to this device" | Control Panel feature routes hardware mic → CABLE Input with no code. | Zero-code passthrough fallback, but adds 50–150 ms latency and lives in hidden, fragile OS UI. Documented as plan B only. |
 | D | Write our own virtual audio driver | AVStream/ACX kernel driver or APO, WHQL-signed. | ❌ Rejected. Months of work, signing cost and process, kernel risk. Not realistic for a solo developer. |
 | E | Hook the mic stream of other apps (Soundpad-style) | Code injection into other processes' audio sessions. | ❌ Rejected. Fragile, antivirus flags, broken by browser sandboxing. |
@@ -39,9 +39,9 @@ flowchart LR
     subgraph APP["AdaVoice audio engine"]
         CAP["WASAPI capture<br/>shared, event-driven, 20 ms"]
         DUCK["Mic gain stage<br/>micDuckDb (live-configurable)"]
-        CACHE["Phrase cache<br/>RAM, 48 kHz float"]
+        LOAD["Phrase load<br/>WAV from disk per trigger<br/>(RAM cache planned)"]
         MIX["MixingSampleProvider"]
-        MON["Monitor gain stage<br/>monitorPhraseDb (live-configurable)"]
+        MON["Monitor gain stage<br/>monitorPhraseDb<br/>(planned — not built)"]
     end
 
     subgraph VBC["VB-CABLE driver"]
@@ -54,11 +54,11 @@ flowchart LR
     end
 
     MIC --> CAP --> DUCK --> MIX
-    CACHE -->|"phrase trigger"| MIX
+    LOAD -->|"phrase trigger"| MIX
     MIX -->|"WASAPI render"| CIN
     CIN -.->|"driver-internal pair"| COUT
     COUT -->|"selected as Chrome microphone"| ZV
-    CACHE --> MON --> HP
+    LOAD -.->|"planned"| MON -.->|"planned"| HP
     ZV -->|"client's voice — normal path, untouched"| HP
 ```
 
@@ -67,14 +67,14 @@ Key properties:
 - Chrome's **speaker** setting stays on her headphones — the client's voice path is untouched.
 - The app holds **one persistent render stream** to CABLE Input; phrases are mixed in and out
   without reopening devices → instant start/stop, no device-open latency on the hot path.
-- Mic ducking (`micDuckDb`, default −12 dB, range −60…0 dB with mute floor, 50 ms ramp) and
-  phrase monitor level (`monitorPhraseDb`, default −6 dB) are independent live-adjustable
-  gain stages.
-- The engine **opts out of Windows communications ducking** on its cable and monitor
-  sessions (`IAudioSessionControl2::SetDuckingPreference`, small COM interop — NAudio does
+- Mic ducking (`micDuckDb`, default −12 dB, 50 ms ramp) is a live-adjustable gain stage.
+  The phrase monitor gain stage (`monitorPhraseDb`, default −6 dB) is **planned — the
+  monitor path is not built yet**; previews play to the default output instead.
+- The engine **opts out of Windows communications ducking** on its cable session
+  (`IAudioSessionControl2::SetDuckingPreference`, small COM interop — NAudio does
   not wrap it). Without this, Windows attenuates AdaVoice's output the moment Chrome opens
   a communications stream — i.e., exactly when a call starts. The wizard additionally sets
-  Sound → Communications → "Do nothing" as a belt-and-braces fallback.
+  Sound → Communications → "Do nothing" as an extra safety fallback.
 
 ## 4. Browser / Zoho caveats
 
@@ -84,11 +84,10 @@ Key properties:
 - **AGC is the most adversarial component for this design**: it can re-amplify the ducked
   mic (nullifying the configured duck level), pump between phrase and live voice, and
   re-level phrase loudness. The duck/gain values the operator tunes may not match what the
-  client hears. Phase 0 tests with AGC explicitly in the matrix; if Zoho/Chrome expose an
+  client hears. Phase 0 tested with AGC explicitly in the matrix; if Zoho/Chrome expose an
   `autoGainControl` toggle, the wizard documents it.
-- Played phrases are normal human speech, so they are expected to pass intelligibly, but
-  double processing can color the audio. **Assumption A6 — unverified until the Phase 0
-  spike runs a real Zoho call.**
+- Played phrases are normal human speech, so they pass intelligibly; double processing can
+  color the audio. **Assumption A6 — verified 2026-06-15 on a real Zoho call (Phase 0 gate).**
 - Mitigations: record clean phrases loudness-matched to her live mic level (see calibration,
   decision #13); disable optional noise-suppression/AGC toggles in Zoho/Chrome if available.
 
@@ -101,16 +100,16 @@ Mitigations (details in [07-risks-security.md](07-risks-security.md)):
 
 1. Engine watchdog with automatic stream rebuild on device errors.
 2. Loud DEGRADED state: visual banner + alarm tone played on the **system default output
-   device** (not the optional monitor stream — the alarm must survive `monitorEnabled=false`).
+   device** (not the planned monitor stream — the alarm must survive `monitorEnabled=false`).
 3. Process-death resilience: the app calls `RegisterApplicationRestart` so Windows relaunches
    it after a crash; on unclean-exit restart the engine auto-restores and shows a recovery toast.
 4. Documented 60-second manual fallback: switch Chrome's mic back to the hardware device.
-   **Rehearsed during Phase 0 on a live test call** — whether Zoho applies a mid-call mic
-   change without reconnecting must be verified, not assumed.
+   **Rehearsed during Phase 0 on a live test call** — the mid-call mic change was
+   verified there, not assumed.
 5. Documented OS-level fallback: Windows "Listen to this device" (Option C).
-6. Voicemeeter (Option B) is spiked in Phase 0 alongside Architecture A, so if in-app
-   passthrough proves unreliable, the switch is to a known-good configuration — AdaVoice then
-   becomes a plain soundboard and the mixing moves into Voicemeeter's engine.
+6. Voicemeeter (Option B) was spiked in Phase 0 alongside Architecture A, so if in-app
+   passthrough ever proves unreliable, the switch is to a known-good configuration — AdaVoice
+   then becomes a plain soundboard and the mixing moves into Voicemeeter's engine.
 
 ## 6. VB-CABLE licensing note
 

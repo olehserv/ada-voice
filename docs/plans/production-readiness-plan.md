@@ -4,14 +4,17 @@
 real workday?*
 
 This is the **release gate** — the definition of "done for production." It cross-cuts the
-phases in the [implementation plan](implementation-plan.md); many items are *built* in
-Phases 1–5 but only *signed off* here, against real hardware and a real call. Sources: NFRs in
+phases in the [roadmap](../roadmaps/mvp-roadmap.md); many items are *built* earlier
+but only *signed off* here, against real hardware and a real call. Sources: NFRs in
 [design 01 §7](../design/01-overview.md#7-non-functional-requirements), edge cases and risks in
 [design 07](../design/07-risks-security.md), and the test strategy in
 [design 08](../design/08-testing.md).
 
-> **Status:** not started. This gate is the final step of Phase 5; the manual call checklist
-> within it is also run earlier (Phase 0 and the post-Phase-3 pilot) as a dry run.
+> **Status (2026-07-05):** in progress. Many items are already built and hardware-verified
+> (mutex, crash restart, device-loss recovery, daily backups, corrupt-library recovery,
+> Serilog logging), and the operator pilot passed. The boxes stay unchecked on purpose:
+> each one is a final sign-off on the target machine, done as the last step before release.
+> The 8-hour soak and the clean-VM installer test have not been run yet.
 
 ---
 
@@ -32,7 +35,8 @@ The gate is met only when **every box below is checked on the target machine**, 
       "recovered" toast shown; unclean exit logged via heartbeat.
 - [ ] 8-hour soak passes: drift events logged < a few/hour; RSS flat (no leak).
 - [ ] Render-pull stall > 500 ms triggers exactly one rebuild.
-- [ ] Two-instance launch focuses the first window (single-instance mutex).
+- [ ] Two-instance launch is safe: the second instance shows a message and exits
+      (single-instance mutex; shipped behavior — it does not focus the first window).
 
 ## 2. Audio quality & latency (hardware-verified, not designed)
 

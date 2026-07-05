@@ -1,5 +1,9 @@
 # Phase 0 Spike — Architecture A (VB-CABLE + in-app mixer)
 
+> **Status: Phase 0 gate PASSED (GO), 2026-06-15** — results in
+> [PHASE0-RESULTS.md](PHASE0-RESULTS.md). The test matrix below is the historical
+> checklist; its boxes were never ticked.
+
 **Throwaway console prototype** per [the MVP roadmap](../docs/roadmaps/mvp-roadmap.md).
 Not production code; nothing here ships. The one reusable artifact is
 `DuckingOptOut.cs` — the `IAudioSessionControl2::SetDuckingPreference` COM shim

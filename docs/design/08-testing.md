@@ -20,8 +20,9 @@ IAudioCaptureDevice          IAudioRenderDevice
 - **Production implementations** wrap `WasapiCapture` / `WasapiOut` (+ the ducking opt-out
   interop).
 - **Test implementations**: `FileCaptureDevice` (feeds a WAV as if spoken into the mic, at
-  controllable pace), `MemoryRenderDevice` (collects rendered output for assertions),
-  `FaultyDevice` decorators (throw / disappear / stall on command to drive failure paths).
+  controllable pace), `MemoryRenderDevice` (collects rendered output for assertions), and
+  `FakeDeviceFactory` with controllable fakes (disposal counting, Init-before-Start
+  enforcement, fail-on-command) to drive failure paths.
 
 `DeviceMonitor` is similarly behind `IDeviceMonitor` so device-removal events can be fired
 synthetically in tests.
@@ -31,7 +32,7 @@ synthetically in tests.
 | Layer | Framework | What it covers |
 |---|---|---|
 | Unit (audio core) | xUnit | State machine, mixer behavior, ducking ramps, single-playback rule, OFF AIR transitions, watchdog, drift policy — all against fake devices |
-| Unit (DSP, golden files) | xUnit + reference WAVs | Trim, loudness match, fade-out: feed known input WAV → compare output against stored reference (sample-accurate within tolerance) |
+| Unit (DSP) | xUnit | Trim, loudness match, fade-out: feed generated input → assert computed properties (RMS, peak, sample counts, continuity). No stored reference WAVs exist today; golden files stay an option if DSP regressions appear |
 | Unit (storage) | xUnit | Repository atomic writes, corrupt-file handling, orphaning, import merge/replace |
 | Unit (services) | xUnit | HotkeyService registration/conflict surfacing, LocalizationService completeness |
 | Integration (manual + scripted) | checklist | Real devices, real VB-CABLE, real Zoho call — the things only hardware can verify |
@@ -40,7 +41,7 @@ synthetically in tests.
 
 ### AudioEngine / state machine
 - Every transition in the 06 §2 diagram: Stopped→Live, Live→OffAir→Live, Live→Degraded
-  (device loss via `FaultyDevice`), Degraded→Live (rebuild succeeds), Degraded→Stopped
+  (device loss via a controllable fake device), Degraded→Live (rebuild succeeds), Degraded→Stopped
   (retries exhausted), OffAir→Degraded.
 - Watchdog: render pull stalls > 500 ms ⇒ rebuild triggered exactly once.
 - Ducking opt-out invoked on every stream (re)start (assert via test double).
@@ -51,12 +52,13 @@ synthetically in tests.
 ### Mixer / PhrasePlayer
 - Single-playback: trigger during playback replaces (default) or is ignored (toggle) —
   assert sample-level output via `MemoryRenderDevice`.
-- Stop applies a 10 ms linear fade (golden file: no discontinuity > threshold).
+- Stop applies a 10 ms linear fade (computed check: no discontinuity > threshold).
 - Duck ramp: mic branch reaches `micDuckDb` within `duckRampMs` ±1 buffer and returns after.
 - Mono→stereo upmix correctness at the cable edge.
 
-### Recorder (DSP golden files)
-- Trim: leading/trailing silence removed, 150 ms padding kept (reference WAVs).
+### Recorder (DSP)
+- Trim: leading/trailing silence removed, 150 ms padding kept (computed assertions on
+  generated takes — no stored reference WAVs today).
 - Loudness match: output RMS within ±0.5 dB of `micReferenceRms` target; peak never exceeds
   −3 dBFS (test with quiet, loud, and clipped takes).
 - OFF AIR: opening the recorder pauses the cable branch (assert no samples reach the cable
@@ -76,12 +78,13 @@ synthetically in tests.
 - HotkeyService: registration failure surfaces a typed error (assert with a pre-registered
   conflicting hotkey); re-registration after reassignment.
 - Localization completeness: a test enumerates every resource key and asserts presence in
-  `uk`, `pl`, and `en` — a missing translation fails CI, not the operator.
+  `uk`, `pl`, and `en` — a missing translation fails CI, not the operator. *Pending the
+  slice-4 `.resx` retrofit (UI is hard-coded English today, so there is nothing to test yet).*
 
 ## 4. Manual call-test checklist (only hardware can verify these)
 
-Run on the target machine against a real Zoho Voice call (Phase 0 initially; repeated at the
-post-Phase-3 pilot and before v1):
+Run on the target machine against a real Zoho Voice call (done at Phase 0, passed
+2026-06-15; repeated at the operator pilot, passed 2026-06-29; run again before v1):
 
 - [ ] Far end hears phrase clearly; intelligibility unaffected by Chrome NS/EC/AGC
 - [ ] Far end hears live voice between phrases; no level jump at phrase boundaries
@@ -98,4 +101,6 @@ post-Phase-3 pilot and before v1):
 
 Phase exit criteria in the [roadmap](../roadmaps/mvp-roadmap.md) reference this document;
 the rule is: **a phase's code ships with its tests** — coverage is written alongside the
-feature, not deferred. CI runs the unit + golden-file suites on every commit from Phase 1 on.
+feature, not deferred. CI runs the unit + DSP suites on every commit.
+
+Current suite: **360 tests across 5 projects** (72 Core, 97 Audio, 8 Wasapi, 5 Host, 178 App).

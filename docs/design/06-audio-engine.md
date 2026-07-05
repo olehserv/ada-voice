@@ -11,15 +11,19 @@ flowchart LR
     BUF --> FMT["Resample / format<br/>to 48 kHz float mono"]
     FMT --> DUCK["VolumeSampleProvider<br/>micDuckDb when phrase active<br/>50 ms gain ramp"]
     DUCK --> MIX["MixingSampleProvider"]
-    PC["Phrase cache<br/>pre-decoded float arrays<br/>(background decode at startup)"] -->|"PhraseSampleProvider<br/>(at most one active)"| MIX
+    PC["Phrase WAV<br/>loaded from disk per trigger<br/>(WavFile.Load; RAM cache planned)"] -->|"PhraseSampleProvider<br/>(at most one active)"| MIX
     MIX --> OUT1["WasapiOut → CABLE Input<br/>shared, event, 20 ms<br/>ducking opt-out applied"]
-    PC --> MONG["VolumeSampleProvider<br/>monitorPhraseDb"]
-    MONG --> OUT2["WasapiOut → headphones<br/>(phrase-only monitor tap)<br/>ducking opt-out applied"]
+    PC -.-> MONG["VolumeSampleProvider<br/>monitorPhraseDb<br/>(planned — not built yet)"]
+    MONG -.-> OUT2["WasapiOut → headphones<br/>(planned monitor tap)"]
 ```
+
+The headphone monitor tap (OUT2, `monitorPhraseDb`) is **planned — not built yet**.
+Previews play on the default output device. The engine's other output today is the
+DEGRADED alarm on the system default device (§2).
 
 ### Session-level protections
 
-- Both render sessions (cable + monitor) call
+- The cable render session (and the planned monitor session, once built) calls
   `IAudioSessionControl2::SetDuckingPreference(optOut: true)` after stream start —
   otherwise Windows attenuates them the moment Chrome opens a communications stream, i.e.
   exactly when a call begins (decision #12). NAudio does not wrap this; it is a ~30-line COM
@@ -30,9 +34,11 @@ flowchart LR
 
 ### Hot-path behavior
 
-- **Phrase start:** all phrases are pre-decoded to RAM (background thread at startup;
-  buttons enable as decodes land — see 04 §5). Trigger = add one `PhraseSampleProvider` to
-  the mixer → audible within one or two 20 ms buffers. No device open, no disk I/O.
+- **Phrase start (current behavior):** each trigger loads the phrase WAV from disk
+  (`WavFile.Load` in `EngineHost.PlayPhrase`), then adds one `PhraseSampleProvider` to the
+  mixer → audible within one or two 20 ms buffers. No device open on the hot path, but
+  there **is** disk I/O per trigger. A pre-decoded RAM cache (background decode at
+  startup) stays a **planned optimization**.
 - **Stop:** mark the provider finished with a **10 ms linear fade-out** (avoids clicks),
   mixer removes it. Device streams are never torn down on trigger/stop.
 - **Single-playback rule:** the engine holds at most one phrase input. A new trigger
@@ -40,11 +46,11 @@ flowchart LR
 - **Ducking:** while a phrase is active, the mic branch ramps to `micDuckDb` over
   `duckRampMs` (50 ms default) and ramps back on completion/stop. Both values adjustable
   live from Settings. (Caveat: Chrome's AGC downstream may partially counteract perceived
-  ducking — see 02 §4; defaults are tuned against post-AGC output in Phase 0.)
+  ducking — see 02 §4; defaults were tuned against post-AGC output in Phase 0.)
 - **OFF AIR (decision #11):** entering recording mode pauses the cable output branch
-  entirely; the monitor stays available for preview. Restored on Recorder close.
+  entirely; preview stays available on the default output. Restored on Recorder close.
 
-### Latency budget (app-side targets — A11: unverified until Phase 0)
+### Latency budget (app-side targets — A11: verified, Phase 0 gate passed 2026-06-15)
 
 | Stage | Budget |
 |---|---|
@@ -58,23 +64,23 @@ Passthrough (voice path): capture buffer 20 ms + mixer ≤ 20 ms + render buffer
 
 **These numbers exclude VB-CABLE's own internal buffering** (driver default "max latency"
 is thousands of samples — tens of ms — adjustable only in its control panel) **and Chrome's
-WebRTC capture buffering.** Phase 0 therefore measures **mouth-to-Chrome end-to-end**
-(speak → loopback recording of what Chrome receives), not just app-internal timing, and the
-buffer sizes plus the VB-CABLE latency setting are tuned from that measurement. The wizard
-documents the cable's control-panel setting (05 §2).
+WebRTC capture buffering.** Phase 0 therefore measured **mouth-to-Chrome end-to-end**
+(speak → loopback recording of what Chrome receives), not just app-internal timing. The
+gate **passed 2026-06-15**; note the exact measured numbers were never recorded
+(`spike/PHASE0-RESULTS.md` still has TBDs).
 
 ### Clock drift and buffer policy
 
 Capture and render run on different device clocks. Policy, both directions:
 
 - **Overrun** (capture faster): if the buffer exceeds ~100 ms, drop the oldest samples and
-  log. Audible as a small skip in her live voice; recurrence is logged so Phase 0/1 can
-  quantify the cadence.
+  log. Audible as a small skip in her live voice; recurrence is logged so the cadence can
+  be quantified.
 - **Underrun** (render faster): insert silence for the missing samples and log. Audible as a
   brief gap; same logging.
-- If either event recurs frequently (> a few per hour), that is a Phase 1 finding to fix
+- If either event recurs frequently (> a few per hour), that is a finding to fix
   (buffer sizing or a slow-adaptive resampler keyed to buffer fill) — not something to ship
-  around silently. Expected glitch cadence is documented after Phase 0 measurement.
+  around silently. Phase 0 passed 2026-06-15, but glitch-cadence numbers were not recorded.
 
 ## 2. Engine state machine
 
@@ -122,12 +128,12 @@ sequenceDiagram
     Op->>R: Open Recorder
     R->>E: Pause cable output (OFF AIR)
     Op->>R: Record
-    R->>FS: WasapiCapture → WaveFileWriter (tmp-{id}.wav, 48 kHz/16-bit/mono)
+    R->>FS: WasapiCapture → WavFile.Save (float → 16-bit PCM, atomic temp→final, 48 kHz/mono)
     R-->>Op: live peak meter + clipping warning
     Op->>R: Stop
     R->>R: trim silence (threshold −45 dBFS, keep 150 ms padding)
     R->>R: loudness-match to micReferenceRms → sets gainDb (peak ceiling −3 dBFS)
-    R-->>Op: preview (monitor device only)
+    R-->>Op: preview (default output device — never the cable)
     Op->>R: Save (title, category, tags)
     R->>FS: atomic move tmp → audio/p-{id}.wav, update library.json
     Op->>R: Close Recorder
@@ -153,8 +159,9 @@ sequenceDiagram
 - **MVP registers exactly one global hotkey: emergency stop, default `Pause`** (decision
   #10). `Ctrl+Space` was rejected: on a trilingual machine it collides with IME/layout
   switching, and the panic button cannot live on contested keys. The wizard verifies the
-  `Pause` key exists (missing on some compact laptops) with a live press-to-test and offers
-  `Ctrl+F12` as fallback. Reassignable in Settings.
+  `Pause` key exists (missing on some compact laptops) and offers `Ctrl+F12` as fallback.
+  Settings shows which fixed candidate (`Pause` / `Ctrl+F12`) is active — read-only; true
+  reassignment is **deferred**.
 - Registration failure (combination taken by another app) is surfaced inline in Settings,
   never silent.
 - Future (post-MVP): per-phrase hotkey slots, conflict editor, optional avoidance of the

@@ -1,5 +1,10 @@
 # Full Codebase Review — 2026-07-04
 
+> **Status: point-in-time review.** The Critical/High findings and the "now" / "next touch"
+> lists were all fixed the same week (shipped 2026-07-04/05). Findings below are written in
+> present tense as of the review date — do not read them as today's state. Still open:
+> the "Wait for need" list and some Low items.
+
 Scope: `src/`, `tests/`, build props, docs cross-checks. Method: 6 parallel specialist review passes
 (audio engine/DSP, WASAPI interop, Core storage/security, App UI, Host, tests) plus an independent
 verification pass over ~2,700 lines of the most critical code. Every Critical/High finding below was

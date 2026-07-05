@@ -7,14 +7,14 @@
 | VB-CABLE not installed / removed | Engine STOPPED; board disabled with clear message; setup wizard re-opens |
 | Mic unplugged mid-call | Auto-retry rebuild with backoff; DEGRADED banner + alarm tone on the **system default device** (she must know the client cannot hear her) |
 | Windows communications ducking attenuates the cable stream when a call starts | Engine opts out per session (`SetDuckingPreference`); wizard sets Sound → Communications → "Do nothing" as fallback (decision #12) |
-| AdaVoice session muted in Volume Mixer | Silent total failure otherwise — wizard/self-test reads the session mute state and flags it |
-| Default output device is CABLE Input (common post-install state) | Every system sound would play to the client — wizard checks default render + communications devices and warns |
+| AdaVoice session muted in Volume Mixer | Silent total failure otherwise — a wizard check that reads the session mute state is *planned — not built yet* (shipped wizard runs the 4-check subset, see 05 §4) |
+| Default output device is CABLE Input (common post-install state) | Every system sound would play to the client — wizard checks the default output device and warns (*shipped*; communications-device check *planned*) |
 | Recording attempted while a call could be active | Not possible to leak: Recorder open ⇒ OFF AIR (cable paused, banner) by design (decision #11) |
 | Device renumbering (Windows update, USB re-enumeration) | Devices stored by MMDevice ID with friendly-name fallback; prompt if ambiguous — never guess |
-| App crash | `RegisterApplicationRestart` relaunches; auto-restore engine + "engine recovered" toast; heartbeat file lets restart detect unclean exit and log it |
-| Windows mic privacy settings block desktop apps | Wizard pre-check with fix-it link (Settings → Privacy → Microphone) |
+| App crash | `RegisterApplicationRestart` relaunches; auto-restore engine + "engine recovered" toast. A heartbeat file for unclean-exit detection is *planned — not built yet* |
+| Windows mic privacy settings block desktop apps | Wizard pre-check with fix-it link (Settings → Privacy → Microphone) — *planned — not built yet* |
 | Phrase file missing / corrupt | Button shows broken state; playback refuses gracefully; startup library validation |
-| Two AdaVoice instances | Single-instance mutex; second launch focuses the first window |
+| Two AdaVoice instances | Single-instance mutex; second launch shows an "AdaVoice is already running" message and exits |
 | Disk full while recording | Pre-check free space; writer failure aborts the take with a message; temp file cleaned |
 | VB-CABLE at 44.1 kHz (its common default) | Wizard verifies shared-mode format = 48 kHz and offers to fix — avoids permanent resampling on the hot path |
 | Device with mismatched sample rate at runtime | Engine resamples; logged |
@@ -56,26 +56,26 @@
 
 | Risk | Impact | Likelihood | Mitigation |
 |---|---|---|---|
-| App is single point of failure for her live mic (passthrough dies → client hears silence) | High | Medium | Watchdog + auto-rebuild; `RegisterApplicationRestart`; alarm on system default device; **fallback rehearsed in Phase 0** (mid-call Chrome mic switch tested on a live call); Voicemeeter spike makes plan B known-good |
-| Chrome/Zoho processing degrades phrase audio (NS, EC, **AGC**) | Medium | Medium | **Phase 0 spike on a real Zoho Voice call with AGC explicitly in the test matrix** (go/no-go gate); loudness-matched recordings; disable NS/AGC toggles if exposed |
-| AGC counteracts ducking / re-levels phrases (perceived levels ≠ configured levels) | Medium | Medium | Tune duck and gain defaults against post-AGC output in Phase 0; calibration step gives a consistent baseline |
+| App is single point of failure for her live mic (passthrough dies → client hears silence) | High | Medium | Watchdog + auto-rebuild; `RegisterApplicationRestart`; alarm on system default device; **fallback was rehearsed in Phase 0** (mid-call Chrome mic switch tested on a live call, gate passed 2026-06-15); Voicemeeter spike made plan B known-good |
+| Chrome/Zoho processing degrades phrase audio (NS, EC, **AGC**) | Medium | Medium | **Phase 0 spike ran on a real Zoho Voice call with AGC in the test matrix** — go/no-go gate **passed 2026-06-15**; loudness-matched recordings; disable NS/AGC toggles if exposed |
+| AGC counteracts ducking / re-levels phrases (perceived levels ≠ configured levels) | Medium | Medium | Duck and gain defaults were tuned against post-AGC output in Phase 0; calibration step gives a consistent baseline |
 | Loudness mismatch phrases vs live voice breaks the "as if spoken" illusion | Medium | High (with peak-only normalization) | RMS loudness matching to the wizard-calibrated mic reference (decision #13) |
-| End-to-end latency exceeds targets (VB-CABLE internal buffer + Chrome buffering not in app budget) | Medium | Medium | Phase 0 measures **mouth-to-Chrome**; VB-CABLE control-panel latency documented; buffers tuned from measurement (A11) |
-| VB-CABLE install friction (driver, admin, AV warnings, default-device hijack) | Medium | Medium | Wizard with screenshots, verify-after-install, default-device + format + privacy + mixer checks; admin access confirmed available |
+| End-to-end latency exceeds targets (VB-CABLE internal buffer + Chrome buffering not in app budget) | Medium | Medium | Phase 0 measured **mouth-to-Chrome** and the gate passed 2026-06-15 (A11; exact numbers not recorded) |
+| VB-CABLE install friction (driver, admin, AV warnings, default-device hijack) | Medium | Medium | Wizard verify-after-install; default-device + format checks *shipped*; privacy + mixer checks and screenshots *planned*; admin access confirmed available |
 | Echo/feedback (monitor leaking into mic) | Medium | Low | Wired headset confirmed; monitoring goes to headphones only |
 | Latency creep over long sessions (buffer drift) | Medium | Medium | Bounded buffer with drop-oldest/insert-silence + logging; 8-hour soak test in Phase 1 |
 | Stop hotkey unusable (missing Pause key) or conflicting | Low | Low | Wizard existence check + live press-to-test; `Ctrl+F12` fallback; conflict detection at registration |
 | Employer/platform policy forbids the tool | High | **Resolved (2026-06-13)** | No employer/Zoho agreement needed (employer is loyal); risk closed (decision #20) |
-| Operator rejects the UX (buttons, workflow, focus) | Medium | Unknown → resolved early | Supervised half-day pilot after Phase 3 (decision #20), not first contact at Phase 5 |
+| Operator rejects the UX (buttons, workflow, focus) | Medium | **Resolved** | Supervised operator pilot after Phase 3 (decision #20) — **passed 2026-06-29** |
 | WASAPI edge cases (exclusive-mode apps stealing devices) | Medium | Low | Shared mode everywhere; rebuild logic |
-| NAudio/driver quirks specific to her hardware | Medium | Unknown | Phase 0 spike runs on the actual target machine |
+| NAudio/driver quirks specific to her hardware | Medium | Low (post-spike) | Phase 0 spike ran on the actual target machine (passed 2026-06-15) |
 
 ## 5. Fallback playbook (for the user guide)
 
 1. **Phrase audio sounds bad to clients** → re-run calibration; check Zoho/Chrome NS+AGC
    settings; if persistent, switch to the rehearsed Voicemeeter configuration.
 2. **Mic dead mid-call (DEGRADED alarm)** → in Chrome/Zoho switch microphone back to the
-   hardware headset (≈ 30–60 s; **this exact move is rehearsed in Phase 0 on a live
+   hardware headset (≈ 30–60 s; **this exact move was rehearsed in Phase 0 on a live
    call**), finish the call, restart AdaVoice (or let Windows relaunch it after a crash).
 3. **App won't start / engine won't go LIVE** → run setup wizard self-test; verify CABLE
    devices exist in Windows Sound settings; reinstall VB-CABLE if missing.

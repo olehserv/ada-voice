@@ -1,8 +1,12 @@
 # AdaVoice — Operator Pilot Plan (Phase 3 gate)
 
+> **Outcome: PASSED 2026-06-29.** The supervised pilot ran on the real machine; the operator
+> "tested everything, works awesome" (see handoff). The script below is kept for re-runs —
+> for example before the next big UI change or the monetization pilot.
+
 **What this is:** the script for the half-day supervised pilot with the real operator, on the
 real machine. It is the **only acceptance gate before the late phases** (see
-[roadmap](../roadmaps/mvp-roadmap.md#operator-pilot-½-day-after-phase-3)).
+[roadmap](../roadmaps/mvp-roadmap.md#operator-pilot--day-after-phase-3)).
 
 **Goal for THIS pilot (chosen 2026-06-29):** *functional smoke — does it work at all, safely,
 on the real machine in a real test call?* The operator **records fresh phrases live** during
@@ -34,8 +38,8 @@ Reuse the setup from [handoff.md → Next action](../../handoff.md). Confirm all
 - [ ] App builds and launches: `dotnet run --project src/AdaVoice.App`
 - [ ] A second person / phone ready to be the **far end** on a Zoho **test** call
 
-**Not testable in this pilot (don't try):** the global `Pause` stop hotkey is **Phase 4 — not
-built**. Stop is the **on-screen STOP button** only.
+**Not testable in the 2026-06-29 pilot:** the global `Pause` stop hotkey was not built yet.
+*(It shipped 2026-07-01 — include it in any re-run.)*
 
 ## 2. Session script (ordered)
 

@@ -1,15 +1,16 @@
 # AdaVoice — MVP Implementation Roadmap
 
 Strategy layer: **what order, how long, which go/no-go gates.** Full design:
-[`../design/`](../design/README.md). Execution detail:
-[implementation plan](../plans/implementation-plan.md). Release gate:
+[`../design/`](../design/README.md). Release gate:
 [production-readiness plan](../plans/production-readiness-plan.md). Live status:
 [handoff.md](../../handoff.md).
 
-**Status (2026-06-15): design complete and eng-reviewed; Phase 0 go/no-go gate PASSED on the
-target machine (Architecture A confirmed); Phase 1 audio core partly built (seams +
-passthrough + player, 23 tests green, WASAPI seam hardware-validated) — engine orchestrator,
-recorder, and device monitor still to come.**
+**Status (2026-07-05): Phases 0–2 done; the operator pilot PASSED (2026-06-29); Phase 3 and
+Phase 4 are largely done (Board UI, wizard, Settings, stop hotkey all shipped — 360 tests
+green). Still open: Full/Docked layout, localization, hotkey reassignment, the Settings
+Devices group, and all of Phase 5 (hardening sign-off + installer). Work landed in a
+different order than the diagram below — hotkey/settings/wizard came before layouts and
+localization.**
 
 ## Goal
 
@@ -19,7 +20,7 @@ passthrough and instant stop. Local-first, offline, solo-dev scale.
 
 ## Locked decisions
 
-The **canonical decisions table is [design 01 §4](../design/01-overview.md#4-confirmed-decisions-canonical)** (20 entries).
+The **canonical decisions table is [design 01 §4](../design/01-overview.md#4-confirmed-decisions-canonical)** (24 entries).
 Implementation-critical gist: VB-CABLE + in-app NAudio mixer (Voicemeeter rehearsed in
 Phase 0 as known-good plan B); WAV 48 kHz mono with RMS loudness-matching to a calibrated
 mic reference; `Pause` stop hotkey; Recorder = OFF AIR (mutually exclusive with the call
@@ -29,19 +30,19 @@ board; delete = orphan (no trash subsystem); daily backup includes audio; self-c
 
 ## MVP scope checklist
 
-- [ ] Setup wizard: VB-CABLE detect/verify; environment checks (mic privacy, cable = 48 kHz, default output ≠ CABLE Input, session not muted, Communications = "Do nothing"); device pick; voice calibration; `Pause` key press-to-test; Chrome/Zoho instruction; loopback self-test
-- [ ] Audio engine: persistent capture→mix→cable graph behind `IAudioCaptureDevice`/`IAudioRenderDevice` seams; monitor tap; ducking + ducking opt-out interop; single-playback rule; 10 ms stop fade; OFF AIR state; drift policy (drop-oldest / insert-silence, logged); device-loss recovery; DEGRADED alarm on system default device; `RegisterApplicationRestart`
-- [ ] Recorder: record/re-record, trim silence, RMS loudness-match to calibrated reference (peak ceiling −3 dBFS), preview to monitor, OFF AIR enforcement
-- [ ] Library: categories, tags, search, move-via-edit-dialog, delete-as-orphan, JSON repository (atomic writes)
-- [ ] Board UI: large phrase buttons (enable as background decode lands), Topmost toggle (default on), status bar (engine state incl. OFF AIR, mic meter, progress), big STOP; **WPF-UI fixed dark theme + tokens per [design 09](../design/09-design-system.md)**; **Full + Docked layouts (min 420×560)**
-- [ ] Interaction states per design 05 §2: first-run welcome board, decode-dimmed buttons, broken-phrase repair, search/category empty states, saved/backup toasts
-- [ ] Global stop hotkey `Pause` via `RegisterHotKey`, reassignable, conflict-surfaced, `Ctrl+F12` fallback
-- [ ] Settings: grouped IA (Levels → Behavior → Language & Backup → Devices with confirm-on-change), devices with meters, live duck sliders, re-run calibration, language choice (applies on restart)
-- [ ] Localization UA/PL/EN (static .resx, completeness test)
-- [ ] Backup: daily zip incl. `audio\` (keep 7), manual export/import
-- [ ] Tests per [design 08](../design/08-testing.md): state machine, golden-file DSP, storage, services; CI from Phase 1
-- [ ] Logging (Serilog) + engine state alarms
-- [ ] Installer (Inno Setup, self-contained .NET 10) + short user guide with Zoho screenshots incl. SmartScreen note
+- [x] Setup wizard: environment checks (mic privacy, cable = 48 kHz, default output ≠ CABLE Input, session not muted, Communications = "Do nothing"); voice calibration; hotkey status; Chrome/Zoho instruction; first-call card; VB-CABLE download link — **remaining (wizard v2):** device pick, live meters, loopback self-test, VB-CABLE install detection
+- [x] Audio engine: persistent capture→mix→cable graph behind `IAudioCaptureDevice`/`IAudioRenderDevice` seams; monitor tap; ducking + ducking opt-out interop; single-playback rule; stop fade; OFF AIR state; drift policy; device-loss recovery; DEGRADED alarm on system default device; `RegisterApplicationRestart`
+- [x] Recorder: record/re-record, trim silence, RMS loudness-match to calibrated reference (peak ceiling −3 dBFS), preview to monitor, OFF AIR enforcement — **remaining:** live level meter (needs live metering capability)
+- [x] Library: categories, tags, search, move-via-edit-dialog, delete-as-orphan, JSON repository (atomic writes)
+- [x] Board UI: large phrase tiles (category colour fill, tag chips), Topmost, status bar (engine state incl. OFF AIR + error surface), big STOP; **WPF-UI fixed dark theme + tokens per [design 09](../design/09-design-system.md)** — **remaining (slice 3):** Full + Docked layouts (min 420×560 is enforced)
+- [x] Interaction states per design 05 §2: first-run welcome board, broken-phrase repair dialog, search/category empty states, Recorder Processing state, saved/backup toasts — **remaining:** decode-dimmed buttons (phrases load synchronously today)
+- [x] Global stop hotkey `Pause` via `RegisterHotKey`, `Ctrl+F12` fallback, conflict-surfaced — **remaining:** true reassignment (capture-any-key)
+- [x] Settings: grouped IA (Levels → Behavior → Language & Backup), live duck slider, re-run calibration, language choice (applies on restart) — **remaining:** Devices group with meters + confirm-on-change (needs live metering)
+- [ ] Localization UA/PL/EN (static .resx, completeness test) — **slice 4, not started**
+- [x] Backup: daily zip incl. `audio\` (keep 7), manual export/import
+- [x] Tests per [design 08](../design/08-testing.md): state machine, golden-file DSP, storage, services; CI green (360 tests across 5 projects)
+- [x] Logging (Serilog) + engine state alarms
+- [ ] Installer (Inno Setup, self-contained .NET 10) + short user guide with Zoho screenshots incl. SmartScreen note — **not started**
 
 **Not in MVP:** per-phrase hotkeys, compact always-on-top strip (Topmost board covers v1), runtime language switching, drag-and-drop, trash/purge subsystem, MP3 export, encrypted backup, noise-reduction DSP, phrase chaining, two-process split.
 
@@ -59,7 +60,7 @@ flowchart LR
     P4 --> P5["Phase 5\nHardening + installer\n1 wk"]
 ```
 
-### Phase 0 — Spike + human gates (2–4 days) · highest risk first
+### Phase 0 — Spike + human gates (2–4 days) · highest risk first — ✅ DONE (gate PASSED 2026-06-15)
 
 Throwaway console prototype (not production code): NAudio mic→CABLE passthrough + WAV mixing.
 
@@ -83,7 +84,7 @@ Throwaway console prototype (not production code): NAudio mic→CABLE passthroug
   for 1 h; ducking opt-out verified; fallback rehearsed; B documented. Failure of A →
   adopt the rehearsed B configuration and re-scope Phase 1 (engine shrinks to soundboard).
 
-### Phase 1 — Audio core + tests (1–2 wks)
+### Phase 1 — Audio core + tests (1–2 wks) — ✅ DONE (2026-06; hardware-verified 2026-07-01; note: the 8-hour soak was never run — it stays a production-readiness sign-off item)
 
 `AudioEngine`, `MicPassthrough`, `PhrasePlayer`, `Recorder`, `DeviceMonitor` behind the
 device seams from [design 08 §1](../design/08-testing.md); state machine
@@ -92,14 +93,14 @@ device seams from [design 08 §1](../design/08-testing.md); state machine
 **Exit:** all 08 §3 engine/mixer/recorder tests green; 8-hour soak passes (drift events
 logged < a few/hour); device unplug/replug recovers automatically.
 
-### Phase 2 — Library + storage (1 wk)
+### Phase 2 — Library + storage (1 wk) — ✅ DONE (2026-06)
 
 JSON repository with atomic writes, orphaning delete, startup validation, daily backup
 incl. audio, zip export/import.
 **Exit:** storage test suite green (incl. automated kill -9 simulation and corrupt-file
 recovery); export→import round-trips losslessly.
 
-### Phase 3 — Board UI + Recorder UI + localization (1–2 wks)
+### Phase 3 — Board UI + Recorder UI + localization (1–2 wks) — 🟡 MOSTLY DONE (Board + recorder UI + interaction states shipped; open: Full/Docked layouts, decode-dimmed buttons, localization)
 
 MVVM screens built on WPF-UI dark theme + [design 09](../design/09-design-system.md) tokens; Full **and Docked** layouts;
 search, edit-dialog categorization, status bar + STOP, Topmost toggle, recorder panel with
@@ -108,13 +109,13 @@ empty search/category, toasts); static `.resx` UA/PL/EN + completeness test.
 **Exit:** full record→organize→play→stop flow usable in both layouts; localization test
 green; every state in the 05 §2 table reachable and styled.
 
-### Operator pilot (½ day, after Phase 3)
+### Operator pilot (½ day, after Phase 3) — ✅ PASSED (2026-06-29; script kept in [operator-pilot.md](../plans/operator-pilot.md))
 
 Supervised session with the real operator on the real machine (test calls, not client
 calls): button sizes, duck defaults, category workflow, Topmost ergonomics, OFF AIR clarity.
 Findings feed Phase 4. **The only user's acceptance is validated here, not at the end.**
 
-### Phase 4 — Stop hotkey + Settings + wizard (1 wk)
+### Phase 4 — Stop hotkey + Settings + wizard (1 wk) — 🟡 MOSTLY DONE (hotkey, Settings, wizard shipped; open: hotkey reassignment, Devices group, wizard loopback self-test, clean-VM check)
 
 `RegisterHotKey` stop (`Pause` + fallback), conflict surfacing; settings page with live duck
 sliders, calibration re-run, device meters; setup wizard with all environment checks,
@@ -122,7 +123,7 @@ loopback self-test, and the first-call confidence card (decision #24).
 **Exit:** stop fires while Chrome is focused; wizard succeeds on a clean Windows VM
 (self-contained install, no runtime download).
 
-### Phase 5 — Hardening + installer (1 wk)
+### Phase 5 — Hardening + installer (1 wk) — ⬜ NOT STARTED
 
 Edge cases from [design 07](../design/07-risks-security.md), Serilog, Inno Setup installer
 (self-contained), user guide (fallback playbook, Zoho mic screenshots, SmartScreen note),
@@ -133,15 +134,15 @@ final manual call-test checklist ([design 08 §4](../design/08-testing.md)), pil
 
 ## Assumptions (carried into implementation)
 
-1. ⚠ Zoho Voice respects Chrome mic selection and passes pre-recorded speech intelligibly
-   through NS/EC/**AGC** — **verified only by Phase 0** (A5/A6).
+1. ✅ Zoho Voice respects Chrome mic selection and passes pre-recorded speech intelligibly
+   through NS/EC/**AGC** — **verified by the Phase 0 gate, 2026-06-15** (A5/A6).
 2. Wired headset on Windows 10/11 x64; admin available for VB-CABLE install (confirmed).
 3. Library stays at "few dozen" scale — full RAM pre-decode is safe (~100 MB ceiling).
 4. Employer/platform permits assistive audio tools — **resolved 2026-06-13: no employer/Zoho
    agreement needed (employer is loyal); no longer a gate** (A8).
 5. VB-CABLE cannot be bundled (license) — wizard-driven manual install is acceptable UX.
-6. ⚠ All latency numbers are app-side design targets until Phase 0 measures mouth-to-Chrome
-   end-to-end, including VB-CABLE internal buffering (A11).
+6. ✅ Mouth-to-Chrome latency confirmed acceptable by the Phase 0 gate (A11); the exact
+   measured number was never written down (see `spike/PHASE0-RESULTS.md`).
 
 ## Deferred (post-MVP backlog)
 
@@ -163,7 +164,7 @@ local usage stats for board layout.
 
 - **CROSS-MODEL:** Eng-review outside voice (Claude fresh-context subagent; Codex CLI
   unavailable) raised 14 findings; all 14 accepted. Design review ran without outside
-  voices (user choice) and without mockups (no OpenAI key — tracked in [handoff.md](../../handoff.md)).
+  voices (user choice) and without mockups (no OpenAI key at the time).
 - **VERDICT:** ENG + DESIGN CLEARED — design docs, the [design system](../design/09-design-system.md),
   and this roadmap updated in place; ready for Phase 0.
 

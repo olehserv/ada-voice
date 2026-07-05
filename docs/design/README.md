@@ -5,7 +5,8 @@ online operator play pre-recorded phrases in her own voice into the microphone d
 client conversations (Zoho CRM Web in Google Chrome).
 
 **Status:** Design phase complete, reviewed (eng review 2026-06-10, incl. independent
-outside-voice challenge). No application code exists yet.
+outside-voice challenge). The app is now built and in daily-use shape — these documents are
+the living design reference. Live status: [handoff.md](../../handoff.md).
 
 ## Documents
 
@@ -18,12 +19,11 @@ outside-voice challenge). No application code exists yet.
 | [05-ui-design.md](05-ui-design.md) | WPF UI design, localization (UA/PL/EN), keyboard UX, settings, wizard |
 | [06-audio-engine.md](06-audio-engine.md) | Audio engine internals, recording engine, hotkeys, latency budget |
 | [07-risks-security.md](07-risks-security.md) | Error handling, edge cases, security/privacy, legal/ethical notes, risk register |
-| [08-testing.md](08-testing.md) | Test strategy: device seams, golden-file DSP tests, state-machine tests, manual call checklist |
-| [09-design-system.md](09-design-system.md) | **Canonical visual system**: theme, color tokens, typography, spacing, layout rules (built from by 05) |
+| [08-testing.md](08-testing.md) | Test strategy: device seams, DSP tests, state-machine tests, manual call checklist |
+| [09-design-system.md](09-design-system.md) | **Canonical visual system**: theme, color tokens, typography, spacing, layout rules (what 05's screens are built from) |
 
 Planning docs:
 [roadmap](../roadmaps/mvp-roadmap.md) (strategy) ·
-[implementation plan](../plans/implementation-plan.md) (execution) ·
 [production-readiness plan](../plans/production-readiness-plan.md) (release gate) ·
 [handoff.md](../../handoff.md) (live status)
 
@@ -32,6 +32,7 @@ Planning docs:
 The **canonical decisions table lives in [01-overview.md §4](01-overview.md#4-confirmed-decisions-canonical)** —
 this section is a gist only. In short: VB-CABLE + in-app mixer (Voicemeeter rehearsed as
 plan B in Phase 0), Zoho CRM in Chrome with a wired headset, configurable ducking, `Pause`
-as the emergency-stop hotkey, UA/PL/EN UI applied on restart, recording is mutually
-exclusive with being on air, and one non-technical gate — a supervised operator pilot after
-Phase 3 (the employer-permission gate was resolved 2026-06-13: no agreement needed).
+as the emergency-stop hotkey, UA/PL/EN UI applied on restart, and recording is mutually
+exclusive with being on air. The one non-technical gate — a supervised operator pilot after
+Phase 3 — **passed 2026-06-29** (the employer-permission gate was resolved 2026-06-13: no
+agreement needed).
