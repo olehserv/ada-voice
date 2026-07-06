@@ -10,17 +10,22 @@ back up. It answers one question: *where are we right now?*
 - Details of past work live in git history and in the dated docs under `docs/reviews/`.
   This file stays short on purpose.
 
-_Last updated: 2026-07-05._
+_Last updated: 2026-07-06._
 
 ## Status in one line
 
 **The app is built and verified on the target machine** — engine, recorder, library, Board UI,
 setup wizard, Settings window, stop hotkey, backups, export/import; 360 tests green
-(72 Core + 97 Audio + 8 Wasapi + 5 Host + 178 App). Slice 2 (interaction-state gaps) is pushed
-to `main` but **not yet smoke-tested by the user**. Monetization exists as a full design
-(no code yet).
+(72 Core + 97 Audio + 8 Wasapi + 5 Host + 178 App). Slice 2 (interaction-state gaps) is smoke-tested
+and confirmed working. Monetization exists as a full design (no code yet).
 
-## Latest work (2026-07-05)
+## Latest work (2026-07-06)
+
+- **Slice 2 smoke test — PASSED.** User ran the full checklist (category-empty CTA, search
+  Clear, repair dialog, Processing state, blank-title guard, wizard spinner): "works great, no
+  bugs detected." Slice 2 is now fully done, not just shipped.
+
+## Previous work (2026-07-05)
 
 - **Docs consolidation:** deleted the stale `.ukr/` mirror, executed plan/spec checklists
   (`docs/superpowers/`), the two 2026-07-04 fix plans, and the frozen implementation plan.
@@ -36,7 +41,7 @@ to `main` but **not yet smoke-tested by the user**. Monetization exists as a ful
 - **Slice 2 (interaction-state gaps) shipped:** repair dialog for broken phrases,
   category-empty CTA, search Clear + query echo, Recorder Processing state + hardened
   `SaveTake` (closes review finding M15), wizard per-check spinner. Fully reviewed;
-  360 tests green; pushed to `main`. Awaiting the user's smoke test (checklist below).
+  360 tests green; pushed to `main`; smoke-tested (see 2026-07-06 above).
 
 ## Done (compact history, newest first)
 
@@ -84,11 +89,7 @@ to `main` but **not yet smoke-tested by the user**. Monetization exists as a ful
 
 ## In progress
 
-**Slice 2 smoke test (user, ~10 min):** record into an empty category from its CTA; search a
-no-match term and use both Clear buttons; click a broken phrase (temporarily rename its WAV)
-and try Cancel/Remove/Re-record; watch for "Processing…" after Stop with no Record-button
-flash; try to Save with a blank title (button disabled); run Setup and watch the
-environment-checks spinner.
+Nothing open right now. Slice 2 is done and verified; next work needs a decision first (see below).
 
 ## Next action
 
@@ -96,11 +97,14 @@ environment-checks spinner.
 [ui-ux-localization-scope.md](docs/plans/ui-ux-localization-scope.md)):
 
 1. ✅ Settings window — done, smoke-tested.
-2. ✅ Interaction-state gaps — done, **needs the smoke test above**.
+2. ✅ Interaction-state gaps — done, smoke-tested.
 3. **Full/Docked responsive layout** — not started; needs a design decision first (bring back
    the category rail at ≥720 px, or keep dropdown-only and update design 05).
 4. **Localization retrofit (UA/PL/EN)** — last, after slice 3's strings exist. All UI strings
    so far are English-only; a `.resx` retrofit is known debt.
+
+Separately, **monetization** is blocked on the owner answering OQ-12/OC-06 (device vs per-seat
+limits) before Phase 0 of the [monetize roadmap](docs/monetize/implementation-roadmap.md) starts.
 
 **Monetization** — next step is Phase 0 of the
 [monetize roadmap](docs/monetize/implementation-roadmap.md), after the owner answers

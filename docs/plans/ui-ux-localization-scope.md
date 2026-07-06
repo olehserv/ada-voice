@@ -48,9 +48,9 @@ Four independently shippable slices, in this order:
 1. ✅ **Settings window** — shipped 2026-07-02/04 (Levels / Behavior / Language & Backup,
    incl. backup/export UI). Deferred to a future slice: the Devices group (pickers + meters —
    needs live audio metering, which does not exist yet) and true hotkey reassignment.
-2. ✅ **Interaction-state gaps on the existing Board** — shipped 2026-07-05 (repair dialog,
-   category-empty CTA, search Clear + query echo, Recorder Processing state, wizard per-check
-   spinner). Pending the user's smoke test. Deferred with the Devices group: the recorder
+2. ✅ **Interaction-state gaps on the existing Board** — shipped 2026-07-05, smoke-tested
+   2026-07-06 (repair dialog, category-empty CTA, search Clear + query echo, Recorder
+   Processing state, wizard per-check spinner). Deferred with the Devices group: the recorder
    live level meter (same missing live-metering capability).
 3. **Full/Docked responsive layout** — needs a design decision first: does the category rail
    come back at ≥720px, or do we keep the dropdown-only layout and update design 05 to match
