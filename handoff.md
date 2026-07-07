@@ -19,8 +19,32 @@ setup wizard, Settings window, stop hotkey, backups, export/import; 360 tests gr
 (72 Core + 97 Audio + 8 Wasapi + 5 Host + 178 App). Slice 2 (interaction-state gaps) is smoke-tested
 and confirmed working. Monetization exists as a full design (no code yet).
 
-## Latest work (2026-07-06)
+## Latest work (2026-07-06 … 07-07)
 
+- **Recorder moved to a modal window** (owner request): the Board's bottom record strip is
+  gone; a Record button sits in the filter row (and the empty-state cards still work). All
+  entry points go through `BoardViewModel`'s new `showRecorder` callback, so the window opens
+  even when the start fails (it shows why). Closing mid-take stops the recorder and keeps the
+  take pending; Record with a take already recording/waiting **reopens the recorder instead of
+  starting (and overwriting)** — the Board's Record button lights amber while a take waits.
+  Fixed-height dialog on purpose: `SizeToContent` mis-measures under FluentWindow chrome and
+  would jump between recorder states.
+- **Notices became severity-colored toasts** (owner request): the inline notice text under the
+  engine buttons is gone; all `Notice` messages now pop bottom-right of the board area (never
+  over STOP) via `BoardViewModel.Notified` — neutral info, amber warning, red error. The
+  library-load warning shows as a longer toast on startup. `Notice` stays as VM state (tests).
+  364 tests green (4 new this session); warning toast verified by screenshot.
+- **UI redesign shipped** (brief: [design 10](docs/design/10-ui-redesign-brief.md), tokens:
+  [design 09](docs/design/09-design-system.md)). Expanded token system (surface ramp, subtle
+  borders, status tints, hover/press overlays, radius scale), engine-state **status pill**,
+  tile hover/press feedback, brand accent applied in code (Primary buttons used to take the OS
+  accent color), all six windows on dark `FluentWindow` chrome, `Esc` = stop and `Ctrl+F` =
+  search, readable tag chips (colored border, primary text). The OFF AIR banner was **removed**
+  (owner call): the OFF AIR toggle now lights amber (`Caution`) while off air, with the amber
+  status pill as the second indicator. 360 tests green; Board, Settings, and tile hover verified
+  by screenshot. **Needs a user smoke test**: wizard + dialogs, the lit OFF AIR toggle, playing
+  ring with a live engine. The Conversations plan's Task 7 carries a compatibility note (its
+  XAML snippets predate the redesign).
 - **Slice 2 smoke test — PASSED.** User ran the full checklist (category-empty CTA, search
   Clear, repair dialog, Processing state, blank-title guard, wizard spinner): "works great, no
   bugs detected." Slice 2 is now fully done, not just shipped.

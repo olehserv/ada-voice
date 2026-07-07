@@ -15,6 +15,12 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </Window.Resources>
 
+    <!-- Esc = panic stop from anywhere in the window (the global hotkey covers other apps).
+         ComboBox/menu popups handle Esc themselves first, so this never fights them. -->
+    <Window.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding StopCommand}" />
+    </Window.InputBindings>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -24,77 +30,206 @@
         <!-- Fluent title bar (compact tool: no maximize) -->
         <ui:TitleBar Grid.Row="0" Title="AdaVoice" ShowMaximize="False" CanMaximize="False" />
 
-        <Grid Grid.Row="1" Margin="12">
+        <Grid Grid.Row="1" Margin="12,4,12,12">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- OFF AIR banner: shown while recording (the call feed is paused) -->
-        <Border Grid.Row="0" Background="{StaticResource Status.OffAir}" CornerRadius="{StaticResource Radius.Control}"
-                Padding="12,6" Margin="0,0,0,8"
-                Visibility="{Binding Status.IsOffAir, Converter={StaticResource BoolToVis}}">
-            <TextBlock Text="OFF AIR — recording (the call cannot hear you)" Foreground="#1F1F1F"
-                       FontWeight="SemiBold" HorizontalAlignment="Center" />
-        </Border>
+        <!-- Status panel: state pill + error on the first row, engine controls below,
+             window-level actions (setup/settings) top-right as quiet icon buttons. -->
+        <Border Grid.Row="0" Style="{StaticResource PanelStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-        <!-- Status bar: engine state + engine controls -->
-        <Border Grid.Row="1" Background="{StaticResource Surface.Raised}" CornerRadius="{StaticResource Radius.Control}"
-                Padding="{StaticResource Pad.Control}">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="{Binding Status.StateLabel}" FontWeight="SemiBold"
-                           FontSize="{StaticResource FontSize.SectionTitle}"
-                           VerticalAlignment="Center" MinWidth="90" />
-                <!-- Why the engine landed here (e.g. a failed Start's reason). Empty = collapsed-looking. -->
-                <TextBlock Text="{Binding Status.StateError}" Foreground="#C42B1C"
-                           VerticalAlignment="Center" Margin="8,0,0,0" MaxWidth="420"
-                           TextTrimming="CharacterEllipsis"
-                           ToolTip="{Binding Status.StateError}" />
-                <ui:Button Content="Start" Appearance="Secondary" Command="{Binding StartEngineCommand}" Margin="8,0,0,0"
-                           IsEnabled="{Binding Status.CanStart}" />
-                <ui:Button Content="Stop engine" Appearance="Secondary" Command="{Binding StopEngineCommand}" Margin="8,0,0,0"
-                           IsEnabled="{Binding Status.IsEngineRunning}" />
-                <ui:Button Content="OFF AIR" Appearance="Secondary" Command="{Binding ToggleOffAirCommand}" Margin="8,0,0,0"
-                           IsEnabled="{Binding Status.IsEngineRunning}" />
-                <ui:Button Content="Setup…" Appearance="Secondary" Command="{Binding RunSetupCommand}" Margin="8,0,0,0" />
-                <ui:Button Content="Settings…" Appearance="Secondary" Command="{Binding RunSettingsCommand}" Margin="8,0,0,0" />
-            </StackPanel>
+                    <!-- Engine state pill: colored dot + label, tinted wash per state. The dot plus
+                         the ALL-CAPS label mean state is never conveyed by color alone. -->
+                    <Border Grid.Column="0" CornerRadius="{StaticResource Radius.Pill}" Padding="10,4"
+                            VerticalAlignment="Center"
+                            AutomationProperties.Name="{Binding Status.StateLabel}">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{StaticResource Status.Stopped.Tint}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Status.State}" Value="Live">
+                                        <Setter Property="Background" Value="{StaticResource Status.Live.Tint}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Status.State}" Value="OffAir">
+                                        <Setter Property="Background" Value="{StaticResource Status.OffAir.Tint}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Status.State}" Value="Degraded">
+                                        <Setter Property="Background" Value="{StaticResource Status.Degraded.Tint}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="{StaticResource Status.Stopped}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Status.State}" Value="Live">
+                                                <Setter Property="Fill" Value="{StaticResource Status.Live}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status.State}" Value="OffAir">
+                                                <Setter Property="Fill" Value="{StaticResource Status.OffAir}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status.State}" Value="Degraded">
+                                                <Setter Property="Fill" Value="{StaticResource Status.Degraded}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock Text="{Binding Status.StateLabel}" FontWeight="SemiBold"
+                                       Margin="6,0,0,0" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource Text.Secondary}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Status.State}" Value="Live">
+                                                <Setter Property="Foreground" Value="{StaticResource Status.Live}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status.State}" Value="OffAir">
+                                                <Setter Property="Foreground" Value="{StaticResource Status.OffAir}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status.State}" Value="Degraded">
+                                                <Setter Property="Foreground" Value="{StaticResource Status.Degraded}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Why the engine landed here (e.g. a failed Start's reason). Empty = invisible. -->
+                    <TextBlock Grid.Column="1" Text="{Binding Status.StateError}"
+                               Foreground="{StaticResource Status.Degraded}"
+                               VerticalAlignment="Center" Margin="10,0,8,0"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding Status.StateError}" />
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <ui:Button Appearance="Transparent" BorderThickness="0" Padding="6"
+                                   Icon="{ui:SymbolIcon Wrench24}"
+                                   Command="{Binding RunSetupCommand}"
+                                   ToolTip="Run setup again" AutomationProperties.Name="Setup" />
+                        <ui:Button Appearance="Transparent" BorderThickness="0" Padding="6" Margin="4,0,0,0"
+                                   Icon="{ui:SymbolIcon Settings24}"
+                                   Command="{Binding RunSettingsCommand}"
+                                   ToolTip="Settings" AutomationProperties.Name="Settings" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- Engine controls. Start is the one primary action while stopped. -->
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,0">
+                    <ui:Button Content="Start" Appearance="Primary" Command="{Binding StartEngineCommand}"
+                               IsEnabled="{Binding Status.CanStart}" />
+                    <ui:Button Content="Stop engine" Appearance="Secondary" Command="{Binding StopEngineCommand}" Margin="8,0,0,0"
+                               IsEnabled="{Binding Status.IsEngineRunning}" />
+                    <!-- A toggle must show its own state: lit amber (Caution) while off air.
+                         The banner this replaced (owner call, 2026-07-06) lives in git history. -->
+                    <ui:Button Content="OFF AIR" Command="{Binding ToggleOffAirCommand}" Margin="8,0,0,0"
+                               IsEnabled="{Binding Status.IsEngineRunning}">
+                        <ui:Button.Style>
+                            <!-- BasedOn the implicit WPF-UI style: a bare local Style would replace
+                                 it and strip the Fluent chrome entirely. -->
+                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Setter Property="Appearance" Value="Secondary" />
+                                <Setter Property="ToolTip" Value="Pause the call feed (the call cannot hear you)" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Status.IsOffAir}" Value="True">
+                                        <Setter Property="Appearance" Value="Caution" />
+                                        <Setter Property="ToolTip" Value="OFF AIR — the call cannot hear you. Click to go back on air." />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
+                </StackPanel>
+            </Grid>
         </Border>
 
         <!-- Search + category filter, then the phrase buttons / welcome / no-match states -->
-        <Grid Grid.Row="2" Margin="0,12">
+        <Grid Grid.Row="1" Margin="0,12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Search box + category filter — hidden until the board has at least one phrase -->
-        <Grid Grid.Row="0" Margin="0,0,0,8"
+        <!-- Search on its own line, filters below it — both rows survive the 420 px docked
+             width, and the filter row has room for the Conversations selector later. -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,8"
               Visibility="{Binding HasPhrases, Converter={StaticResource BoolToVis}}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <ui:TextBox Grid.Column="0" PlaceholderText="Search title or tags…"
-                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
-            <ui:Button Grid.Column="1" Margin="4,0,0,0" Appearance="Secondary" Content="✕"
-                       Command="{Binding ClearSearchCommand}" ToolTip="Clear search"
-                       Visibility="{Binding HasSearchText, Converter={StaticResource BoolToVis}}" />
-            <ComboBox Grid.Column="2" Margin="8,0,0,0" MinWidth="150" VerticalAlignment="Center"
-                      ItemsSource="{Binding CategoryFilterOptions}"
-                      SelectedItem="{Binding SelectedCategoryFilter}"
-                      DisplayMemberPath="Name" />
-            <ui:Button Grid.Column="3" Margin="8,0,0,0" Appearance="Secondary"
-                       Content="Categories…" Command="{Binding ManageCategoriesCommand}"
-                       ToolTip="Add, rename, or delete categories" />
-        </Grid>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBox x:Name="SearchBox" Grid.Column="0" PlaceholderText="Search title or tags…  (Ctrl+F)"
+                            Icon="{ui:SymbolIcon Search24}"
+                            Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                <ui:Button Grid.Column="1" Margin="4,0,0,0" Appearance="Transparent" BorderThickness="0"
+                           Padding="6" VerticalAlignment="Center"
+                           Icon="{ui:SymbolIcon Dismiss24}"
+                           Command="{Binding ClearSearchCommand}" ToolTip="Clear search"
+                           AutomationProperties.Name="Clear search"
+                           Visibility="{Binding HasSearchText, Converter={StaticResource BoolToVis}}" />
+            </Grid>
+            <Grid Margin="0,8,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox Grid.Column="0" MinWidth="160" VerticalAlignment="Center"
+                          ItemsSource="{Binding CategoryFilterOptions}"
+                          SelectedItem="{Binding SelectedCategoryFilter}"
+                          DisplayMemberPath="Name"
+                          AutomationProperties.Name="Category filter" />
+                <ui:Button Grid.Column="1" Margin="8,0,0,0" Appearance="Transparent" BorderThickness="0"
+                           Content="Categories…" Foreground="{StaticResource Text.Secondary}"
+                           Command="{Binding ManageCategoriesCommand}"
+                           ToolTip="Add, rename, or delete categories" />
+                <!-- Starts a take immediately and opens the recorder window (BoardViewModel calls
+                     back into MainWindow.ShowRecorder). With a take already waiting, it reopens
+                     the recorder instead — the lit Caution state says something is unfinished. -->
+                <ui:Button Grid.Column="3" Icon="{ui:SymbolIcon Mic24}"
+                           Content="Record" Command="{Binding StartRecordingCommand}">
+                    <ui:Button.Style>
+                        <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                            <Setter Property="Appearance" Value="Secondary" />
+                            <Setter Property="ToolTip" Value="Record a new phrase (pauses the call feed while recording)" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasPendingTake}" Value="True">
+                                    <Setter Property="Appearance" Value="Caution" />
+                                    <Setter Property="ToolTip" Value="A recording is waiting to be saved — click to open it." />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ui:Button.Style>
+                </ui:Button>
+            </Grid>
+        </StackPanel>
 
         <Grid Grid.Row="1">
+        <!-- Toasts pop in the bottom-right of the board area — never over the STOP zone. -->
+        <ui:SnackbarPresenter x:Name="RootSnackbar" Panel.ZIndex="1"
+                              HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                              MaxWidth="380" />
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       Visibility="{Binding HasMatches, Converter={StaticResource BoolToVis}}">
             <ItemsControl ItemsSource="{Binding PhrasesView}">
@@ -107,11 +242,10 @@
                     <DataTemplate>
                         <!-- Tag carries the board VM so the context-menu items (outside the visual tree)
                              can reach EditCommand/DeleteCommand; CommandParameter is the phrase item. -->
-                        <!-- Padding 0 + stretched content so the category-colour Border fills the whole
-                             tile. The fill lives on our own Border (not the ui:Button Background) so it is
-                             immune to WPF-UI's hover/press appearance states. -->
-                        <ui:Button CommandParameter="{Binding}" Padding="0"
-                                   HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                        <!-- The category-colour fill lives on our own inner Border (not the ui:Button
+                             Background) so WPF-UI's hover/press states can't wash it out; hover and
+                             press feedback comes from the overlay Border painted on top instead. -->
+                        <ui:Button CommandParameter="{Binding}"
                                    Background="Transparent" CornerRadius="{StaticResource Radius.Control}"
                                    Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
@@ -144,40 +278,61 @@
                             </ui:Button.ContextMenu>
                             <!-- Full-bleed fill = the category colour; every text mark uses the same
                                  auto-contrast (black/white) brush so nothing goes illegible on a fill. -->
-                            <Border CornerRadius="{StaticResource Radius.Control}" Padding="12"
-                                    Background="{Binding CategoryColor, Converter={StaticResource HexToBrush}}">
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
-                                               FontSize="{StaticResource FontSize.SectionTitle}"
-                                               TextWrapping="Wrap" MaxWidth="170"
-                                               Foreground="{Binding CategoryColor, Converter={StaticResource ContrastText}}" />
-                                    <TextBlock Text="{Binding DurationLabel}"
-                                               FontSize="{StaticResource FontSize.Label}" Opacity="0.75" Margin="0,6,0,0"
-                                               Foreground="{Binding CategoryColor, Converter={StaticResource ContrastText}}" />
-                                    <TextBlock Text="⚠ audio missing" FontSize="{StaticResource FontSize.Label}"
-                                               Margin="0,4,0,0"
-                                               Foreground="{Binding CategoryColor, Converter={StaticResource ContrastText}}"
-                                               Visibility="{Binding IsBroken, Converter={StaticResource BoolToVis}}" />
+                            <Grid>
+                                <Border Style="{StaticResource PhraseTileFillStyle}"
+                                        Background="{Binding CategoryColor, Converter={StaticResource HexToBrush}}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                                   FontSize="{StaticResource FontSize.SectionTitle}"
+                                                   TextWrapping="Wrap" MaxWidth="170"
+                                                   Foreground="{Binding CategoryColor, Converter={StaticResource ContrastText}}" />
+                                        <TextBlock Text="{Binding DurationLabel}" Typography.NumeralAlignment="Tabular"
+                                                   FontSize="{StaticResource FontSize.Label}" Opacity="0.75" Margin="0,6,0,0"
+                                                   Foreground="{Binding CategoryColor, Converter={StaticResource ContrastText}}" />
+                                        <TextBlock Text="⚠ audio missing" FontSize="{StaticResource FontSize.Label}"
+                                                   Margin="0,4,0,0"
+                                                   Foreground="{Binding CategoryColor, Converter={StaticResource ContrastText}}"
+                                                   Visibility="{Binding IsBroken, Converter={StaticResource BoolToVis}}" />
 
-                                    <!-- Tag chips: colour border + colour text on a fixed dark scrim, so
-                                         they stay legible over any category fill (not just the neutral one). -->
-                                    <ItemsControl ItemsSource="{Binding TagChips}" Margin="0,6,0,0">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border CornerRadius="8" BorderThickness="1" Margin="0,0,4,4" Padding="6,1"
-                                                        Background="#66000000"
-                                                        BorderBrush="{Binding Color, Converter={StaticResource HexToBrush}}">
-                                                    <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSize.Label}"
-                                                               Foreground="{Binding Color, Converter={StaticResource HexToBrush}}" />
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Border>
+                                        <!-- Tag chips: the tag's colour lives on the border (its identity);
+                                             the text stays primary-on-scrim so a dark tag colour can never
+                                             make its own name unreadable. -->
+                                        <ItemsControl ItemsSource="{Binding TagChips}" Margin="0,6,0,0">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                                                            Margin="0,0,4,4" Padding="6,1"
+                                                            Background="{StaticResource Scrim.Tag}"
+                                                            BorderBrush="{Binding Color, Converter={StaticResource HexToBrush}}">
+                                                        <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSize.Label}"
+                                                                   Foreground="{StaticResource Text.Primary}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                                <!-- Hover/press feedback over any category fill. Not hit-testable, so
+                                     clicks and the context menu pass straight through it. -->
+                                <Border CornerRadius="{StaticResource Radius.Control}" IsHitTestVisible="False">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource Overlay.Hover}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsPressed, RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource Overlay.Pressed}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                </Border>
+                            </Grid>
                         </ui:Button>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
@@ -233,61 +388,21 @@
         </Grid>
         </Grid>
 
-        <!-- Record area -->
-        <Border Grid.Row="3" Background="{StaticResource Surface.Raised}" CornerRadius="{StaticResource Radius.Control}"
-                Padding="{StaticResource Pad.Control}" Margin="0,0,0,12">
-            <StackPanel>
-                <StackPanel Orientation="Horizontal">
-                    <!-- Idle: offer to record (hidden while recording or while a take is pending) -->
-                    <ui:Button Content="Record" Appearance="Primary"
-                               Command="{Binding StartRecordingCommand}"
-                               Visibility="{Binding ShowRecordButton, Converter={StaticResource BoolToVis}}" />
-
-                    <!-- Recording -->
-                    <StackPanel Orientation="Horizontal"
-                                Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="Recording…" VerticalAlignment="Center" FontWeight="SemiBold" />
-                        <ui:Button Content="Stop" Appearance="Secondary" Command="{Binding StopRecordingCommand}" Margin="12,0,0,0" />
-                    </StackPanel>
-
-                    <!-- Bridges the gap between Stop and the pending-take bar appearing, so the
-                         idle Record button never flashes back in between. -->
-                    <TextBlock Text="Processing…" VerticalAlignment="Center" FontWeight="SemiBold"
-                               Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}}" />
-
-                    <!-- A take is waiting to be saved -->
-                    <StackPanel Orientation="Horizontal"
-                                Visibility="{Binding HasPendingTake, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="{Binding PendingTakeDurationLabel}"
-                                   VerticalAlignment="Center" Foreground="{StaticResource Text.Secondary}" />
-                        <TextBox Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" Width="160"
-                                 Margin="8,0,0,0" VerticalAlignment="Center" />
-                        <ui:Button Content="Preview" Appearance="Secondary" Command="{Binding PreviewTakeCommand}" Margin="8,0,0,0" />
-                        <ui:Button Content="Save" Appearance="Secondary" Command="{Binding SaveTakeCommand}" Margin="8,0,0,0" />
-                        <ui:Button Content="Discard" Appearance="Secondary" Command="{Binding DiscardTakeCommand}" Margin="8,0,0,0" />
-                    </StackPanel>
-                </StackPanel>
-
-                <TextBlock Text="{Binding Notice}" Foreground="{StaticResource Text.Secondary}"
-                           Margin="0,6,0,0" TextWrapping="Wrap" />
-            </StackPanel>
-        </Border>
-
         <!-- Big STOP, with a hint of the global stop hotkey just below it.
-             HotkeyHint text + visibility are set in code-behind once the key is registered. -->
-        <StackPanel Grid.Row="4">
+             HotkeyHint text + visibility are set in code-behind once the key is registered.
+             (Recording moved to the modal RecorderDialog — the Record button in the filter row
+             and the empty-state cards open it.) -->
+        <StackPanel Grid.Row="2">
             <ui:Button Content="STOP" Appearance="Danger" Command="{Binding StopCommand}"
                        IsEnabled="{Binding Status.IsEngineRunning}"
                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                        Height="56" FontSize="{StaticResource FontSize.Title}" FontWeight="Bold" />
             <TextBlock x:Name="HotkeyHint" HorizontalAlignment="Center" Margin="0,6,0,0"
                        Visibility="Collapsed"
-                       Foreground="{StaticResource Text.Secondary}"
+                       Foreground="{StaticResource Text.Muted}"
                        FontSize="{StaticResource FontSize.Label}" />
         </StackPanel>
         </Grid>
 
-        <!-- Toasts float above the board -->
-        <ui:SnackbarPresenter Grid.Row="1" x:Name="RootSnackbar" />
     </Grid>
 </ui:FluentWindow>

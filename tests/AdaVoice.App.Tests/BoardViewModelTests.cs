@@ -16,14 +16,76 @@ public class BoardViewModelTests
         Action<SetupWizardViewModel>? showSetupWizard = null,
         ISettingsHost? settingsHost = null,
         Action<SettingsWindowViewModel>? showSettings = null,
-        Func<RepairPhraseViewModel, bool>? showRepairDialog = null) =>
+        Func<RepairPhraseViewModel, bool>? showRepairDialog = null,
+        Action? showRecorder = null) =>
         new(host, host, host, host, settingsHost ?? new FakeSettingsHost(), new StatusViewModel(host),
             new SettingsViewModel(new FakeSettingsHost()),
             getActiveHotkey: () => "Pause", confirmDelete: confirmDelete, showEditDialog: showEditDialog,
             showManageCategories: showManageCategories, showSetupWizard: showSetupWizard,
-            showSettings: showSettings, showRepairDialog: showRepairDialog);
+            showSettings: showSettings, showRepairDialog: showRepairDialog, showRecorder: showRecorder);
 
     private static RecordingResult Take() => new(new float[10], GainDb: -3, DurationMs: 1000, PeakDbfs: -6);
+
+    [Fact]
+    public async Task Starting_a_recording_opens_the_recorder_window()
+    {
+        var host = new FakePlaybackHost { State = EngineState.Live };
+        var opened = false;
+        var board = NewBoard(host, showRecorder: () => opened = true);
+
+        await board.StartRecordingCommand.ExecuteAsync(null);
+
+        Assert.True(opened);
+    }
+
+    [Fact]
+    public async Task Play_when_not_live_raises_a_warning_notification()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Stopped,
+            Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav" }],
+        };
+        var board = NewBoard(host);
+        BoardNotification? seen = null;
+        board.Notified += (_, n) => seen = n;
+
+        await board.PlayCommand.ExecuteAsync(board.Phrases[0]);
+
+        Assert.NotNull(seen);
+        Assert.Equal(NoticeSeverity.Warning, seen.Severity);
+        Assert.Equal(board.Notice, seen.Message); // the property still mirrors the last message
+    }
+
+    [Fact]
+    public async Task Record_with_a_take_already_pending_reopens_the_recorder_instead_of_overwriting_it()
+    {
+        var host = new FakePlaybackHost { State = EngineState.Live, NextStopResult = Take() };
+        var opens = 0;
+        var board = NewBoard(host, showRecorder: () => opens++);
+        await board.StartRecordingCommand.ExecuteAsync(null);
+        await board.StopRecordingCommand.ExecuteAsync(null); // take is now waiting to be saved
+
+        await board.StartRecordingCommand.ExecuteAsync(null); // Record clicked again on the Board
+
+        Assert.False(board.IsRecording);                      // no new take was started…
+        Assert.True(board.HasPendingTake);                    // …the waiting one survived…
+        Assert.Equal(2, opens);                               // …and the recorder window reopened
+        Assert.Equal(1, host.Calls.Count(c => c == "TryStartRecording"));
+    }
+
+    [Fact]
+    public async Task A_failed_recording_start_still_opens_the_recorder_window_to_show_why()
+    {
+        var host = new FakePlaybackHost { CanRecord = false }; // recorder refuses (not Live)
+        var opened = false;
+        var board = NewBoard(host, showRecorder: () => opened = true);
+
+        await board.StartRecordingCommand.ExecuteAsync(null);
+
+        Assert.True(opened);
+        Assert.False(board.IsRecording);
+    }
 
     [Fact]
     public void Phrases_come_from_the_host()

@@ -6,7 +6,7 @@ namespace AdaVoice.App;
 /// <summary>Modal "repair phrase" prompt for a broken (audio-missing) phrase. Its
 /// <c>DataContext</c> is a <c>RepairPhraseViewModel</c>; the caller reads
 /// <see cref="RepairPhraseViewModel.Choice"/> after <see cref="Window.ShowDialog"/> returns true.</summary>
-public partial class RepairPhraseDialog : Window
+public partial class RepairPhraseDialog : Wpf.Ui.Controls.FluentWindow
 {
     public RepairPhraseDialog() => InitializeComponent();
 

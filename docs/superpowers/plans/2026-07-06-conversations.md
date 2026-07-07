@@ -1686,6 +1686,17 @@ git commit -m "feat(app): ManageConversationsDialog + window wiring"
 
 ### Task 7: Board UI — conversation selector, tile highlight, empty state
 
+> **⚠ Adapted by the 2026-07-06 UI redesign** (see [design 10](../../design/10-ui-redesign-brief.md)).
+> The literal XAML below predates it — apply the *intent* to the current files:
+> 1. **Selector**: the filter row is now the second row of a `StackPanel` (search sits on its own
+>    row above). Add the Conversation `ComboBox` + a "Conversations…" `Transparent`-appearance
+>    button as new columns of that second-row `Grid`, mirroring the Category pair next to them.
+> 2. **Tile highlight**: the ring triggers moved from `PhraseButtonStyle` to
+>    **`PhraseTileFillStyle`** (same file). Add the `IsCurrentStep` DataTrigger there, ABOVE the
+>    `IsPlaying` one, setting only `BorderBrush` to `{StaticResource Text.Secondary}` —
+>    `BorderThickness` is already a constant 2 (transparent when idle), do not set it.
+> 3. **Empty state**: unchanged — copy the card pattern as written.
+
 **Files:**
 - Modify: `src/AdaVoice.App/MainWindow.xaml`
 - Modify: `src/AdaVoice.App/Theme/Controls.xaml`

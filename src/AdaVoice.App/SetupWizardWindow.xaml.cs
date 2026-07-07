@@ -7,7 +7,7 @@ namespace AdaVoice.App;
 /// caller reads <see cref="Window.ShowDialog"/>'s result to know whether it was actually finished
 /// (true) versus closed early (false/null) — driven by <see cref="SetupWizardViewModel.Finished"/>,
 /// never a plain "window closed" signal.</summary>
-public partial class SetupWizardWindow : Window
+public partial class SetupWizardWindow : Wpf.Ui.Controls.FluentWindow
 {
     public SetupWizardWindow()
     {

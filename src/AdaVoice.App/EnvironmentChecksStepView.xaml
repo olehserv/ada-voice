@@ -3,8 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
     <StackPanel>
-        <TextBlock Text="Environment checks" FontWeight="SemiBold"
-                   FontSize="{StaticResource FontSize.SectionTitle}" Margin="0,0,0,8" />
+        <TextBlock Text="Environment checks" Style="{StaticResource SectionTitleStyle}" />
 
         <!-- Brief spinner shown before results appear. The checks actually run instantly — this is
              a deliberate cosmetic pause (design 05 §2: "each row: spinner → ✓/✗").
@@ -18,8 +17,7 @@
         <ItemsControl x:Name="ChecksList" Visibility="Collapsed" ItemsSource="{Binding Checks}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Border Background="{StaticResource Surface.Raised}" CornerRadius="{StaticResource Radius.Control}"
-                            Padding="{StaticResource Pad.Control}" Margin="0,0,0,8">
+                    <Border Style="{StaticResource PanelStyle}" Margin="0,0,0,8">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />

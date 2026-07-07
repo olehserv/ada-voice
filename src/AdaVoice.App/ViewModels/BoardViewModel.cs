@@ -37,6 +37,7 @@ public partial class BoardViewModel : ObservableObject
     private readonly Func<PhraseEditViewModel, bool> _showEditDialog;
     private readonly Func<RepairPhraseViewModel, bool> _showRepairDialog;
     private readonly Action<CategoriesViewModel> _showManageCategories;
+    private readonly Action _showRecorder;
     private readonly Action<Action> _onUiThread;
 
     [ObservableProperty]
@@ -60,8 +61,21 @@ public partial class BoardViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(SaveTakeCommand))]
     private string _newTitle = "";
 
+    /// <summary>The last message raised for the operator (kept as state for tests and for the
+    /// library-load warning the view reads on startup). The view shows messages as toasts via
+    /// <see cref="Notified"/>, not by binding this.</summary>
     [ObservableProperty]
     private string? _notice;
+
+    /// <summary>Raised when the operator should see a message; the view shows it as a
+    /// severity-colored toast. Set through <see cref="Notify"/> only.</summary>
+    public event EventHandler<BoardNotification>? Notified;
+
+    private void Notify(string message, NoticeSeverity severity)
+    {
+        Notice = message;
+        Notified?.Invoke(this, new BoardNotification(message, severity));
+    }
 
     /// <summary>Live title/tag search. Empty matches everything.</summary>
     [ObservableProperty]
@@ -86,7 +100,8 @@ public partial class BoardViewModel : ObservableObject
         Func<(string Path, ImportMode Mode)?>? pickImportFile = null,
         Action? confirmAndRestart = null,
         Action<string>? showError = null,
-        Action<string>? showSettingsInfo = null)
+        Action<string>? showSettingsInfo = null,
+        Action? showRecorder = null)
     {
         _playback = playback;
         _recorder = recorder;
@@ -106,6 +121,7 @@ public partial class BoardViewModel : ObservableObject
         _confirmAndRestart = confirmAndRestart ?? (() => { }); // default: no-op (unit tests)
         _showError = showError ?? (_ => { });              // default: no-op (unit tests)
         _showSettingsInfo = showSettingsInfo ?? (_ => { }); // default: no-op (unit tests)
+        _showRecorder = showRecorder ?? (() => { });       // default: no-op (unit tests)
         Status = status;
         Settings = settings;
         var broken = library.BrokenPhraseIds.ToHashSet();
@@ -322,7 +338,7 @@ public partial class BoardViewModel : ObservableObject
 
         if (_playback.State != EngineState.Live)
         {
-            Notice = "Start the engine (and be ON AIR) to play to the call.";
+            Notify("Start the engine (and be ON AIR) to play to the call.", NoticeSeverity.Warning);
             return;
         }
 
@@ -343,12 +359,12 @@ public partial class BoardViewModel : ObservableObject
         {
             var error = await Task.Run(() => _playback.PreviewEntry(item.Entry));
             if (error is not null)
-                _onUiThread(() => Notice = error);
+                _onUiThread(() => Notify(error, NoticeSeverity.Error));
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             // Corrupt WAV, no output device, COM failure — surface it instead of crashing the app.
-            _onUiThread(() => Notice = "Could not play the preview — check the playback device and try again.");
+            _onUiThread(() => Notify("Could not play the preview — check the playback device and try again.", NoticeSeverity.Error));
         }
     }
 
@@ -423,6 +439,15 @@ public partial class BoardViewModel : ObservableObject
     [RelayCommand]
     private async Task StartRecording()
     {
+        // A take is already in progress or waiting to be saved — starting another would silently
+        // overwrite it. Just show the recorder so the operator can finish (save/discard) first.
+        if (!ShowRecordButton)
+        {
+            _pendingMetadata = default; // a Re-record/CTA stash must not misfile the waiting take
+            _showRecorder();
+            return;
+        }
+
         Notice = null;
         try
         {
@@ -439,7 +464,7 @@ public partial class BoardViewModel : ObservableObject
                     // stash made before this call (RecordIntoCategory / repair dialog Re-record)
                     // must not survive to misfile the operator's next, unrelated recording.
                     _pendingMetadata = default;
-                    Notice = "Press Start to go Live before recording.";
+                    Notify("Press Start to go Live before recording.", NoticeSeverity.Warning);
                 }
             });
         }
@@ -449,9 +474,14 @@ public partial class BoardViewModel : ObservableObject
             _onUiThread(() =>
             {
                 _pendingMetadata = default;
-                Notice = "Could not start recording — check the microphone and try again.";
+                Notify("Could not start recording — check the microphone and try again.", NoticeSeverity.Error);
             });
         }
+
+        // Open the recorder window last — the modal blocks here until it closes, and by now the
+        // state it must show is set either way: Recording…, or the Notice explaining the failure.
+        // The view no-ops if the recorder is already open (Record clicked inside it).
+        _showRecorder();
     }
 
     /// <summary>Record straight into the currently selected (empty) category — the category-empty
@@ -492,7 +522,7 @@ public partial class BoardViewModel : ObservableObject
                     // cleared here or it would leak into the operator's next, unrelated recording.
                     PendingTake = null;
                     _pendingMetadata = default;
-                    Notice = "No signal — nothing recorded.";
+                    Notify("No signal — nothing recorded.", NoticeSeverity.Warning);
                 }
             });
         }
@@ -503,7 +533,7 @@ public partial class BoardViewModel : ObservableObject
                 // Same reasoning as the no-signal branch above: no take, so no stash may survive.
                 PendingTake = null;
                 _pendingMetadata = default;
-                Notice = "Could not finish the recording — the take was lost.";
+                Notify("Could not finish the recording — the take was lost.", NoticeSeverity.Error);
             });
         }
         finally
@@ -522,16 +552,16 @@ public partial class BoardViewModel : ObservableObject
         if (PendingTake is not { } take)
             return;
 
-        Notice = "Previewing…";
+        Notify("Previewing…", NoticeSeverity.Info);
         try
         {
             var error = await Task.Run(() => _recorder.Preview(take.Samples, take.GainDb));
             if (error is not null)
-                _onUiThread(() => Notice = error);
+                _onUiThread(() => Notify(error, NoticeSeverity.Error));
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            _onUiThread(() => Notice = "Could not play the preview — check the playback device and try again.");
+            _onUiThread(() => Notify("Could not play the preview — check the playback device and try again.", NoticeSeverity.Error));
         }
     }
 
@@ -539,7 +569,7 @@ public partial class BoardViewModel : ObservableObject
     /// already guards its own failure path (M1/M2); this was the one gap the 2026-07-04 review
     /// flagged (M15) as still open: no CanExecute (an empty title was silently accepted) and no
     /// catch (a disk-full write would bubble to the global handler's generic dialog instead of
-    /// this section's friendly inline Notice).</summary>
+    /// this section's friendly notification toast).</summary>
     private bool CanSaveTake() => !string.IsNullOrWhiteSpace(NewTitle);
 
     [RelayCommand(CanExecute = nameof(CanSaveTake))]
@@ -557,7 +587,7 @@ public partial class BoardViewModel : ObservableObject
         {
             // Nothing persisted yet — keep PendingTake (and the pending metadata) set so the
             // operator can retry Save or Discard instead of silently losing the recording.
-            Notice = "Could not save the recording — check disk space and try again.";
+            Notify("Could not save the recording — check disk space and try again.", NoticeSeverity.Error);
             return;
         }
 
@@ -574,7 +604,7 @@ public partial class BoardViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            Notice = "Saved, but could not apply the category/tags — edit it manually.";
+            Notify("Saved, but could not apply the category/tags — edit it manually.", NoticeSeverity.Warning);
         }
         _pendingMetadata = default;
 
@@ -589,6 +619,6 @@ public partial class BoardViewModel : ObservableObject
     {
         PendingTake = null;
         _pendingMetadata = default;
-        Notice = "Take discarded.";
+        Notify("Take discarded.", NoticeSeverity.Info);
     }
 }

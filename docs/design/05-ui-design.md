@@ -127,12 +127,22 @@ flowchart LR
     S --> W
 ```
 
-### Recorder panel — OFF AIR rule (decision #11)
+### Recorder window — OFF AIR rule (decision #11)
 
-**Recording during calls is not allowed, and the app enforces it:** opening the Recorder
-pauses the cable output (her mic stops reaching the call) and shows a full-width
-**OFF AIR** banner (amber token); closing the panel restores the previous live state.
-Recording and being on air are mutually exclusive by design.
+The recorder is a **modal window** (owner decision 2026-07-07 — it replaced the always-visible
+record strip at the bottom of the Board). It opens from the Record button in the Board's filter
+row, from the empty-state cards, or from a repair-dialog Re-record; clicking Record starts the
+take immediately and the window shows its progress. Closing the window mid-take stops the
+recorder and keeps the take pending (shown the next time the recorder opens) — audio is never
+silently lost. With a take already recording or waiting, Record **reopens the recorder instead
+of starting a new take** (nothing is ever overwritten); the Board's Record button lights amber
+(Caution) while a take waits, so the unfinished work is visible.
+
+**Recording during calls is not allowed, and the app enforces it:** while a take is being
+captured, the cable output is paused (her mic stops reaching the call) and the **OFF AIR**
+state shows — amber status pill + the OFF AIR toggle lit amber (the full-width banner was
+replaced by the lit toggle, owner decision 2026-07-06); stopping the take restores the previous
+live state. Recording and being on air are mutually exclusive by design.
 
 - Device level meter with clipping warning, Record / Stop buttons.
 - Lightweight waveform preview of the take.
@@ -205,6 +215,6 @@ download-link flow and control-panel latency note.
 | Engine state | UI | Audio |
 |---|---|---|
 | LIVE | Green token dot + "LIVE", meters active | — |
-| OFF AIR (Recorder open) | Full-width amber banner "OFF AIR — recording mode" | — |
+| OFF AIR (Recorder open) | Amber status pill + OFF AIR toggle lit amber (Caution) | — |
 | DEGRADED (mic forwarding down, rebuilding) | Red banner across the board, taskbar flash | Alarm tone on the **system default output device** — independent of the monitor setting; she must know the client cannot hear her |
 | STOPPED | Dimmed UI, board disabled, setup hint | — |

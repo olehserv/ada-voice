@@ -49,6 +49,12 @@ public partial class App : Application
 
         RegisterGlobalExceptionHandlers();
 
+        // Brand accent (design 09): without this, WPF-UI derives Primary buttons, checkboxes, and
+        // focus visuals from the OS accent color — whatever the user picked in Windows settings.
+        Wpf.Ui.Appearance.ApplicationAccentColorManager.Apply(
+            System.Windows.Media.Color.FromRgb(0x4C, 0xC2, 0xFF),
+            Wpf.Ui.Appearance.ApplicationTheme.Dark);
+
         _host = new EngineHost(new WasapiAudioOptions(), msg => Log.Information("{Event}", msg));
 
         // BeginInvoke (async) so a state change raised on the engine control thread never blocks it on the UI.
@@ -63,6 +69,7 @@ public partial class App : Application
             confirmDelete: window.ConfirmDelete,
             showEditDialog: window.ShowEditDialog,
             showManageCategories: window.ShowManageCategories,
+            showRecorder: window.ShowRecorder,
             showSetupWizard: window.ShowSetupWizard,
             showSettings: window.ShowSettings,
             pickExportPath: window.PickExportPath,

@@ -6,8 +6,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </UserControl.Resources>
     <StackPanel>
-        <TextBlock Text="Voice calibration" FontWeight="SemiBold"
-                   FontSize="{StaticResource FontSize.SectionTitle}" Margin="0,0,0,8" />
+        <TextBlock Text="Voice calibration" Style="{StaticResource SectionTitleStyle}" />
         <TextBlock TextWrapping="Wrap" Margin="0,0,0,12" Foreground="{StaticResource Text.Secondary}"
                    Text="Speak normally for 5 seconds so AdaVoice can match your recorded phrases to your live voice level." />
 

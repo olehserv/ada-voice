@@ -2,27 +2,59 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
 
-    <!-- Design 09 dark tokens. WPF-UI provides the Fluent control chrome; these are the brand layer. -->
+    <!-- Design 09 dark tokens (redesign 2026-07-06, brief in design 10). WPF-UI provides the
+         Fluent control chrome; these are the brand layer. Every color, radius, and font size a
+         view uses must come from here — no hex literals in view XAML. -->
 
-    <!-- Colours -->
-    <SolidColorBrush x:Key="Surface.Window" Color="#1F1F1F" />
-    <SolidColorBrush x:Key="Surface.Raised" Color="#2B2B2B" />
-    <SolidColorBrush x:Key="Text.Primary" Color="#F0F0F0" />
-    <SolidColorBrush x:Key="Text.Secondary" Color="#A0A0A0" />
+    <!-- Surfaces: a three-step ramp. Depth comes from the ramp + subtle borders, not shadows. -->
+    <SolidColorBrush x:Key="Surface.Window" Color="#161719" />
+    <SolidColorBrush x:Key="Surface.Raised" Color="#202226" />
+    <SolidColorBrush x:Key="Surface.Overlay" Color="#282B30" />
+
+    <!-- Borders: white at low alpha so they hold on every surface step. -->
+    <SolidColorBrush x:Key="Border.Subtle" Color="#14FFFFFF" />
+    <SolidColorBrush x:Key="Border.Strong" Color="#26FFFFFF" />
+
+    <!-- Text: all three hold ≥ 4.5:1 on Surface.Raised. -->
+    <SolidColorBrush x:Key="Text.Primary" Color="#F2F3F5" />
+    <SolidColorBrush x:Key="Text.Secondary" Color="#A7ACB4" />
+    <SolidColorBrush x:Key="Text.Muted" Color="#8B919A" />
+
+    <!-- Status: verified against both dark surfaces (design 09). Tints are pill/banner washes. -->
     <SolidColorBrush x:Key="Status.Live" Color="#54D262" />
     <SolidColorBrush x:Key="Status.OffAir" Color="#F2A33C" />
     <SolidColorBrush x:Key="Status.Degraded" Color="#FF6B6B" />
+    <SolidColorBrush x:Key="Status.Live.Tint" Color="#2354D262" />
+    <SolidColorBrush x:Key="Status.OffAir.Tint" Color="#26F2A33C" />
+    <SolidColorBrush x:Key="Status.Degraded.Tint" Color="#26FF6B6B" />
+    <SolidColorBrush x:Key="Status.Stopped" Color="#8B919A" />
+    <SolidColorBrush x:Key="Status.Stopped.Tint" Color="#1AFFFFFF" />
+
+    <!-- One accent, used sparingly: focus, playing ring, interactive highlights. -->
     <SolidColorBrush x:Key="Accent" Color="#4CC2FF" />
 
+    <!-- Interaction overlays: painted on top of a tile's category fill so hover/press read on any
+         color. Pressed is dimmer than hover (Fluent convention). -->
+    <SolidColorBrush x:Key="Overlay.Hover" Color="#17FFFFFF" />
+    <SolidColorBrush x:Key="Overlay.Pressed" Color="#0DFFFFFF" />
+
+    <!-- Fixed dark scrim behind tag chips so colored chip text stays legible over any fill. -->
+    <SolidColorBrush x:Key="Scrim.Tag" Color="#66000000" />
+
     <!-- Typography scale (design 09): use these instead of hard-coded sizes. Font family stays the
-         native Fluent Segoe UI Variable, set at the window. Weight hierarchy: titles 600, body 400. -->
+         native Fluent Segoe UI Variable, set at the window. Weight hierarchy: titles 600, body 400.
+         Floor: nothing below 12; status elements never below 14. -->
     <sys:Double x:Key="FontSize.Title">20</sys:Double>
     <sys:Double x:Key="FontSize.SectionTitle">16</sys:Double>
     <sys:Double x:Key="FontSize.Body">14</sys:Double>
     <sys:Double x:Key="FontSize.Label">12</sys:Double>
 
-    <!-- Spacing + shape -->
-    <Thickness x:Key="Pad.Control">12,8</Thickness>
+    <!-- Spacing (4 px grid) + shape. Radius scale: Small = chips/swatches, Control = buttons and
+         inputs, Panel = grouping panels/cards, Pill = status pill. One scale, no ad-hoc radii. -->
+    <Thickness x:Key="Pad.Panel">14,12</Thickness>
+    <CornerRadius x:Key="Radius.Small">4</CornerRadius>
     <CornerRadius x:Key="Radius.Control">6</CornerRadius>
+    <CornerRadius x:Key="Radius.Panel">8</CornerRadius>
+    <CornerRadius x:Key="Radius.Pill">12</CornerRadius>
 
 </ResourceDictionary>

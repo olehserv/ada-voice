@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using AdaVoice.App.Services;
 using AdaVoice.App.ViewModels;
@@ -30,6 +31,13 @@ public partial class MainWindow : FluentWindow
         {
             board.Saved += OnPhraseSaved;
             board.Deleted += OnPhraseDeleted;
+            board.Notified += OnNotified;
+
+            // The library-load warning is set in the view-model's constructor, before this
+            // window could subscribe — surface it now, with extra time (it explains why the
+            // board may look empty).
+            if (board.Notice is { } libraryWarning)
+                ShowToast(libraryWarning, ControlAppearance.Caution, TimeSpan.FromSeconds(8));
         }
 
         SetUpStopHotkey();
@@ -72,6 +80,18 @@ public partial class MainWindow : FluentWindow
         }
     }
 
+    /// <summary>Ctrl+F focuses the search box (design 05 §3, keyboard-first). A window-level
+    /// KeyBinding can't do this — focusing a control isn't a view-model command — so it lives here.</summary>
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            SearchBox.Focus();
+            e.Handled = true;
+        }
+    }
+
     /// <summary>Confirm a delete (the board calls this before orphaning the WAV). Synchronous so it fits
     /// the view-model's <c>Func&lt;_, bool&gt;</c> callback.</summary>
     public bool ConfirmDelete(PhraseItemViewModel item) =>
@@ -94,6 +114,27 @@ public partial class MainWindow : FluentWindow
     /// <summary>Show the modal category manager (changes persist live, so nothing is returned).</summary>
     public void ShowManageCategories(CategoriesViewModel categories) =>
         new ManageCategoriesDialog { DataContext = categories, Owner = this }.ShowDialog();
+
+    private RecorderDialog? _recorder;
+
+    /// <summary>Show the modal recorder. It binds to the same BoardViewModel as the Board, so no
+    /// state moves on open/close. No-ops while already open: the Record button inside the dialog
+    /// re-enters StartRecording, which calls back here for a second window.</summary>
+    public void ShowRecorder()
+    {
+        if (_recorder is not null)
+            return;
+
+        _recorder = new RecorderDialog { DataContext = DataContext, Owner = this };
+        try
+        {
+            _recorder.ShowDialog();
+        }
+        finally
+        {
+            _recorder = null;
+        }
+    }
 
     /// <summary>Show the modal setup wizard. If she reaches Finish (not just closes early), mark
     /// the wizard completed so it does not auto-show again on the next launch.</summary>
@@ -213,6 +254,22 @@ public partial class MainWindow : FluentWindow
             }.Show();
         }
     }
+
+    /// <summary>Board notifications ("Take discarded.", "No signal…", engine hints) as toasts,
+    /// colored by severity. Errors linger longer — they carry a recovery instruction.</summary>
+    private void OnNotified(object? sender, BoardNotification notification) =>
+        ShowToast(
+            notification.Message,
+            notification.Severity switch
+            {
+                NoticeSeverity.Error => ControlAppearance.Danger,
+                NoticeSeverity.Warning => ControlAppearance.Caution,
+                _ => ControlAppearance.Secondary,
+            },
+            TimeSpan.FromSeconds(notification.Severity == NoticeSeverity.Error ? 6 : 4));
+
+    private void ShowToast(string message, ControlAppearance appearance, TimeSpan timeout) =>
+        new Snackbar(RootSnackbar) { Content = message, Appearance = appearance, Timeout = timeout }.Show();
 
     // Fires on the UI thread (SaveTake runs from a command), so showing the toast here is safe.
     private void OnPhraseSaved(object? sender, string title) =>

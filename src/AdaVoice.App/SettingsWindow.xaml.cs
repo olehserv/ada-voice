@@ -4,7 +4,7 @@ using AdaVoice.App.ViewModels;
 
 namespace AdaVoice.App;
 
-public partial class SettingsWindow : Window
+public partial class SettingsWindow : Wpf.Ui.Controls.FluentWindow
 {
     public SettingsWindow() => InitializeComponent();
 
