@@ -83,15 +83,12 @@ public partial class BoardViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasSearchText))]
     private string _searchText = "";
 
-    /// <summary>The category to show, or the "All categories" sentinel for no category filter.</summary>
-    [ObservableProperty]
-    private Category _selectedCategoryFilter;
-
     /// <summary>The conversation to show, or the "None" sentinel for no conversation filter. Mutually
     /// exclusive with the category filter (design: docs/superpowers/specs/2026-07-06-conversations-design.md §3).</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConversationActive))]
     [NotifyPropertyChangedFor(nameof(CategoryFilterEnabled))]
+    [NotifyPropertyChangedFor(nameof(ConversationFilterButtonLabel))]
     private Conversation _selectedConversationFilter;
 
     public BoardViewModel(IPlaybackHost playback, IRecorderHost recorder, ILibraryHost library, ISetupHost setup,
@@ -143,9 +140,12 @@ public partial class BoardViewModel : ObservableObject
 
         ApplyColors(); // tint each tile with its category colour and resolve its tag chips
 
-        // "All categories" + the real categories drive the filter dropdown; default to All.
-        CategoryFilterOptions = [AllCategories, .. library.Categories];
-        _selectedCategoryFilter = AllCategories;
+        // One checkable row per category — no "All categories" sentinel; zero checked means "show
+        // all" (design: docs/superpowers/specs/2026-07-07-filter-controls-redesign.md §1).
+        CategoryFilterItems = new ObservableCollection<CategoryFilterItemViewModel>(
+            library.Categories.Select(c => new CategoryFilterItemViewModel(c)));
+        foreach (var item in CategoryFilterItems)
+            item.PropertyChanged += OnCategoryFilterItemChanged;
 
         // "None" + the real conversations drive the filter dropdown; default to None.
         ConversationFilterOptions = [NoneConversation, .. library.Conversations];
@@ -154,7 +154,7 @@ public partial class BoardViewModel : ObservableObject
         // A filtered view over the same collection — the grid binds to this, not to Phrases directly.
         PhrasesView = CollectionViewSource.GetDefaultView(Phrases);
         PhrasesView.Filter = o => o is PhraseItemViewModel p
-            && Matches(p.Entry, SearchText, EffectiveCategoryId)
+            && Matches(p.Entry, SearchText, EffectiveCategoryIds)
             && (_activeConversationPhraseIdSet is null || _activeConversationPhraseIdSet.Contains(p.Entry.Id));
 
         Phrases.CollectionChanged += (_, _) =>
@@ -162,15 +162,13 @@ public partial class BoardViewModel : ObservableObject
             OnPropertyChanged(nameof(IsEmpty));
             OnPropertyChanged(nameof(HasPhrases));
             OnPropertyChanged(nameof(CategoryIsEmpty));
+            OnPropertyChanged(nameof(MultipleCategoriesNoMatch));
             OnPropertyChanged(nameof(SearchNoMatch));
             OnPropertyChanged(nameof(HasMatches));
             OnPropertyChanged(nameof(ConversationIsEmpty));
         };
         _playback.PlayingPhraseChanged += OnPlayingPhraseChanged;
     }
-
-    /// <summary>Sentinel "show every category" option for the filter dropdown (blank id = no filter).</summary>
-    public static readonly Category AllCategories = new() { Id = "", Name = "All categories" };
 
     /// <summary>Sentinel "no conversation" option for the filter dropdown (blank id = no filter).</summary>
     public static readonly Conversation NoneConversation = new() { Id = "", Name = "None" };
@@ -204,9 +202,29 @@ public partial class BoardViewModel : ObservableObject
     /// <summary>The filtered, ordered view of <see cref="Phrases"/> the grid binds to.</summary>
     public ICollectionView PhrasesView { get; }
 
-    /// <summary>"All categories" followed by the real categories — the filter dropdown's items. Rebuilt
-    /// after the category manager runs, since categories may have been added/renamed/deleted.</summary>
-    public IReadOnlyList<Category> CategoryFilterOptions { get; private set; }
+    /// <summary>One checkable row per category — the Categories filter menu's items. Rebuilt after
+    /// the category manager runs, since categories may have been added/renamed/deleted.</summary>
+    public ObservableCollection<CategoryFilterItemViewModel> CategoryFilterItems { get; private set; }
+
+    /// <summary>The Categories button's label: "Categories" when nothing is checked, the single
+    /// checked category's name when exactly one is, or "{N} categories" for 2+.</summary>
+    public string CategoryFilterButtonLabel
+    {
+        get
+        {
+            var checkedItems = CategoryFilterItems.Where(i => i.IsChecked).ToList();
+            return checkedItems.Count switch
+            {
+                0 => "Categories",
+                1 => checkedItems[0].Category.Name,
+                _ => $"{checkedItems.Count} categories",
+            };
+        }
+    }
+
+    /// <summary>The Conversations button's label: "Conversations" when none is active, or the
+    /// active conversation's name.</summary>
+    public string ConversationFilterButtonLabel => IsConversationActive ? SelectedConversationFilter.Name : "Conversations";
 
     /// <summary>"None" followed by the real conversations — the filter dropdown's items. Rebuilt after
     /// the conversation manager runs.</summary>
@@ -248,16 +266,45 @@ public partial class BoardViewModel : ObservableObject
     /// <summary>At least one phrase is visible under the current filter — the grid binds to this.</summary>
     public bool HasMatches => HasPhrases && !PhrasesView.IsEmpty;
 
-    /// <summary>True when a specific category is selected, no search is active, and that category
-    /// has no phrases at all — the CTA card offers to record straight into it. Mutually exclusive
-    /// with the search-driven no-match state (Task 3): this one requires blank search text.</summary>
+    /// <summary>True when exactly one category is checked, no search is active, and that category
+    /// has no phrases at all — the CTA card offers to record straight into it. Only makes sense for
+    /// exactly one checked category (no single target to record into for 2+) — see
+    /// <see cref="MultipleCategoriesNoMatch"/> for that case. Mutually exclusive with the
+    /// search-driven no-match state: this one requires blank search text.</summary>
     public bool CategoryIsEmpty => HasPhrases
-        && !string.IsNullOrEmpty(EffectiveCategoryId)
+        && EffectiveSingleCategoryId is { } categoryId
         && string.IsNullOrWhiteSpace(SearchText)
-        && !Phrases.Any(p => p.Entry.CategoryId == EffectiveCategoryId);
+        && !Phrases.Any(p => p.Entry.CategoryId == categoryId);
 
-    private string? EffectiveCategoryId =>
-        string.IsNullOrEmpty(SelectedCategoryFilter?.Id) ? null : SelectedCategoryFilter.Id;
+    /// <summary>2+ categories are checked, no search is active, and nothing on the board matches any
+    /// of them — the generic empty-state card (distinct from <see cref="CategoryIsEmpty"/>, which
+    /// owns the exactly-one-checked case and offers a "record into" CTA that has no single target
+    /// here).</summary>
+    public bool MultipleCategoriesNoMatch => HasPhrases
+        && EffectiveCategoryIds.Count >= 2
+        && string.IsNullOrWhiteSpace(SearchText)
+        && !HasMatches;
+
+    /// <summary>The checked category's name, when exactly one is checked — bound by the "record
+    /// into" CTA card, which only shows in that same condition.</summary>
+    public string? EffectiveSingleCategoryName =>
+        EffectiveSingleCategoryId is { } id ? CategoryFilterItems.First(i => i.Category.Id == id).Category.Name : null;
+
+    /// <summary>The checked category, when exactly one is checked — the CTA and "record into" flow
+    /// only make sense for a single target. Null when zero or 2+ are checked.</summary>
+    private string? EffectiveSingleCategoryId
+    {
+        get
+        {
+            var checkedIds = EffectiveCategoryIds;
+            return checkedIds.Count == 1 ? checkedIds.Single() : null;
+        }
+    }
+
+    /// <summary>Every checked category's id — the union filter <see cref="Matches"/> applies. Empty
+    /// means no category filtering (show everything).</summary>
+    private IReadOnlySet<string> EffectiveCategoryIds =>
+        CategoryFilterItems.Where(i => i.IsChecked).Select(i => i.Category.Id).ToHashSet();
 
     /// <summary>Title/category/tags to apply to the next take <see cref="SaveTake"/> creates —
     /// set by <see cref="RecordIntoCategory"/> (category only) or the repair dialog's Re-record
@@ -276,11 +323,12 @@ public partial class BoardViewModel : ObservableObject
     private HashSet<string>? _activeConversationPhraseIdSet;
     private int _currentStepIndex;
 
-    /// <summary>A phrase matches when its category passes the filter and the search text appears in its
-    /// title or any tag. Pure, so it is unit-testable without WPF.</summary>
-    private static bool Matches(PhraseEntry entry, string? search, string? categoryId)
+    /// <summary>A phrase matches when its category is in the checked set (or the set is empty — no
+    /// filtering) and the search text appears in its title or any tag. Pure, so it is unit-testable
+    /// without WPF.</summary>
+    private static bool Matches(PhraseEntry entry, string? search, IReadOnlySet<string> categoryIds)
     {
-        if (categoryId is not null && entry.CategoryId != categoryId)
+        if (categoryIds.Count > 0 && !categoryIds.Contains(entry.CategoryId))
             return false;
         if (string.IsNullOrWhiteSpace(search))
             return true;
@@ -290,17 +338,23 @@ public partial class BoardViewModel : ObservableObject
             || entry.Tags.Any(t => t.Contains(term, StringComparison.OrdinalIgnoreCase));
     }
 
-    /// <summary>Open the category manager; when it closes, rebuild the filter dropdown (categories may
-    /// have changed) and reset the filter to "All".</summary>
+    /// <summary>Open the category manager; when it closes, rebuild the checkable rows (categories may
+    /// have changed) — every row starts unchecked, same as picking "All" used to.</summary>
     [RelayCommand]
     private void ManageCategories()
     {
         _showManageCategories(new CategoriesViewModel(_library));
 
-        CategoryFilterOptions = [AllCategories, .. _library.Categories];
-        OnPropertyChanged(nameof(CategoryFilterOptions));
+        foreach (var item in CategoryFilterItems)
+            item.PropertyChanged -= OnCategoryFilterItemChanged;
+        CategoryFilterItems = new ObservableCollection<CategoryFilterItemViewModel>(
+            _library.Categories.Select(c => new CategoryFilterItemViewModel(c)));
+        foreach (var item in CategoryFilterItems)
+            item.PropertyChanged += OnCategoryFilterItemChanged;
+        OnPropertyChanged(nameof(CategoryFilterItems));
+        OnPropertyChanged(nameof(CategoryFilterButtonLabel));
         ApplyColors(); // categories may have been recoloured or deleted
-        SelectedCategoryFilter = AllCategories; // also refreshes the filter
+        RefreshFilter();
     }
 
     /// <summary>Open the conversation manager; when it closes, rebuild the filter dropdown
@@ -334,35 +388,26 @@ public partial class BoardViewModel : ObservableObject
 
     partial void OnSearchTextChanged(string value) => RefreshFilter();
 
-    partial void OnSelectedCategoryFilterChanged(Category value)
-    {
-        // Picking a specific category turns Conversation mode off — the two filters are mutually
-        // exclusive. Picking "All categories" (blank id) is not a category choice, so it never does
-        // (this also guards against the recursive call OnSelectedConversationFilterChanged makes below).
-        if (!string.IsNullOrEmpty(value?.Id) && IsConversationActive)
-            SelectedConversationFilter = NoneConversation;
-
-        RefreshFilter();
-    }
-
     partial void OnSelectedConversationFilterChanged(Conversation value)
     {
         if (!string.IsNullOrEmpty(value?.Id))
         {
-            // Populate the active-conversation state before flipping the category filter below —
-            // that flip re-enters this class via OnSelectedCategoryFilterChanged -> RefreshFilter,
+            // Populate the active-conversation state before clearing checked categories below —
+            // that clear re-enters this class via OnCategoryFilterItemChanged -> RefreshFilter,
             // which raises PropertyChanged(ConversationIsEmpty) while SelectedConversationFilter
             // already reports IsConversationActive == true. If _activeConversationPhraseIdSet were
             // still null at that point, ConversationIsEmpty's `_activeConversationPhraseIdSet!.Contains(...)`
-            // would null-ref the moment Task 7 binds it. Setting these first keeps the invariant
-            // (IsConversationActive == true implies the set is populated) intact throughout.
+            // would null-ref the moment a live binding reads it. Setting these first keeps the
+            // invariant (IsConversationActive == true implies the set is populated) intact throughout.
             _activeConversationPhraseIds = value.PhraseIds.ToList();
             _activeConversationPhraseIdSet = _activeConversationPhraseIds.ToHashSet();
             _currentStepIndex = 0;
 
-            // Activating a Conversation turns off the Category filter — mutually exclusive.
-            if (!string.IsNullOrEmpty(SelectedCategoryFilter?.Id))
-                SelectedCategoryFilter = AllCategories;
+            // Activating a Conversation clears every checked category — mutually exclusive. Never
+            // re-triggers OnCategoryFilterItemChanged's "turn off the conversation" branch, since
+            // that only fires on a check transitioning to true, and this only sets false.
+            foreach (var item in CategoryFilterItems.Where(i => i.IsChecked).ToList())
+                item.IsChecked = false;
 
             var indexById = _activeConversationPhraseIds
                 .Select((id, index) => (id, index))
@@ -385,10 +430,28 @@ public partial class BoardViewModel : ObservableObject
         RefreshFilter();
     }
 
+    /// <summary>Checking a category while a Conversation is active turns the Conversation off —
+    /// mutually exclusive. Unchecking never does. Every check/uncheck re-runs the filter and
+    /// refreshes the button label.</summary>
+    private void OnCategoryFilterItemChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(CategoryFilterItemViewModel.IsChecked))
+            return;
+
+        var item = (CategoryFilterItemViewModel)sender!;
+        if (item.IsChecked && IsConversationActive)
+            SelectedConversationFilter = NoneConversation;
+
+        RefreshFilter();
+        OnPropertyChanged(nameof(CategoryFilterButtonLabel));
+    }
+
     private void RefreshFilter()
     {
         PhrasesView.Refresh();
         OnPropertyChanged(nameof(CategoryIsEmpty));
+        OnPropertyChanged(nameof(EffectiveSingleCategoryName));
+        OnPropertyChanged(nameof(MultipleCategoriesNoMatch));
         OnPropertyChanged(nameof(SearchNoMatch));
         OnPropertyChanged(nameof(HasMatches));
         OnPropertyChanged(nameof(ConversationIsEmpty));
@@ -627,11 +690,12 @@ public partial class BoardViewModel : ObservableObject
 
     /// <summary>Record straight into the currently selected (empty) category — the category-empty
     /// CTA's button. Reuses StartRecording exactly as clicking the normal Record button would;
-    /// only the pending-category stash differs.</summary>
+    /// only the pending-category stash differs. Only reachable when CategoryIsEmpty is true (exactly
+    /// one category checked), so EffectiveSingleCategoryId is always non-null here in practice.</summary>
     [RelayCommand]
     private async Task RecordIntoCategory()
     {
-        _pendingMetadata = (_pendingMetadata.Title, EffectiveCategoryId, _pendingMetadata.Tags);
+        _pendingMetadata = (_pendingMetadata.Title, EffectiveSingleCategoryId, _pendingMetadata.Tags);
         await StartRecording();
     }
 

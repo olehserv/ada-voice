@@ -457,7 +457,7 @@ public class BoardViewModelTests
             SetPhraseCategoryThrows = true,
         };
         var board = NewBoard(host);
-        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-2").IsChecked = true;
         board.RecordIntoCategoryCommand.Execute(null); // arranges _pendingMetadata.CategoryId synchronously (before its await)
         board.PendingTake = Take();
         board.NewTitle = "Greeting";
@@ -613,7 +613,7 @@ public class BoardViewModelTests
             edit.SelectedCategoryId = Category.DefaultId; // move it out of "Greetings"
             return true;
         });
-        board.SelectedCategoryFilter = board.CategoryFilterOptions.First(c => c.Id == "c-1");
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-1").IsChecked = true;
         Assert.Single(VisibleTitles(board));
 
         board.EditCommand.Execute(board.Phrases[0]);
@@ -860,7 +860,7 @@ public class BoardViewModelTests
         };
         var board = NewBoard(host);
 
-        board.SelectedCategoryFilter = board.CategoryFilterOptions.First(c => c.Id == "c-1");
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-1").IsChecked = true;
 
         Assert.Equal(["A"], VisibleTitles(board));
     }
@@ -875,7 +875,7 @@ public class BoardViewModelTests
         };
         var board = NewBoard(host);
 
-        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-2").IsChecked = true;
 
         Assert.True(board.CategoryIsEmpty);
     }
@@ -890,7 +890,7 @@ public class BoardViewModelTests
         };
         var board = NewBoard(host);
 
-        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-1");
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-1").IsChecked = true;
 
         Assert.False(board.CategoryIsEmpty);
     }
@@ -906,7 +906,7 @@ public class BoardViewModelTests
             Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = "c-1" }],
         };
         var board = NewBoard(host);
-        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-2").IsChecked = true;
 
         board.SearchText = "hello";
 
@@ -919,7 +919,100 @@ public class BoardViewModelTests
         var host = new FakePlaybackHost { Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi" }] };
         var board = NewBoard(host);
 
-        Assert.False(board.CategoryIsEmpty); // default filter is "All categories"
+        Assert.False(board.CategoryIsEmpty); // default: nothing checked, shows every phrase
+    }
+
+    [Fact]
+    public void Checking_two_categories_shows_phrases_from_either()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-1", Name = "Openers" }, new Category { Id = "c-2", Name = "Closers" }],
+            Phrases =
+            [
+                new PhraseEntry { Id = "p-1", Title = "A", CategoryId = "c-1" },
+                new PhraseEntry { Id = "p-2", Title = "B", CategoryId = "c-2" },
+                new PhraseEntry { Id = "p-3", Title = "C", CategoryId = Category.DefaultId },
+            ],
+        };
+        var board = NewBoard(host);
+
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-1").IsChecked = true;
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-2").IsChecked = true;
+
+        Assert.Equal(["A", "B"], VisibleTitles(board));
+    }
+
+    [Fact]
+    public void Unchecking_the_last_category_shows_every_phrase_again()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-1", Name = "Openers" }],
+            Phrases =
+            [
+                new PhraseEntry { Id = "p-1", Title = "A", CategoryId = "c-1" },
+                new PhraseEntry { Id = "p-2", Title = "B", CategoryId = Category.DefaultId },
+            ],
+        };
+        var board = NewBoard(host);
+        var item = board.CategoryFilterItems.Single(i => i.Category.Id == "c-1");
+        item.IsChecked = true;
+        Assert.Equal(["A"], VisibleTitles(board));
+
+        item.IsChecked = false;
+
+        Assert.Equal(["A", "B"], VisibleTitles(board));
+    }
+
+    [Fact]
+    public void Two_categories_checked_with_no_matches_shows_the_generic_empty_state_not_the_cta()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-1", Name = "Openers" }, new Category { Id = "c-2", Name = "Closers" }],
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = Category.DefaultId }],
+        };
+        var board = NewBoard(host);
+
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-1").IsChecked = true;
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-2").IsChecked = true;
+
+        Assert.False(board.CategoryIsEmpty); // 2+ checked — no single target to record into
+        Assert.True(board.MultipleCategoriesNoMatch);
+    }
+
+    [Fact]
+    public void Category_filter_button_label_summarizes_the_checked_set()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-1", Name = "Openers" }, new Category { Id = "c-2", Name = "Closers" }],
+        };
+        var board = NewBoard(host);
+        Assert.Equal("Categories", board.CategoryFilterButtonLabel);
+
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-1").IsChecked = true;
+        Assert.Equal("Openers", board.CategoryFilterButtonLabel);
+
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-2").IsChecked = true;
+        Assert.Equal("2 categories", board.CategoryFilterButtonLabel);
+    }
+
+    [Fact]
+    public void Conversation_filter_button_label_reflects_the_active_conversation()
+    {
+        var host = new FakePlaybackHost
+        {
+            Phrases = [new PhraseEntry { Id = "p-1" }],
+            Conversations = [new Conversation { Id = "v-1", Name = "Cold call", PhraseIds = ["p-1"] }],
+        };
+        var board = NewBoard(host);
+        Assert.Equal("Conversations", board.ConversationFilterButtonLabel);
+
+        board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+
+        Assert.Equal("Cold call", board.ConversationFilterButtonLabel);
     }
 
     [Fact]
@@ -927,7 +1020,7 @@ public class BoardViewModelTests
     {
         var host = new FakePlaybackHost { CanRecord = true, Categories = [new Category { Id = "c-2", Name = "Closers" }] };
         var board = NewBoard(host);
-        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-2").IsChecked = true;
 
         await board.RecordIntoCategoryCommand.ExecuteAsync(null);
 
@@ -939,7 +1032,7 @@ public class BoardViewModelTests
     {
         var host = new FakePlaybackHost { CanRecord = true, Categories = [new Category { Id = "c-2", Name = "Closers" }] };
         var board = NewBoard(host);
-        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-2").IsChecked = true;
 
         // Execute (not ExecuteAsync + await) — RecordIntoCategory stashes the pending category
         // synchronously before its first await, and awaiting the full command here would hop this
@@ -960,7 +1053,7 @@ public class BoardViewModelTests
     {
         var host = new FakePlaybackHost { CanRecord = true, Categories = [new Category { Id = "c-2", Name = "Closers" }] };
         var board = NewBoard(host);
-        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-2").IsChecked = true;
         board.RecordIntoCategoryCommand.Execute(null); // synchronous — see comment above
         board.DiscardTakeCommand.Execute(null);
 
@@ -982,7 +1075,7 @@ public class BoardViewModelTests
     {
         var host = new FakePlaybackHost { CanRecord = false, Categories = [new Category { Id = "c-2", Name = "Closers" }] };
         var board = NewBoard(host);
-        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-2");
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-2").IsChecked = true;
 
         // Block instead of `await` — see the comment on the repair-dialog re-record test above for
         // why: this keeps the assertions below on the thread that owns the Phrases CollectionView.
@@ -1062,7 +1155,7 @@ public class BoardViewModelTests
             Phrases = [new PhraseEntry { Id = "p-1", Title = "Hello", CategoryId = "c-1" }],
         };
         var board = NewBoard(host);
-        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-1");
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-1").IsChecked = true;
 
         board.SearchText = "zzz";
 
@@ -1105,9 +1198,8 @@ public class BoardViewModelTests
 
         board.ManageCategoriesCommand.Execute(null);
 
-        // "All categories" sentinel + Uncategorized + the new one.
-        Assert.Contains(board.CategoryFilterOptions, c => c.Name == "Greetings");
-        Assert.Same(BoardViewModel.AllCategories, board.SelectedCategoryFilter); // reset to All
+        Assert.Contains(board.CategoryFilterItems, i => i.Category.Name == "Greetings");
+        Assert.All(board.CategoryFilterItems, i => Assert.False(i.IsChecked)); // every row starts unchecked
     }
 
     [Fact]
@@ -1168,11 +1260,11 @@ public class BoardViewModelTests
             Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1"] }],
         };
         var board = NewBoard(host);
-        board.SelectedCategoryFilter = new Category { Id = "c-1", Name = "Greetings" };
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-1").IsChecked = true;
 
         board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
 
-        Assert.Equal(BoardViewModel.AllCategories.Id, board.SelectedCategoryFilter.Id);
+        Assert.All(board.CategoryFilterItems, i => Assert.False(i.IsChecked)); // cleared
         Assert.False(board.CategoryFilterEnabled);
     }
 
@@ -1188,7 +1280,7 @@ public class BoardViewModelTests
         var board = NewBoard(host);
         board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
 
-        board.SelectedCategoryFilter = host.Categories[0];
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-1").IsChecked = true;
 
         Assert.False(board.IsConversationActive);
         Assert.Equal(BoardViewModel.NoneConversation.Id, board.SelectedConversationFilter.Id);
@@ -1319,7 +1411,7 @@ public class BoardViewModelTests
             Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1"] }],
         };
         var board = NewBoard(host);
-        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-1");
+        board.CategoryFilterItems.Single(i => i.Category.Id == "c-1").IsChecked = true;
 
         var conversationIsEmptyNotified = false;
         var observedConversationIsEmpty = false;
