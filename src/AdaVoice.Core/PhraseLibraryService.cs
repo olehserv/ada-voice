@@ -209,7 +209,7 @@ public sealed class PhraseLibraryService
     public Category AddCategory(string name, string color)
     {
         EnsureWritable();
-        var trimmed = RequireName(name);
+        var trimmed = RequireName(name, "category");
         var category = new Category
         {
             Id = "c-" + Guid.NewGuid().ToString("N")[..8],
@@ -232,7 +232,7 @@ public sealed class PhraseLibraryService
         if (index < 0)
             return null;
 
-        var updated = _library.Categories[index] with { Name = RequireName(name), Color = color };
+        var updated = _library.Categories[index] with { Name = RequireName(name, "category"), Color = color };
         _library.Categories[index] = updated;
         _repository.Save(_library);
         return updated;
@@ -271,7 +271,7 @@ public sealed class PhraseLibraryService
         var conversation = new Conversation
         {
             Id = "v-" + Guid.NewGuid().ToString("N")[..8],
-            Name = RequireName(name),
+            Name = RequireName(name, "conversation"),
             PhraseIds = [],
             SortOrder = _library.Conversations.Count,
             CreatedAt = now,
@@ -292,7 +292,7 @@ public sealed class PhraseLibraryService
         if (index < 0)
             return null;
 
-        var updated = _library.Conversations[index] with { Name = RequireName(name), UpdatedAt = DateTime.UtcNow };
+        var updated = _library.Conversations[index] with { Name = RequireName(name, "conversation"), UpdatedAt = DateTime.UtcNow };
         _library.Conversations[index] = updated;
         _repository.Save(_library);
         return updated;
@@ -385,11 +385,11 @@ public sealed class PhraseLibraryService
         return updated;
     }
 
-    private static string RequireName(string name)
+    private static string RequireName(string name, string what)
     {
         var trimmed = name?.Trim() ?? "";
         if (trimmed.Length == 0)
-            throw new ArgumentException("A category name is required.", nameof(name));
+            throw new ArgumentException($"A {what} name is required.", nameof(name));
         return trimmed;
     }
 
