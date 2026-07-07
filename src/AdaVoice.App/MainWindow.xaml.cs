@@ -119,6 +119,72 @@ public partial class MainWindow : FluentWindow
     public void ShowManageConversations(ConversationsViewModel conversations) =>
         new ManageConversationsDialog { DataContext = conversations, Owner = this }.ShowDialog();
 
+    /// <summary>Open the Categories filter menu: "Manage categories…", then one checkable row per
+    /// category. Built fresh on every click (cheap for a handful of rows) so it never shows stale
+    /// state. Native ContextMenu + checkable MenuItems, not data-bound — WPF has no clean way to mix
+    /// a fixed action row with a dynamically-bound checkable list in one ItemsSource.</summary>
+    private void ShowCategoryFilterMenu(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not BoardViewModel board || sender is not FrameworkElement button)
+            return;
+
+        var menu = new System.Windows.Controls.ContextMenu { PlacementTarget = button };
+        menu.Items.Add(new System.Windows.Controls.MenuItem
+        {
+            Header = "Manage categories…",
+            Command = board.ManageCategoriesCommand,
+        });
+        menu.Items.Add(new System.Windows.Controls.Separator());
+
+        foreach (var item in board.CategoryFilterItems)
+        {
+            var menuItem = new System.Windows.Controls.MenuItem
+            {
+                Header = item.Category.Name,
+                IsCheckable = true,
+                IsChecked = item.IsChecked,
+            };
+            menuItem.Checked += (_, _) => item.IsChecked = true;
+            menuItem.Unchecked += (_, _) => item.IsChecked = false;
+            menu.Items.Add(menuItem);
+        }
+
+        menu.IsOpen = true;
+    }
+
+    /// <summary>Open the Conversations filter menu: "Manage conversations…", then one row per
+    /// conversation (including the "None" sentinel, rendered like any other row). Clicking a row
+    /// activates it directly through BoardViewModel.SelectedConversationFilter's existing setter —
+    /// the menu does not track checked-state itself, it only reflects the current selection when
+    /// built.</summary>
+    private void ShowConversationFilterMenu(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not BoardViewModel board || sender is not FrameworkElement button)
+            return;
+
+        var menu = new System.Windows.Controls.ContextMenu { PlacementTarget = button };
+        menu.Items.Add(new System.Windows.Controls.MenuItem
+        {
+            Header = "Manage conversations…",
+            Command = board.ManageConversationsCommand,
+        });
+        menu.Items.Add(new System.Windows.Controls.Separator());
+
+        foreach (var conversation in board.ConversationFilterOptions)
+        {
+            var menuItem = new System.Windows.Controls.MenuItem
+            {
+                Header = conversation.Name,
+                IsCheckable = true,
+                IsChecked = board.SelectedConversationFilter.Id == conversation.Id,
+            };
+            menuItem.Click += (_, _) => board.SelectedConversationFilter = conversation;
+            menu.Items.Add(menuItem);
+        }
+
+        menu.IsOpen = true;
+    }
+
     private RecorderDialog? _recorder;
 
     /// <summary>Show the modal recorder. It binds to the same BoardViewModel as the Board, so no
