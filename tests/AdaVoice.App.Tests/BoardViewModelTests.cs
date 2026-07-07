@@ -1353,6 +1353,43 @@ public class BoardViewModelTests
     }
 
     [Fact]
+    public void Activating_the_already_active_conversation_restarts_its_step_pointer()
+    {
+        // Conversation is a record (value equality) and SelectedConversationFilter is an
+        // ObservableProperty, so a plain re-assignment to an equal value is a silent no-op — the
+        // menu's "click a conversation row" path must go through ActivateConversation instead of
+        // setting SelectedConversationFilter directly, or clicking the already-active row would do
+        // nothing (no step-pointer reset).
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            Phrases = [
+                new PhraseEntry { Id = "p-1", FileName = "p-1.wav" },
+                new PhraseEntry { Id = "p-2", FileName = "p-2.wav" },
+            ],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1", "p-2"] }],
+        };
+        var board = NewBoard(host);
+        var conversation = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+        board.ActivateConversation(conversation);
+        board.PlayCommand.Execute(board.Phrases.Single(p => p.Entry.Id == "p-1")); // pointer now at p-2
+
+        board.ActivateConversation(conversation); // re-activate the same conversation
+
+        Assert.True(board.Phrases.Single(p => p.Entry.Id == "p-1").IsCurrentStep); // back to step 0
+    }
+
+    [Fact]
+    public void Activating_none_while_already_none_is_a_harmless_no_op()
+    {
+        var board = NewBoard(new FakePlaybackHost());
+
+        board.ActivateConversation(BoardViewModel.NoneConversation);
+
+        Assert.False(board.IsConversationActive);
+    }
+
+    [Fact]
     public void Switching_to_none_exits_conversation_mode_and_shows_every_phrase()
     {
         var host = new FakePlaybackHost

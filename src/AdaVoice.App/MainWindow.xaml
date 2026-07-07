@@ -197,7 +197,6 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <ui:Button Grid.Column="0" Content="{Binding CategoryFilterButtonLabel}"
-                           IsEnabled="{Binding CategoryFilterEnabled}"
                            Click="ShowCategoryFilterMenu"
                            ToolTip="Filter by category, or manage categories"
                            AutomationProperties.Name="Category filter" />

@@ -358,6 +358,20 @@ public partial class BoardViewModel : ObservableObject
         RefreshFilter();
     }
 
+    /// <summary>Activate a conversation, always resetting the step pointer to the first phrase —
+    /// even when re-activating the conversation that's already active. A plain
+    /// <c>SelectedConversationFilter = conversation</c> would silently no-op in that case
+    /// (<see cref="Conversation"/> is a record — value equality — and the generated property
+    /// setter skips unchanged values), so the Conversations filter menu calls this instead of
+    /// setting the property directly.</summary>
+    public void ActivateConversation(Conversation conversation)
+    {
+        if (SelectedConversationFilter.Id == conversation.Id)
+            SelectedConversationFilter = NoneConversation;
+
+        SelectedConversationFilter = conversation;
+    }
+
     /// <summary>Open the conversation manager; when it closes, rebuild the filter dropdown
     /// (conversations may have changed) and reset the filter to "None".</summary>
     [RelayCommand]

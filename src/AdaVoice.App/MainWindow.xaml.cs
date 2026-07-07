@@ -154,9 +154,10 @@ public partial class MainWindow : FluentWindow
 
     /// <summary>Open the Conversations filter menu: "Manage conversations…", then one row per
     /// conversation (including the "None" sentinel, rendered like any other row). Clicking a row
-    /// activates it directly through BoardViewModel.SelectedConversationFilter's existing setter —
-    /// the menu does not track checked-state itself, it only reflects the current selection when
-    /// built.</summary>
+    /// goes through BoardViewModel.ActivateConversation, not a direct property assignment — the
+    /// same conversation clicked twice must still reset the step pointer, and a plain assignment
+    /// would silently no-op on an equal (record) value. The menu does not track checked-state
+    /// itself, it only reflects the current selection when built.</summary>
     private void ShowConversationFilterMenu(object sender, RoutedEventArgs e)
     {
         if (DataContext is not BoardViewModel board || sender is not FrameworkElement button)
@@ -178,7 +179,7 @@ public partial class MainWindow : FluentWindow
                 IsCheckable = true,
                 IsChecked = board.SelectedConversationFilter.Id == conversation.Id,
             };
-            menuItem.Click += (_, _) => board.SelectedConversationFilter = conversation;
+            menuItem.Click += (_, _) => board.ActivateConversation(conversation);
             menu.Items.Add(menuItem);
         }
 
