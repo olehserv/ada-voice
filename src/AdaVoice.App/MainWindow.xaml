@@ -197,7 +197,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <ComboBox Grid.Column="0" MinWidth="160" VerticalAlignment="Center"
+                <ComboBox Grid.Column="0" MinWidth="120" VerticalAlignment="Center"
                           ItemsSource="{Binding CategoryFilterOptions}"
                           SelectedItem="{Binding SelectedCategoryFilter}"
                           IsEnabled="{Binding CategoryFilterEnabled}"
@@ -207,7 +207,7 @@
                            Content="Categories…" Foreground="{StaticResource Text.Secondary}"
                            Command="{Binding ManageCategoriesCommand}"
                            ToolTip="Add, rename, or delete categories" />
-                <ComboBox Grid.Column="2" Margin="8,0,0,0" MinWidth="160" VerticalAlignment="Center"
+                <ComboBox Grid.Column="2" Margin="8,0,0,0" MinWidth="120" VerticalAlignment="Center"
                           ItemsSource="{Binding ConversationFilterOptions}"
                           SelectedItem="{Binding SelectedConversationFilter}"
                           DisplayMemberPath="Name"
