@@ -1052,7 +1052,13 @@ git commit -m "feat(app): ConversationsViewModel — manage-dialog logic for Con
 
 - [ ] **Step 1: Write the failing tests**
 
-Add to `tests/AdaVoice.App.Tests/BoardViewModelTests.cs` — first extend the `NewBoard` helper (near line 11-24) to accept the new callback:
+> **⚠ Adapted by the 2026-07-06 UI redesign.** The 2026-07-07 redesign added a `showRecorder`
+> parameter to both `BoardViewModel` and this test helper (the Record button now opens a modal
+> `RecorderDialog`) — it already exists in the real file. The replacement below includes it so
+> this step doesn't silently drop it; do not omit `showRecorder` from either the parameter list
+> or the constructor call.
+
+Add to `tests/AdaVoice.App.Tests/BoardViewModelTests.cs` — first extend the `NewBoard` helper (near line 11-25) to accept the new callback:
 
 ```csharp
     private static BoardViewModel NewBoard(
@@ -1064,12 +1070,14 @@ Add to `tests/AdaVoice.App.Tests/BoardViewModelTests.cs` — first extend the `N
         Action<SetupWizardViewModel>? showSetupWizard = null,
         ISettingsHost? settingsHost = null,
         Action<SettingsWindowViewModel>? showSettings = null,
-        Func<RepairPhraseViewModel, bool>? showRepairDialog = null) =>
+        Func<RepairPhraseViewModel, bool>? showRepairDialog = null,
+        Action? showRecorder = null) =>
         new(host, host, host, host, settingsHost ?? new FakeSettingsHost(), new StatusViewModel(host),
             new SettingsViewModel(new FakeSettingsHost()),
             getActiveHotkey: () => "Pause", confirmDelete: confirmDelete, showEditDialog: showEditDialog,
             showManageCategories: showManageCategories, showManageConversations: showManageConversations,
-            showSetupWizard: showSetupWizard, showSettings: showSettings, showRepairDialog: showRepairDialog);
+            showSetupWizard: showSetupWizard, showSettings: showSettings, showRepairDialog: showRepairDialog,
+            showRecorder: showRecorder);
 ```
 
 Then append these tests to the same file (inside the class):
@@ -1522,19 +1530,29 @@ git commit -m "feat(app): Board conversation filter, mutual exclusivity, step po
 
 This is WPF window/XAML — no automated test is possible (the existing `ManageCategoriesDialog` has none either). Verification is manual, listed in Step 4.
 
+> **⚠ Adapted by the 2026-07-06 UI redesign** (see [design 10](../../design/10-ui-redesign-brief.md)).
+> Every dialog now shares dark `FluentWindow` chrome with an in-content `ui:TitleBar` instead of
+> the plain `Window` shown below — **read the real, current
+> `src/AdaVoice.App/ManageCategoriesDialog.xaml` and `.xaml.cs` first** and match its shape:
+> `ui:FluentWindow` root (`ExtendsContentIntoTitleBar="True"`, `WindowBackdropType="None"`,
+> `WindowCornerPreference="Round"`), a two-row `Grid` (`Auto` row for `<ui:TitleBar Title="..."
+> ShowMinimize="False" ShowMaximize="False" CanMaximize="False" />`, `*` row for the content,
+> previously the direct child), and the code-behind base class `Wpf.Ui.Controls.FluentWindow`
+> instead of `Window`. The content structure below (the master-detail `Grid` with the
+> conversation list and step editor) is still correct — it just moves one level deeper, into the
+> second row's content area, instead of being the window's direct child.
+
 - [ ] **Step 1: Create the dialog's code-behind**
 
 Create `src/AdaVoice.App/ManageConversationsDialog.xaml.cs`:
 
 ```csharp
-using System.Windows;
-
 namespace AdaVoice.App;
 
 /// <summary>Modal conversation manager. Its <c>DataContext</c> is a <c>ConversationsViewModel</c>;
 /// every change (add/rename/delete a conversation, add/remove/reorder a phrase) is persisted live by
 /// that view-model, so closing needs no save step.</summary>
-public partial class ManageConversationsDialog : Window
+public partial class ManageConversationsDialog : Wpf.Ui.Controls.FluentWindow
 {
     public ManageConversationsDialog() => InitializeComponent();
 }
@@ -1542,7 +1560,7 @@ public partial class ManageConversationsDialog : Window
 
 - [ ] **Step 2: Create the dialog's XAML**
 
-Create `src/AdaVoice.App/ManageConversationsDialog.xaml`:
+Create `src/AdaVoice.App/ManageConversationsDialog.xaml` — apply the FluentWindow/TitleBar wrapper described in the note above around the content shown here (do not paste this literally as a plain `Window`):
 
 ```xml
 <Window x:Class="AdaVoice.App.ManageConversationsDialog"
