@@ -1297,6 +1297,53 @@ public class BoardViewModelTests
         Assert.False(board.CategoryIsEmpty); // mutually exclusive by construction
     }
 
+    // Regression test for the NRE a self-review caught in OnSelectedConversationFilterChanged
+    // (commit e8bdcba): a live WPF binding on ConversationIsEmpty reads the property synchronously
+    // from inside the PropertyChanged handler. A plain unit test with no subscriber can never see
+    // this — OnPropertyChanged just raises an event; nothing evaluates the getter unless something
+    // is listening, the way a real binding does. This test simulates that listener.
+    //
+    // Selecting a category first means a specific category is active when the conversation gets
+    // selected, so OnSelectedConversationFilterChanged has to flip SelectedCategoryFilter back to
+    // AllCategories — that flip re-enters OnSelectedCategoryFilterChanged -> RefreshFilter ->
+    // OnPropertyChanged(ConversationIsEmpty), while IsConversationActive already reports true. If
+    // _activeConversationPhraseIdSet were still null at that point (the pre-fix ordering),
+    // the handler's read of ConversationIsEmpty would NRE inside `_activeConversationPhraseIdSet!.Contains(...)`.
+    [Fact]
+    public void Selecting_a_conversation_while_a_category_is_active_does_not_null_ref_a_live_binding()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-1", Name = "Greetings" }],
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = "c-1" }],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1"] }],
+        };
+        var board = NewBoard(host);
+        board.SelectedCategoryFilter = board.CategoryFilterOptions.Single(c => c.Id == "c-1");
+
+        var conversationIsEmptyNotified = false;
+        var observedConversationIsEmpty = false;
+        board.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(BoardViewModel.ConversationIsEmpty))
+            {
+                conversationIsEmptyNotified = true;
+                // A real WPF binding reads the getter synchronously right here — this is the read
+                // that NREs pre-fix, when _activeConversationPhraseIdSet is still null.
+                observedConversationIsEmpty = board.ConversationIsEmpty;
+            }
+        };
+
+        var exception = Record.Exception(() =>
+            board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1"));
+
+        Assert.Null(exception);
+        // If this ever stops being true, the re-entrant notification chain silently stopped firing
+        // for ConversationIsEmpty — the test would otherwise pass for the wrong reason.
+        Assert.True(conversationIsEmptyNotified);
+        Assert.False(observedConversationIsEmpty); // the conversation's one phrase is visible
+    }
+
     [Fact]
     public void ManageConversations_shows_the_dialog_and_refreshes_the_filter_options()
     {
