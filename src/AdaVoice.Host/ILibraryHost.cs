@@ -20,6 +20,9 @@ public interface ILibraryHost
     /// the tag chips on the board.</summary>
     IReadOnlyList<TagInfo> Tags { get; }
 
+    /// <summary>The conversations (ordered phrase scripts), in sort order.</summary>
+    IReadOnlyList<Conversation> Conversations { get; }
+
     /// <summary>Ids of phrases whose audio file is missing — flagged broken in the UI rather than
     /// crashing playback.</summary>
     IReadOnlyList<string> BrokenPhraseIds { get; }
@@ -54,4 +57,19 @@ public interface ILibraryHost
     /// <summary>Delete a category (its phrases fall back to Uncategorized). Returns false if the id is
     /// unknown or is the protected default category.</summary>
     bool DeleteCategory(string id);
+
+    /// <summary>Create a conversation (no phrases yet). Throws if the name is blank.</summary>
+    Conversation AddConversation(string name);
+
+    /// <summary>Rename a conversation. Returns the updated conversation, or null if the id is unknown.
+    /// Throws if the new name is blank.</summary>
+    Conversation? RenameConversation(string id, string name);
+
+    /// <summary>Delete a conversation. Its phrases are untouched. Returns false if the id is
+    /// unknown.</summary>
+    bool DeleteConversation(string id);
+
+    /// <summary>Replace a conversation's ordered phrase list. Unknown phrase ids are dropped. Returns
+    /// the updated conversation, or null if the id is unknown.</summary>
+    Conversation? SetConversationPhrases(string id, IReadOnlyList<string> phraseIds);
 }

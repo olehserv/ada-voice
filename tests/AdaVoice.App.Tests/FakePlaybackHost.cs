@@ -28,6 +28,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     public IReadOnlyList<string> BrokenPhraseIds { get; set; } = [];
     public string? LibraryWarning { get; set; }
     public List<PhraseEntry> Deleted { get; } = [];
+    public IReadOnlyList<Conversation> Conversations { get; set; } = [];
 
     public event EventHandler<EngineStateChangedEventArgs>? StateChanged;
     public event EventHandler<string?>? PlayingPhraseChanged;
@@ -173,6 +174,48 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
 
         Categories = Categories.Where(c => c.Id != id).ToList();
         return true;
+    }
+
+    public Conversation AddConversation(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("blank", nameof(name));
+
+        var conversation = new Conversation { Id = "v-" + (Conversations.Count + 1), Name = name.Trim() };
+        Conversations = [.. Conversations, conversation];
+        return conversation;
+    }
+
+    public Conversation? RenameConversation(string id, string name)
+    {
+        var existing = Conversations.FirstOrDefault(c => c.Id == id);
+        if (existing is null)
+            return null;
+
+        var updated = existing with { Name = name.Trim() };
+        Conversations = Conversations.Select(c => c.Id == id ? updated : c).ToList();
+        return updated;
+    }
+
+    public bool DeleteConversation(string id)
+    {
+        if (Conversations.All(c => c.Id != id))
+            return false;
+
+        Conversations = Conversations.Where(c => c.Id != id).ToList();
+        return true;
+    }
+
+    public Conversation? SetConversationPhrases(string id, IReadOnlyList<string> phraseIds)
+    {
+        var existing = Conversations.FirstOrDefault(c => c.Id == id);
+        if (existing is null)
+            return null;
+
+        var knownIds = Phrases.Select(p => p.Id).ToHashSet();
+        var updated = existing with { PhraseIds = phraseIds.Where(knownIds.Contains).ToList() };
+        Conversations = Conversations.Select(c => c.Id == id ? updated : c).ToList();
+        return updated;
     }
 
     // ---- IRecorderHost ----

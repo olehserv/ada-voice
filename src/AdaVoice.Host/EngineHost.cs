@@ -179,6 +179,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
 
     public IReadOnlyList<Category> Categories => _library.Categories;
     public IReadOnlyList<TagInfo> Tags => _library.Tags;
+    public IReadOnlyList<Conversation> Conversations => _library.Conversations;
     public IReadOnlyList<string> BrokenPhraseIds => _library.BrokenPhraseIds;
 
     /// <summary>Maps the load status to operator text. Mirrors the log warnings in the constructor,
@@ -203,6 +204,12 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     public Category AddCategory(string name, string color) => _library.AddCategory(name, color);
     public Category? UpdateCategory(string id, string name, string color) => _library.UpdateCategory(id, name, color);
     public bool DeleteCategory(string id) => _library.DeleteCategory(id);
+
+    public Conversation AddConversation(string name) => _library.AddConversation(name);
+    public Conversation? RenameConversation(string id, string name) => _library.RenameConversation(id, name);
+    public bool DeleteConversation(string id) => _library.DeleteConversation(id);
+    public Conversation? SetConversationPhrases(string id, IReadOnlyList<string> phraseIds) =>
+        _library.SetConversationPhrases(id, phraseIds);
 
     public void Start()
     {
