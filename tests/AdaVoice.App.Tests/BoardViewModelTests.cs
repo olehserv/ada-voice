@@ -1281,6 +1281,23 @@ public class BoardViewModelTests
     }
 
     [Fact]
+    public void Conversation_with_no_matching_phrases_shows_the_empty_state()
+    {
+        var host = new FakePlaybackHost
+        {
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "A" }],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = [] }],
+        };
+        var board = NewBoard(host);
+
+        board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+
+        Assert.True(board.ConversationIsEmpty);
+        Assert.False(board.IsEmpty); // the board itself has phrases
+        Assert.False(board.CategoryIsEmpty); // mutually exclusive by construction
+    }
+
+    [Fact]
     public void ManageConversations_shows_the_dialog_and_refreshes_the_filter_options()
     {
         var host = new FakePlaybackHost();
