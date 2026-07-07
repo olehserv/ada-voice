@@ -31,6 +31,9 @@ public sealed class PhraseLibraryService
     /// <summary>The tag registry: each tag name and the colour it shows in. Grows as tags are used.</summary>
     public IReadOnlyList<TagInfo> Tags => _library.Tags;
 
+    /// <summary>The conversations (ordered phrase scripts), in sort order.</summary>
+    public IReadOnlyList<Conversation> Conversations => _library.Conversations;
+
     /// <summary>How the library was loaded — the host/UI surfaces this so a corrupt file is never
     /// mistaken for an empty library (design 04 §3).</summary>
     public LibraryLoadStatus LoadStatus { get; private set; }
@@ -69,13 +72,40 @@ public sealed class PhraseLibraryService
         LoadDetail = result.Detail;
         BrokenPhraseIds = LibraryValidator.FindBrokenPhraseIds(_library, _audioExists);
 
-        // One-time migration: give a colour to any tag that predates the registry (libraries written
-        // before tags were coloured). Idempotent — once persisted, later loads find nothing to add.
-        // Gated to a normal, fully-parsed load: ReadError returns an empty in-memory stand-in for a
-        // good-but-locked file specifically so it is never overwritten, and RecoveredFromBackup already
-        // persists itself. Migrating+saving on either path would defeat that safety.
-        if (LoadStatus == LibraryLoadStatus.Loaded && RegisterTags(_library.Phrases.SelectMany(p => p.Tags)))
-            _repository.Save(_library);
+        // One-time migrations: give a colour to any tag that predates the registry, and drop any
+        // conversation reference to a phrase that no longer exists (e.g. a hand-edited or
+        // merge-imported library). Gated to a normal, fully-parsed load: ReadError returns an empty
+        // in-memory stand-in for a good-but-locked file specifically so it is never overwritten, and
+        // RecoveredFromBackup already persists itself. Migrating+saving on either path would defeat
+        // that safety.
+        if (LoadStatus == LibraryLoadStatus.Loaded)
+        {
+            var tagsChanged = RegisterTags(_library.Phrases.SelectMany(p => p.Tags));
+            var conversationsChanged = PruneUnknownConversationPhrases();
+            if (tagsChanged || conversationsChanged)
+                _repository.Save(_library);
+        }
+    }
+
+    /// <summary>Drop any phrase id from a conversation's step list that no longer matches an existing
+    /// phrase. Returns true if anything changed. Does not persist — the caller (<see cref="Load"/>)
+    /// saves once for both migrations.</summary>
+    private bool PruneUnknownConversationPhrases()
+    {
+        var knownIds = _library.Phrases.Select(p => p.Id).ToHashSet();
+        var changed = false;
+        for (var i = 0; i < _library.Conversations.Count; i++)
+        {
+            var conversation = _library.Conversations[i];
+            var filtered = conversation.PhraseIds.Where(knownIds.Contains).ToList();
+            if (filtered.Count == conversation.PhraseIds.Count)
+                continue;
+
+            _library.Conversations[i] = conversation with { PhraseIds = filtered, UpdatedAt = DateTime.UtcNow };
+            changed = true;
+        }
+
+        return changed;
     }
 
     /// <summary>Ensure each name has a registry entry, assigning the next palette colour (cycling) to
@@ -147,10 +177,30 @@ public sealed class PhraseLibraryService
             return null;
 
         _library.Phrases.Remove(entry);
+        PruneConversationPhrase(phraseId);
         _repository.Save(_library);
 
         orphanAudio(entry.FileName, "deleted-" + entry.FileName);
         return entry;
+    }
+
+    /// <summary>Remove one phrase id from every conversation's step list — a deleted phrase can no
+    /// longer be referenced (design: docs/superpowers/specs/2026-07-06-conversations-design.md §2).
+    /// Does not persist; the caller saves.</summary>
+    private void PruneConversationPhrase(string phraseId)
+    {
+        for (var i = 0; i < _library.Conversations.Count; i++)
+        {
+            var conversation = _library.Conversations[i];
+            if (!conversation.PhraseIds.Contains(phraseId))
+                continue;
+
+            _library.Conversations[i] = conversation with
+            {
+                PhraseIds = conversation.PhraseIds.Where(id => id != phraseId).ToList(),
+                UpdatedAt = DateTime.UtcNow,
+            };
+        }
     }
 
     // ---- Categories ----------------------------------------------------------------------------
@@ -208,6 +258,78 @@ public sealed class PhraseLibraryService
         _library.Categories.RemoveAt(index);
         _repository.Save(_library);
         return true;
+    }
+
+    // ---- Conversations -------------------------------------------------------------------------
+
+    /// <summary>Create a conversation at the end of the list (no phrases yet) and persist. Throws if
+    /// the name is blank.</summary>
+    public Conversation AddConversation(string name)
+    {
+        EnsureWritable();
+        var now = DateTime.UtcNow;
+        var conversation = new Conversation
+        {
+            Id = "v-" + Guid.NewGuid().ToString("N")[..8],
+            Name = RequireName(name),
+            PhraseIds = [],
+            SortOrder = _library.Conversations.Count,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+
+        _library.Conversations.Add(conversation);
+        _repository.Save(_library);
+        return conversation;
+    }
+
+    /// <summary>Rename a conversation. Returns the updated conversation, or null if no conversation
+    /// has that id. Throws if the new name is blank.</summary>
+    public Conversation? RenameConversation(string id, string name)
+    {
+        EnsureWritable();
+        var index = _library.Conversations.FindIndex(c => c.Id == id);
+        if (index < 0)
+            return null;
+
+        var updated = _library.Conversations[index] with { Name = RequireName(name), UpdatedAt = DateTime.UtcNow };
+        _library.Conversations[index] = updated;
+        _repository.Save(_library);
+        return updated;
+    }
+
+    /// <summary>Delete a conversation. Its phrases are untouched — a conversation only references
+    /// them. Returns false if the id is unknown.</summary>
+    public bool DeleteConversation(string id)
+    {
+        EnsureWritable();
+        var index = _library.Conversations.FindIndex(c => c.Id == id);
+        if (index < 0)
+            return false;
+
+        _library.Conversations.RemoveAt(index);
+        _repository.Save(_library);
+        return true;
+    }
+
+    /// <summary>Replace a conversation's ordered phrase list. Unknown phrase ids are silently
+    /// dropped — a conversation may only reference phrases that exist, the same invariant a deleted
+    /// phrase's cleanup enforces (see <see cref="PruneConversationPhrase"/>). Returns the updated
+    /// conversation, or null if no conversation has that id.</summary>
+    public Conversation? SetConversationPhrases(string id, IReadOnlyList<string> phraseIds)
+    {
+        EnsureWritable();
+        var index = _library.Conversations.FindIndex(c => c.Id == id);
+        if (index < 0)
+            return null;
+
+        var knownIds = _library.Phrases.Select(p => p.Id).ToHashSet();
+        var filtered = phraseIds.Where(knownIds.Contains).ToList();
+
+        var updated = _library.Conversations[index] with { PhraseIds = filtered, UpdatedAt = DateTime.UtcNow };
+        _library.Conversations[index] = updated;
+        _repository.Save(_library);
+        return updated;
     }
 
     // ---- Phrase edits --------------------------------------------------------------------------
