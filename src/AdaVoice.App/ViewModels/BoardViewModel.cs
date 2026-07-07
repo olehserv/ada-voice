@@ -349,13 +349,20 @@ public partial class BoardViewModel : ObservableObject
     {
         if (!string.IsNullOrEmpty(value?.Id))
         {
-            // Activating a Conversation turns off the Category filter — mutually exclusive.
-            if (!string.IsNullOrEmpty(SelectedCategoryFilter?.Id))
-                SelectedCategoryFilter = AllCategories;
-
+            // Populate the active-conversation state before flipping the category filter below —
+            // that flip re-enters this class via OnSelectedCategoryFilterChanged -> RefreshFilter,
+            // which raises PropertyChanged(ConversationIsEmpty) while SelectedConversationFilter
+            // already reports IsConversationActive == true. If _activeConversationPhraseIdSet were
+            // still null at that point, ConversationIsEmpty's `_activeConversationPhraseIdSet!.Contains(...)`
+            // would null-ref the moment Task 7 binds it. Setting these first keeps the invariant
+            // (IsConversationActive == true implies the set is populated) intact throughout.
             _activeConversationPhraseIds = value.PhraseIds.ToList();
             _activeConversationPhraseIdSet = _activeConversationPhraseIds.ToHashSet();
             _currentStepIndex = 0;
+
+            // Activating a Conversation turns off the Category filter — mutually exclusive.
+            if (!string.IsNullOrEmpty(SelectedCategoryFilter?.Id))
+                SelectedCategoryFilter = AllCategories;
 
             var indexById = _activeConversationPhraseIds
                 .Select((id, index) => (id, index))
