@@ -28,6 +28,17 @@ public partial class PhraseItemViewModel(PhraseEntry entry) : ObservableObject
     [ObservableProperty]
     private bool _isBroken;
 
+    /// <summary>True when this phrase is the active conversation's next expected step — the board
+    /// gives it a highlight ring. Set by <c>BoardViewModel.UpdateCurrentStepHighlight</c>.</summary>
+    [ObservableProperty]
+    private bool _isCurrentStep;
+
+    /// <summary>Sort key while a conversation is active: this phrase's position in the conversation's
+    /// step order, or <see cref="int.MaxValue"/> if it isn't a member (irrelevant — the board's filter
+    /// already hides those). Ignored (left at its default) when no conversation is active.</summary>
+    [ObservableProperty]
+    private int _conversationStepIndex;
+
     /// <summary>Hex fill colour of the phrase's category (set by the board from the category list). Empty
     /// means "no colour" — the tile falls back to a neutral fill.</summary>
     [ObservableProperty]

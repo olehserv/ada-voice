@@ -13,6 +13,7 @@ public class BoardViewModelTests
         Func<PhraseItemViewModel, bool>? confirmDelete = null,
         Func<PhraseEditViewModel, bool>? showEditDialog = null,
         Action<CategoriesViewModel>? showManageCategories = null,
+        Action<ConversationsViewModel>? showManageConversations = null,
         Action<SetupWizardViewModel>? showSetupWizard = null,
         ISettingsHost? settingsHost = null,
         Action<SettingsWindowViewModel>? showSettings = null,
@@ -21,8 +22,9 @@ public class BoardViewModelTests
         new(host, host, host, host, settingsHost ?? new FakeSettingsHost(), new StatusViewModel(host),
             new SettingsViewModel(new FakeSettingsHost()),
             getActiveHotkey: () => "Pause", confirmDelete: confirmDelete, showEditDialog: showEditDialog,
-            showManageCategories: showManageCategories, showSetupWizard: showSetupWizard,
-            showSettings: showSettings, showRepairDialog: showRepairDialog, showRecorder: showRecorder);
+            showManageCategories: showManageCategories, showManageConversations: showManageConversations,
+            showSetupWizard: showSetupWizard, showSettings: showSettings, showRepairDialog: showRepairDialog,
+            showRecorder: showRecorder);
 
     private static RecordingResult Take() => new(new float[10], GainDb: -3, DurationMs: 1000, PeakDbfs: -6);
 
@@ -1132,5 +1134,164 @@ public class BoardViewModelTests
 
         Assert.NotNull(shown);
         Assert.Equal("Pause", shown!.Behavior.HotkeyStatus.Split(": ")[1]);
+    }
+
+    // ---- Conversations -------------------------------------------------------------------------
+
+    [Fact]
+    public void Selecting_a_conversation_shows_only_its_phrases_in_step_order()
+    {
+        var host = new FakePlaybackHost
+        {
+            Phrases = [
+                new PhraseEntry { Id = "p-1", Title = "A" },
+                new PhraseEntry { Id = "p-2", Title = "B" },
+                new PhraseEntry { Id = "p-3", Title = "C" }, // not in the conversation
+            ],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-2", "p-1"] }],
+        };
+        var board = NewBoard(host);
+
+        board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+
+        var visible = board.PhrasesView.Cast<PhraseItemViewModel>().Select(p => p.Entry.Id).ToList();
+        Assert.Equal(["p-2", "p-1"], visible); // filtered to the conversation, in its order
+    }
+
+    [Fact]
+    public void Selecting_a_conversation_turns_off_the_category_filter()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-1", Name = "Greetings" }],
+            Phrases = [new PhraseEntry { Id = "p-1", CategoryId = "c-1" }],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1"] }],
+        };
+        var board = NewBoard(host);
+        board.SelectedCategoryFilter = new Category { Id = "c-1", Name = "Greetings" };
+
+        board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+
+        Assert.Equal(BoardViewModel.AllCategories.Id, board.SelectedCategoryFilter.Id);
+        Assert.False(board.CategoryFilterEnabled);
+    }
+
+    [Fact]
+    public void Selecting_a_specific_category_turns_off_an_active_conversation()
+    {
+        var host = new FakePlaybackHost
+        {
+            Categories = [new Category { Id = "c-1", Name = "Greetings" }],
+            Phrases = [new PhraseEntry { Id = "p-1", CategoryId = "c-1" }],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1"] }],
+        };
+        var board = NewBoard(host);
+        board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+
+        board.SelectedCategoryFilter = host.Categories[0];
+
+        Assert.False(board.IsConversationActive);
+        Assert.Equal(BoardViewModel.NoneConversation.Id, board.SelectedConversationFilter.Id);
+    }
+
+    [Fact]
+    public void Playing_a_phrase_in_the_active_conversation_highlights_the_next_step()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            Phrases = [
+                new PhraseEntry { Id = "p-1", FileName = "p-1.wav" },
+                new PhraseEntry { Id = "p-2", FileName = "p-2.wav" },
+            ],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1", "p-2"] }],
+        };
+        var board = NewBoard(host);
+        board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+        Assert.True(board.Phrases.Single(p => p.Entry.Id == "p-1").IsCurrentStep); // starts at step 0
+
+        board.PlayCommand.Execute(board.Phrases.Single(p => p.Entry.Id == "p-1"));
+
+        Assert.False(board.Phrases.Single(p => p.Entry.Id == "p-1").IsCurrentStep);
+        Assert.True(board.Phrases.Single(p => p.Entry.Id == "p-2").IsCurrentStep);
+    }
+
+    [Fact]
+    public void Playing_an_out_of_order_phrase_jumps_the_pointer_to_just_after_it()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            Phrases = [
+                new PhraseEntry { Id = "p-1", FileName = "p-1.wav" },
+                new PhraseEntry { Id = "p-2", FileName = "p-2.wav" },
+                new PhraseEntry { Id = "p-3", FileName = "p-3.wav" },
+            ],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1", "p-2", "p-3"] }],
+        };
+        var board = NewBoard(host);
+        board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+
+        board.PlayCommand.Execute(board.Phrases.Single(p => p.Entry.Id == "p-3")); // caller jumped ahead
+
+        Assert.DoesNotContain(board.Phrases, p => p.IsCurrentStep); // past the last step — nothing highlighted
+    }
+
+    [Fact]
+    public void Reselecting_a_conversation_resets_the_step_pointer_to_the_first_phrase()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            Phrases = [
+                new PhraseEntry { Id = "p-1", FileName = "p-1.wav" },
+                new PhraseEntry { Id = "p-2", FileName = "p-2.wav" },
+            ],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1", "p-2"] }],
+        };
+        var board = NewBoard(host);
+        var conversation = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+        board.SelectedConversationFilter = conversation;
+        board.PlayCommand.Execute(board.Phrases.Single(p => p.Entry.Id == "p-1")); // pointer now at p-2
+
+        board.SelectedConversationFilter = BoardViewModel.NoneConversation;
+        board.SelectedConversationFilter = conversation; // re-select the same conversation
+
+        Assert.True(board.Phrases.Single(p => p.Entry.Id == "p-1").IsCurrentStep); // back to step 0
+    }
+
+    [Fact]
+    public void Switching_to_none_exits_conversation_mode_and_shows_every_phrase()
+    {
+        var host = new FakePlaybackHost
+        {
+            Phrases = [
+                new PhraseEntry { Id = "p-1" },
+                new PhraseEntry { Id = "p-2" },
+            ],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1"] }],
+        };
+        var board = NewBoard(host);
+        board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+
+        board.SelectedConversationFilter = BoardViewModel.NoneConversation;
+
+        Assert.Equal(2, board.PhrasesView.Cast<PhraseItemViewModel>().Count());
+        Assert.True(board.CategoryFilterEnabled);
+    }
+
+    [Fact]
+    public void ManageConversations_shows_the_dialog_and_refreshes_the_filter_options()
+    {
+        var host = new FakePlaybackHost();
+        ConversationsViewModel? shown = null;
+        var board = NewBoard(host, showManageConversations: vm => shown = vm);
+
+        host.Conversations = [new Conversation { Id = "v-new", Name = "Added mid-dialog" }];
+        board.ManageConversationsCommand.Execute(null);
+
+        Assert.NotNull(shown);
+        Assert.Contains(board.ConversationFilterOptions, c => c.Id == "v-new");
+        Assert.Equal(BoardViewModel.NoneConversation.Id, board.SelectedConversationFilter.Id);
     }
 }

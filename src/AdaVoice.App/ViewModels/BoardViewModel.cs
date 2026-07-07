@@ -37,6 +37,7 @@ public partial class BoardViewModel : ObservableObject
     private readonly Func<PhraseEditViewModel, bool> _showEditDialog;
     private readonly Func<RepairPhraseViewModel, bool> _showRepairDialog;
     private readonly Action<CategoriesViewModel> _showManageCategories;
+    private readonly Action<ConversationsViewModel> _showManageConversations;
     private readonly Action _showRecorder;
     private readonly Action<Action> _onUiThread;
 
@@ -86,6 +87,13 @@ public partial class BoardViewModel : ObservableObject
     [ObservableProperty]
     private Category _selectedCategoryFilter;
 
+    /// <summary>The conversation to show, or the "None" sentinel for no conversation filter. Mutually
+    /// exclusive with the category filter (design: docs/superpowers/specs/2026-07-06-conversations-design.md §3).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConversationActive))]
+    [NotifyPropertyChangedFor(nameof(CategoryFilterEnabled))]
+    private Conversation _selectedConversationFilter;
+
     public BoardViewModel(IPlaybackHost playback, IRecorderHost recorder, ILibraryHost library, ISetupHost setup,
         ISettingsHost settingsHost, StatusViewModel status, SettingsViewModel settings,
         Func<string?>? getActiveHotkey = null,
@@ -94,6 +102,7 @@ public partial class BoardViewModel : ObservableObject
         Func<PhraseEditViewModel, bool>? showEditDialog = null,
         Func<RepairPhraseViewModel, bool>? showRepairDialog = null,
         Action<CategoriesViewModel>? showManageCategories = null,
+        Action<ConversationsViewModel>? showManageConversations = null,
         Action<SetupWizardViewModel>? showSetupWizard = null,
         Action<SettingsWindowViewModel>? showSettings = null,
         Func<string?>? pickExportPath = null,
@@ -114,6 +123,7 @@ public partial class BoardViewModel : ObservableObject
         _showEditDialog = showEditDialog ?? (_ => false);  // default: cancel (unit tests opt in)
         _showRepairDialog = showRepairDialog ?? (_ => false); // default: cancel (unit tests opt in)
         _showManageCategories = showManageCategories ?? (_ => { }); // default: no-op (unit tests)
+        _showManageConversations = showManageConversations ?? (_ => { }); // default: no-op (unit tests)
         _showSetupWizard = showSetupWizard ?? (_ => { });  // default: no-op (unit tests)
         _showSettings = showSettings ?? (_ => { });        // default: no-op (unit tests)
         _pickExportPath = pickExportPath ?? (() => null);  // default: cancelled (unit tests)
@@ -137,9 +147,15 @@ public partial class BoardViewModel : ObservableObject
         CategoryFilterOptions = [AllCategories, .. library.Categories];
         _selectedCategoryFilter = AllCategories;
 
+        // "None" + the real conversations drive the filter dropdown; default to None.
+        ConversationFilterOptions = [NoneConversation, .. library.Conversations];
+        _selectedConversationFilter = NoneConversation;
+
         // A filtered view over the same collection — the grid binds to this, not to Phrases directly.
         PhrasesView = CollectionViewSource.GetDefaultView(Phrases);
-        PhrasesView.Filter = o => o is PhraseItemViewModel p && Matches(p.Entry, SearchText, EffectiveCategoryId);
+        PhrasesView.Filter = o => o is PhraseItemViewModel p
+            && Matches(p.Entry, SearchText, EffectiveCategoryId)
+            && (_activeConversationPhraseIdSet is null || _activeConversationPhraseIdSet.Contains(p.Entry.Id));
 
         Phrases.CollectionChanged += (_, _) =>
         {
@@ -148,12 +164,16 @@ public partial class BoardViewModel : ObservableObject
             OnPropertyChanged(nameof(CategoryIsEmpty));
             OnPropertyChanged(nameof(SearchNoMatch));
             OnPropertyChanged(nameof(HasMatches));
+            OnPropertyChanged(nameof(ConversationIsEmpty));
         };
         _playback.PlayingPhraseChanged += OnPlayingPhraseChanged;
     }
 
     /// <summary>Sentinel "show every category" option for the filter dropdown (blank id = no filter).</summary>
     public static readonly Category AllCategories = new() { Id = "", Name = "All categories" };
+
+    /// <summary>Sentinel "no conversation" option for the filter dropdown (blank id = no filter).</summary>
+    public static readonly Conversation NoneConversation = new() { Id = "", Name = "None" };
 
     /// <summary>Raised after a take is saved, with its title — the view shows a "Saved" toast.</summary>
     public event EventHandler<string>? Saved;
@@ -187,6 +207,26 @@ public partial class BoardViewModel : ObservableObject
     /// <summary>"All categories" followed by the real categories — the filter dropdown's items. Rebuilt
     /// after the category manager runs, since categories may have been added/renamed/deleted.</summary>
     public IReadOnlyList<Category> CategoryFilterOptions { get; private set; }
+
+    /// <summary>"None" followed by the real conversations — the filter dropdown's items. Rebuilt after
+    /// the conversation manager runs.</summary>
+    public IReadOnlyList<Conversation> ConversationFilterOptions { get; private set; }
+
+    /// <summary>True while a conversation filter is active.</summary>
+    public bool IsConversationActive => !string.IsNullOrEmpty(SelectedConversationFilter?.Id);
+
+    /// <summary>The Category filter is disabled while a Conversation is active — the two are mutually
+    /// exclusive.</summary>
+    public bool CategoryFilterEnabled => !IsConversationActive;
+
+    /// <summary>A conversation is active, no search is active, and none of its phrases are visible on
+    /// the board (it has none, or they were all removed from it) — the empty-state card for
+    /// Conversation mode. Mutually exclusive with <see cref="CategoryIsEmpty"/> by construction: that
+    /// one requires <see cref="EffectiveCategoryId"/> non-null, which is never true while a conversation
+    /// is active (the category filter is forced to "All").</summary>
+    public bool ConversationIsEmpty => IsConversationActive
+        && string.IsNullOrWhiteSpace(SearchText)
+        && !Phrases.Any(p => _activeConversationPhraseIdSet!.Contains(p.Entry.Id));
 
     /// <summary>True when the board has no phrases at all — the view shows a first-run welcome card.</summary>
     public bool IsEmpty => Phrases.Count == 0;
@@ -228,6 +268,14 @@ public partial class BoardViewModel : ObservableObject
     /// is the only place left to stop a stash from surviving into an unrelated future recording.</summary>
     private (string? Title, string? CategoryId, IReadOnlyList<string>? Tags) _pendingMetadata;
 
+    /// <summary>The active conversation's phrase ids in step order, or null when no conversation is
+    /// active. A <c>List</c> (not <see cref="IReadOnlyList{T}"/>) so <see cref="AdvanceStepFor"/> can
+    /// use <c>IndexOf</c>.</summary>
+    private List<string>? _activeConversationPhraseIds;
+
+    private HashSet<string>? _activeConversationPhraseIdSet;
+    private int _currentStepIndex;
+
     /// <summary>A phrase matches when its category passes the filter and the search text appears in its
     /// title or any tag. Pure, so it is unit-testable without WPF.</summary>
     private static bool Matches(PhraseEntry entry, string? search, string? categoryId)
@@ -255,6 +303,18 @@ public partial class BoardViewModel : ObservableObject
         SelectedCategoryFilter = AllCategories; // also refreshes the filter
     }
 
+    /// <summary>Open the conversation manager; when it closes, rebuild the filter dropdown
+    /// (conversations may have changed) and reset the filter to "None".</summary>
+    [RelayCommand]
+    private void ManageConversations()
+    {
+        _showManageConversations(new ConversationsViewModel(_library));
+
+        ConversationFilterOptions = [NoneConversation, .. _library.Conversations];
+        OnPropertyChanged(nameof(ConversationFilterOptions));
+        SelectedConversationFilter = NoneConversation; // also refreshes the filter
+    }
+
     /// <summary>Clear the search box — used by the inline Clear button and the search-no-match
     /// card's Clear-search button.</summary>
     [RelayCommand]
@@ -273,7 +333,50 @@ public partial class BoardViewModel : ObservableObject
         _confirmAndRestart, _showError, _showSettingsInfo));
 
     partial void OnSearchTextChanged(string value) => RefreshFilter();
-    partial void OnSelectedCategoryFilterChanged(Category value) => RefreshFilter();
+
+    partial void OnSelectedCategoryFilterChanged(Category value)
+    {
+        // Picking a specific category turns Conversation mode off — the two filters are mutually
+        // exclusive. Picking "All categories" (blank id) is not a category choice, so it never does
+        // (this also guards against the recursive call OnSelectedConversationFilterChanged makes below).
+        if (!string.IsNullOrEmpty(value?.Id) && IsConversationActive)
+            SelectedConversationFilter = NoneConversation;
+
+        RefreshFilter();
+    }
+
+    partial void OnSelectedConversationFilterChanged(Conversation value)
+    {
+        if (!string.IsNullOrEmpty(value?.Id))
+        {
+            // Activating a Conversation turns off the Category filter — mutually exclusive.
+            if (!string.IsNullOrEmpty(SelectedCategoryFilter?.Id))
+                SelectedCategoryFilter = AllCategories;
+
+            _activeConversationPhraseIds = value.PhraseIds.ToList();
+            _activeConversationPhraseIdSet = _activeConversationPhraseIds.ToHashSet();
+            _currentStepIndex = 0;
+
+            var indexById = _activeConversationPhraseIds
+                .Select((id, index) => (id, index))
+                .ToDictionary(t => t.id, t => t.index);
+            foreach (var item in Phrases)
+                item.ConversationStepIndex = indexById.TryGetValue(item.Entry.Id, out var index) ? index : int.MaxValue;
+
+            PhrasesView.SortDescriptions.Clear();
+            PhrasesView.SortDescriptions.Add(
+                new SortDescription(nameof(PhraseItemViewModel.ConversationStepIndex), ListSortDirection.Ascending));
+        }
+        else
+        {
+            _activeConversationPhraseIds = null;
+            _activeConversationPhraseIdSet = null;
+            PhrasesView.SortDescriptions.Clear();
+        }
+
+        UpdateCurrentStepHighlight();
+        RefreshFilter();
+    }
 
     private void RefreshFilter()
     {
@@ -281,6 +384,35 @@ public partial class BoardViewModel : ObservableObject
         OnPropertyChanged(nameof(CategoryIsEmpty));
         OnPropertyChanged(nameof(SearchNoMatch));
         OnPropertyChanged(nameof(HasMatches));
+        OnPropertyChanged(nameof(ConversationIsEmpty));
+    }
+
+    /// <summary>Highlight the tile at the current step — the one the operator is expected to play
+    /// next. Past the last step (the script is done), nothing is highlighted.</summary>
+    private void UpdateCurrentStepHighlight()
+    {
+        var currentId = _activeConversationPhraseIds is { } order && _currentStepIndex < order.Count
+            ? order[_currentStepIndex]
+            : null;
+
+        foreach (var item in Phrases)
+            item.IsCurrentStep = currentId is not null && item.Entry.Id == currentId;
+    }
+
+    /// <summary>Move the step pointer to just after whatever was actually played — not necessarily the
+    /// step it was pointing at, so an operator who follows the caller out of order still gets a
+    /// sensible "what's next" highlight (design: docs/superpowers/specs/2026-07-06-conversations-design.md §3).</summary>
+    private void AdvanceStepFor(string playedPhraseId)
+    {
+        if (_activeConversationPhraseIds is not { } order)
+            return;
+
+        var index = order.IndexOf(playedPhraseId);
+        if (index < 0)
+            return;
+
+        _currentStepIndex = index + 1;
+        UpdateCurrentStepHighlight();
     }
 
     /// <summary>Tint every phrase tile with its category's colour and resolve its tags into coloured
@@ -344,6 +476,8 @@ public partial class BoardViewModel : ObservableObject
 
         Notice = null;
         _playback.PlayEntry(item.Entry);
+        if (IsConversationActive)
+            AdvanceStepFor(item.Entry.Id);
     }
 
     /// <summary>Right-click "Test on headphones": preview a phrase on the monitor output, engine or not.
