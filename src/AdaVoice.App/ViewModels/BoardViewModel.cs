@@ -240,8 +240,9 @@ public partial class BoardViewModel : ObservableObject
     /// <summary>A conversation is active, no search is active, and none of its phrases are visible on
     /// the board (it has none, or they were all removed from it) — the empty-state card for
     /// Conversation mode. Mutually exclusive with <see cref="CategoryIsEmpty"/> by construction: that
-    /// one requires <see cref="EffectiveCategoryId"/> non-null, which is never true while a conversation
-    /// is active (the category filter is forced to "All").</summary>
+    /// one requires <see cref="EffectiveSingleCategoryId"/> non-null (exactly one category checked),
+    /// which can't be true while a conversation is active — activating a conversation clears every
+    /// checked category (see <see cref="OnSelectedConversationFilterChanged"/>).</summary>
     public bool ConversationIsEmpty => IsConversationActive
         && string.IsNullOrWhiteSpace(SearchText)
         && !Phrases.Any(p => _activeConversationPhraseIdSet!.Contains(p.Entry.Id));

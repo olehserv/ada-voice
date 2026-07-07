@@ -1395,12 +1395,12 @@ public class BoardViewModelTests
     // this — OnPropertyChanged just raises an event; nothing evaluates the getter unless something
     // is listening, the way a real binding does. This test simulates that listener.
     //
-    // Selecting a category first means a specific category is active when the conversation gets
-    // selected, so OnSelectedConversationFilterChanged has to flip SelectedCategoryFilter back to
-    // AllCategories — that flip re-enters OnSelectedCategoryFilterChanged -> RefreshFilter ->
-    // OnPropertyChanged(ConversationIsEmpty), while IsConversationActive already reports true. If
-    // _activeConversationPhraseIdSet were still null at that point (the pre-fix ordering),
-    // the handler's read of ConversationIsEmpty would NRE inside `_activeConversationPhraseIdSet!.Contains(...)`.
+    // Selecting a category first means a specific category is checked when the conversation gets
+    // selected, so OnSelectedConversationFilterChanged has to clear that checked category — clearing
+    // it re-enters OnCategoryFilterItemChanged -> RefreshFilter -> OnPropertyChanged(ConversationIsEmpty),
+    // while IsConversationActive already reports true. If _activeConversationPhraseIdSet were still
+    // null at that point (the pre-fix ordering), the handler's read of ConversationIsEmpty would NRE
+    // inside `_activeConversationPhraseIdSet!.Contains(...)`.
     [Fact]
     public void Selecting_a_conversation_while_a_category_is_active_does_not_null_ref_a_live_binding()
     {
