@@ -10,16 +10,36 @@ back up. It answers one question: *where are we right now?*
 - Details of past work live in git history and in the dated docs under `docs/reviews/`.
   This file stays short on purpose.
 
-_Last updated: 2026-07-06._
+_Last updated: 2026-07-07._
 
 ## Status in one line
 
 **The app is built and verified on the target machine** — engine, recorder, library, Board UI,
-setup wizard, Settings window, stop hotkey, backups, export/import; 360 tests green
-(72 Core + 97 Audio + 8 Wasapi + 5 Host + 178 App). Slice 2 (interaction-state gaps) is smoke-tested
-and confirmed working. Monetization exists as a full design (no code yet).
+setup wizard, Settings window, stop hotkey, backups, export/import, **Conversations** (ordered
+phrase scripts with a step-by-step highlight); 402 tests green (83 Core + 97 Audio + 8 Wasapi +
+5 Host + 209 App). Monetization exists as a full design (no code yet).
 
-## Latest work (2026-07-06 … 07-07)
+## Latest work (2026-07-07)
+
+- **Conversations shipped:** a new entity — an ordered, named group of existing phrases for a
+  call script. `ManageConversationsDialog` (add/rename/delete a conversation, add/remove/reorder
+  its phrases). The Board's Conversation filter shows only that script's phrases, in order, and
+  highlights the next expected phrase as the operator plays through it (jumps to whatever was
+  actually played + 1, so it tracks a caller who skips around). Deleting a phrase quietly prunes
+  it from every conversation. Design: [conversations spec](docs/superpowers/specs/2026-07-06-conversations-design.md).
+  Plan: [conversations plan](docs/superpowers/plans/2026-07-06-conversations.md).
+- **Filter controls redesigned:** the Category filter (pre-existing) became real multi-select
+  (checkboxes) — pick several categories, board shows the union. Both Category and Conversation
+  filters moved from ComboBox+button pairs to two compact menu buttons ("Categories…"/
+  "Conversations…"), each opening a native menu with "Manage…" at the top. This was a necessary
+  follow-up: the original 2-ComboBox filter row (built for Conversations) was proven by real WPF
+  layout measurement to overflow the window's width even at default size — simple width tuning
+  couldn't close the gap. Design: [filter-controls spec](docs/superpowers/specs/2026-07-07-filter-controls-redesign.md).
+  Two bugs caught mid-flight and fixed: a step-pointer NRE from a re-entrancy ordering issue, and
+  re-selecting the same conversation being a silent no-op (both have regression tests). Merged to
+  `main`; user visually confirmed the redesigned filter row on the real app.
+
+## Previous work (2026-07-06)
 
 - **Recorder moved to a modal window** (owner request): the Board's bottom record strip is
   gone; a Record button sits in the filter row (and the empty-state cards still work). All
@@ -69,7 +89,9 @@ and confirmed working. Monetization exists as a full design (no code yet).
 
 ## Done (compact history, newest first)
 
-- ✅ **Slice 2 — interaction-state gaps** (2026-07-05): see "Latest work" above.
+- ✅ **Conversations + filter-controls redesign** (2026-07-07): see "Latest work" above.
+- ✅ **Recorder modal, toast notices, UI redesign** (2026-07-06): see "Previous work" above.
+- ✅ **Slice 2 — interaction-state gaps** (2026-07-05): see "Previous work" below.
 - ✅ **"Next touch" review fixes** (2026-07-04): engine recovery M4–M7, recording/calibration
   safety M1/M2, transactional import + zip caps M9/M10, WASAPI COM hygiene M13, and two new
   test projects (`Host.Tests`, `Audio.Wasapi.Tests`) with an injectable `EngineHost` (H11).
@@ -113,7 +135,11 @@ and confirmed working. Monetization exists as a full design (no code yet).
 
 ## In progress
 
-Nothing open right now. Slice 2 is done and verified; next work needs a decision first (see below).
+**Conversations smoke test (user):** the filter-row redesign was visually confirmed on the real
+app (fits, opens, filters correctly), but the full Conversations flow hasn't had an end-to-end
+pass yet: create a conversation with several phrases in `ManageConversationsDialog…`, reorder
+them, select it from the Board's Conversations button, play through in order and out of order,
+confirm the step highlight follows correctly, delete a phrase that's in an active conversation.
 
 ## Next action
 
