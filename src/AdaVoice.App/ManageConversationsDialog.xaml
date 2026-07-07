@@ -1,0 +1,112 @@
+<ui:FluentWindow x:Class="AdaVoice.App.ManageConversationsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="Manage conversations"
+        Width="560" SizeToContent="Height" MaxHeight="620"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="None"
+        WindowCornerPreference="Round"
+        Background="{StaticResource Surface.Window}"
+        TextElement.Foreground="{StaticResource Text.Primary}"
+        FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="Manage conversations" ShowMinimize="False" ShowMaximize="False" CanMaximize="False" />
+
+        <Grid Grid.Row="1" Margin="16,8,16,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="180" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Left: the conversation list -->
+            <ListBox Grid.Column="0" Grid.Row="0" MaxHeight="480"
+                      ItemsSource="{Binding Rows}"
+                      SelectedItem="{Binding SelectedRow}"
+                      DisplayMemberPath="Name" />
+
+            <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,8,0,0">
+                <ui:TextBox PlaceholderText="New conversation name"
+                            Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}" />
+                <ui:Button Content="Add" Appearance="Primary" Margin="0,8,0,0"
+                           Command="{Binding AddCommand}" />
+            </StackPanel>
+
+            <!-- Right: the selected conversation's steps -->
+            <Border Grid.Column="2" Grid.Row="0"
+                    Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+                <StackPanel DataContext="{Binding SelectedRow}">
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" VerticalAlignment="Center"
+                                 Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                        <ui:Button Grid.Column="1" Content="Save" Appearance="Secondary" Margin="8,0,0,0"
+                                   Command="{Binding DataContext.RenameCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                   CommandParameter="{Binding}" />
+                        <ui:Button Grid.Column="2" Content="Delete" Appearance="Secondary" Margin="8,0,0,0"
+                                   Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                   CommandParameter="{Binding}" />
+                    </Grid>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="320">
+                        <ItemsControl ItemsSource="{Binding Members}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Title}" VerticalAlignment="Center" />
+                                        <ui:Button Grid.Column="1" Content="↑" Margin="4,0,0,0" Appearance="Secondary"
+                                                   Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                   CommandParameter="{Binding}" />
+                                        <ui:Button Grid.Column="2" Content="↓" Margin="4,0,0,0" Appearance="Secondary"
+                                                   Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                   CommandParameter="{Binding}" />
+                                        <ui:Button Grid.Column="3" Content="Remove" Margin="4,0,0,0" Appearance="Secondary"
+                                                   Command="{Binding DataContext.RemovePhraseCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                   CommandParameter="{Binding}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0" ItemsSource="{Binding AddablePhrases}"
+                                  SelectedItem="{Binding PhraseToAdd}" DisplayMemberPath="Title" />
+                        <ui:Button Grid.Column="1" Content="Add phrase" Margin="8,0,0,0"
+                                   Command="{Binding AddPhraseCommand}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <ui:Button Grid.Column="2" Grid.Row="1" Content="Done" Appearance="Secondary" IsCancel="True"
+                       HorizontalAlignment="Right" Margin="0,16,0,0" />
+        </Grid>
+    </Grid>
+</ui:FluentWindow>

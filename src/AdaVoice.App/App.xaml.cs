@@ -69,6 +69,7 @@ public partial class App : Application
             confirmDelete: window.ConfirmDelete,
             showEditDialog: window.ShowEditDialog,
             showManageCategories: window.ShowManageCategories,
+            showManageConversations: window.ShowManageConversations,
             showRecorder: window.ShowRecorder,
             showSetupWizard: window.ShowSetupWizard,
             showSettings: window.ShowSettings,

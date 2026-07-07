@@ -115,6 +115,10 @@ public partial class MainWindow : FluentWindow
     public void ShowManageCategories(CategoriesViewModel categories) =>
         new ManageCategoriesDialog { DataContext = categories, Owner = this }.ShowDialog();
 
+    /// <summary>Show the modal conversation manager (changes persist live, so nothing is returned).</summary>
+    public void ShowManageConversations(ConversationsViewModel conversations) =>
+        new ManageConversationsDialog { DataContext = conversations, Owner = this }.ShowDialog();
+
     private RecorderDialog? _recorder;
 
     /// <summary>Show the modal recorder. It binds to the same BoardViewModel as the Board, so no
