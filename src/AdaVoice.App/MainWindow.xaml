@@ -192,22 +192,34 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <ComboBox Grid.Column="0" MinWidth="160" VerticalAlignment="Center"
                           ItemsSource="{Binding CategoryFilterOptions}"
                           SelectedItem="{Binding SelectedCategoryFilter}"
+                          IsEnabled="{Binding CategoryFilterEnabled}"
                           DisplayMemberPath="Name"
                           AutomationProperties.Name="Category filter" />
                 <ui:Button Grid.Column="1" Margin="8,0,0,0" Appearance="Transparent" BorderThickness="0"
                            Content="Categories…" Foreground="{StaticResource Text.Secondary}"
                            Command="{Binding ManageCategoriesCommand}"
                            ToolTip="Add, rename, or delete categories" />
+                <ComboBox Grid.Column="2" Margin="8,0,0,0" MinWidth="160" VerticalAlignment="Center"
+                          ItemsSource="{Binding ConversationFilterOptions}"
+                          SelectedItem="{Binding SelectedConversationFilter}"
+                          DisplayMemberPath="Name"
+                          AutomationProperties.Name="Conversation filter" />
+                <ui:Button Grid.Column="3" Margin="8,0,0,0" Appearance="Transparent" BorderThickness="0"
+                           Content="Conversations…" Foreground="{StaticResource Text.Secondary}"
+                           Command="{Binding ManageConversationsCommand}"
+                           ToolTip="Add, rename, or delete conversations" />
                 <!-- Starts a take immediately and opens the recorder window (BoardViewModel calls
                      back into MainWindow.ShowRecorder). With a take already waiting, it reopens
                      the recorder instead — the lit Caution state says something is unfinished. -->
-                <ui:Button Grid.Column="3" Icon="{ui:SymbolIcon Mic24}"
+                <ui:Button Grid.Column="5" Icon="{ui:SymbolIcon Mic24}"
                            Content="Record" Command="{Binding StartRecordingCommand}">
                     <ui:Button.Style>
                         <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
@@ -383,6 +395,20 @@
                 </TextBlock>
                 <ui:Button Content="Clear search" Appearance="Secondary" HorizontalAlignment="Center"
                            Command="{Binding ClearSearchCommand}" Margin="0,12,0,0" />
+            </StackPanel>
+        </ui:Card>
+
+        <!-- A conversation is active and none of its phrases are on the board (distinct from
+             CategoryIsEmpty, which this can never overlap with — see BoardViewModel.ConversationIsEmpty). -->
+        <ui:Card VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24" MaxWidth="320"
+                 Visibility="{Binding ConversationIsEmpty, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+                <TextBlock HorizontalAlignment="Center"
+                           FontSize="{StaticResource FontSize.SectionTitle}" FontWeight="SemiBold">
+                    <Run Text="No phrases in " /><Run Text="{Binding SelectedConversationFilter.Name, Mode=OneWay}" /><Run Text=" yet." />
+                </TextBlock>
+                <TextBlock Text="Add phrases to it from Conversations…" TextWrapping="Wrap"
+                           TextAlignment="Center" Foreground="{StaticResource Text.Secondary}" Margin="0,8,0,0" />
             </StackPanel>
         </ui:Card>
         </Grid>

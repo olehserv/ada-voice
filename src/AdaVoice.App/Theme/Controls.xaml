@@ -50,6 +50,10 @@
         <Setter Property="BorderThickness" Value="2" />
         <Setter Property="BorderBrush" Value="Transparent" />
         <Style.Triggers>
+            <!-- Muted ring on the step the operator is expected to play next (Conversation mode) -->
+            <DataTrigger Binding="{Binding IsCurrentStep}" Value="True">
+                <Setter Property="BorderBrush" Value="{StaticResource Text.Secondary}" />
+            </DataTrigger>
             <!-- Accent ring while this phrase is playing -->
             <DataTrigger Binding="{Binding IsPlaying}" Value="True">
                 <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
