@@ -22,8 +22,14 @@ public interface IPlaybackHost
 
     void Start();
     void Stop();
+    /// <summary>Stop whatever the operator can currently hear — a phrase playing to the call, and/or
+    /// a headphone preview started by <see cref="PreviewEntry"/>/<see cref="PreviewVersion"/>. Backs
+    /// the app's single "STOP" button and its hotkey, so both must always be reachable from it.</summary>
     void StopPhrase();
-    void PlayEntry(PhraseEntry entry);
+    /// <summary>Play a phrase to the call. When <paramref name="version"/> is given, that take's audio
+    /// and gain are used instead of the entry's own — the phrase id used for <see cref="PlayingPhraseChanged"/>
+    /// is always the entry's, regardless of which take played.</summary>
+    void PlayEntry(PhraseEntry entry, PhraseVersion? version = null);
     void EnterOffAir();
     void ExitOffAir();
 
@@ -31,4 +37,13 @@ public interface IPlaybackHost
     /// it without the engine running — it never reaches the call. Blocks until playback ends, so callers
     /// should run it off the UI thread. Returns an error message, or null on success.</summary>
     string? PreviewEntry(PhraseEntry entry);
+
+    /// <summary>Like <see cref="PreviewEntry"/> but for one specific version of a phrase, used by the
+    /// Edit dialog's version list. Returns an error message, or null on success.</summary>
+    string? PreviewVersion(PhraseVersion version);
+
+    /// <summary>Stop a preview started by <see cref="PreviewEntry"/> or <see cref="PreviewVersion"/>
+    /// before it finishes on its own. No-op if no preview is active. Safe to call from any thread —
+    /// the preview itself blocks a background thread until playback ends or this is called.</summary>
+    void StopPreview();
 }

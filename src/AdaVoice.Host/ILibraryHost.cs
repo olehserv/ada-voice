@@ -47,6 +47,14 @@ public interface ILibraryHost
     /// null if the id is unknown.</summary>
     PhraseEntry? DeleteEntry(PhraseEntry entry);
 
+    /// <summary>Delete one version of a phrase by orphaning its WAV (never destroyed). Returns the
+    /// updated entry, or null if the phrase or version id is unknown.</summary>
+    PhraseEntry? DeletePhraseVersion(string phraseId, string versionId);
+
+    /// <summary>Rename a phrase version. Returns the updated entry, or null if the phrase or version id
+    /// is unknown.</summary>
+    PhraseEntry? SetPhraseVersionLabel(string phraseId, string versionId, string label);
+
     /// <summary>Create a category. Throws if the name is blank.</summary>
     Category AddCategory(string name, string color);
 
@@ -72,4 +80,8 @@ public interface ILibraryHost
     /// <summary>Replace a conversation's ordered phrase list. Unknown phrase ids are dropped. Returns
     /// the updated conversation, or null if the id is unknown.</summary>
     Conversation? SetConversationPhrases(string id, IReadOnlyList<string> phraseIds);
+
+    /// <summary>Turn random-version playback on/off for a conversation. Returns the updated
+    /// conversation, or null if the id is unknown.</summary>
+    Conversation? SetConversationUseRandomVersion(string id, bool useRandomVersion);
 }

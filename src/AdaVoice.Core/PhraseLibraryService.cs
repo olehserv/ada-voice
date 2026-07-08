@@ -332,6 +332,21 @@ public sealed class PhraseLibraryService
         return updated;
     }
 
+    /// <summary>Turn random-version playback on/off for a conversation. Returns the updated
+    /// conversation, or null if no conversation has that id.</summary>
+    public Conversation? SetConversationUseRandomVersion(string id, bool useRandomVersion)
+    {
+        EnsureWritable();
+        var index = _library.Conversations.FindIndex(c => c.Id == id);
+        if (index < 0)
+            return null;
+
+        var updated = _library.Conversations[index] with { UseRandomVersion = useRandomVersion, UpdatedAt = DateTime.UtcNow };
+        _library.Conversations[index] = updated;
+        _repository.Save(_library);
+        return updated;
+    }
+
     // ---- Phrase edits --------------------------------------------------------------------------
 
     /// <summary>Rename a phrase. Returns the updated phrase, or null if no phrase has that id. Throws if
@@ -385,6 +400,91 @@ public sealed class PhraseLibraryService
         return updated;
     }
 
+    // ---- Phrase versions ------------------------------------------------------------------------
+
+    /// <summary>
+    /// Catalogue a recorded take as a new version of an existing phrase. The version id (and its
+    /// <c>{phraseId}-{versionId}.wav</c> file name) are generated here; <paramref name="writeAudio"/>
+    /// is called with that file name to write the WAV <b>before</b> the metadata is persisted — same
+    /// write-before-catalogue discipline as <see cref="Add"/>. Returns the updated phrase, or null if
+    /// no phrase has that id.
+    /// </summary>
+    public PhraseEntry? AddPhraseVersion(string phraseId, string label, int durationMs, double gainDb, Action<string> writeAudio)
+    {
+        EnsureWritable();
+        var index = _library.Phrases.FindIndex(p => p.Id == phraseId);
+        if (index < 0)
+            return null;
+
+        var versionId = NewVersionId();
+        var fileName = $"{phraseId}-{versionId}.wav";
+        writeAudio(fileName);
+
+        var version = new PhraseVersion
+        {
+            Id = versionId,
+            Label = label?.Trim() ?? "",
+            FileName = fileName,
+            DurationMs = durationMs,
+            GainDb = gainDb,
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        var updated = _library.Phrases[index] with
+        {
+            Versions = [.. _library.Phrases[index].Versions, version],
+            UpdatedAt = DateTime.UtcNow,
+        };
+        _library.Phrases[index] = updated;
+        _repository.Save(_library);
+        return updated;
+    }
+
+    /// <summary>
+    /// Delete one version of a phrase by orphaning it: remove it from the phrase's version list,
+    /// persist, then ask the caller to rename its WAV to <c>deleted-{fileName}</c> in place — never
+    /// destroyed, mirroring <see cref="Delete"/>. Returns the updated phrase, or null if the phrase or
+    /// version id is unknown.
+    /// </summary>
+    public PhraseEntry? DeletePhraseVersion(string phraseId, string versionId, Action<string, string> orphanAudio)
+    {
+        EnsureWritable();
+        var index = _library.Phrases.FindIndex(p => p.Id == phraseId);
+        if (index < 0)
+            return null;
+
+        var version = _library.Phrases[index].Versions.FirstOrDefault(v => v.Id == versionId);
+        if (version is null)
+            return null;
+
+        var updated = _library.Phrases[index] with
+        {
+            Versions = _library.Phrases[index].Versions.Where(v => v.Id != versionId).ToList(),
+            UpdatedAt = DateTime.UtcNow,
+        };
+        _library.Phrases[index] = updated;
+        _repository.Save(_library);
+
+        orphanAudio(version.FileName, "deleted-" + version.FileName);
+        return updated;
+    }
+
+    /// <summary>Rename a phrase version. Returns the updated phrase, or null if the phrase or version id
+    /// is unknown.</summary>
+    public PhraseEntry? SetPhraseVersionLabel(string phraseId, string versionId, string label)
+    {
+        if (_library.Phrases.All(p => p.Id != phraseId))
+            return null;
+        if (_library.Phrases.First(p => p.Id == phraseId).Versions.All(v => v.Id != versionId))
+            return null;
+
+        var trimmed = label?.Trim() ?? "";
+        return EditPhrase(phraseId, p => p with
+        {
+            Versions = p.Versions.Select(v => v.Id == versionId ? v with { Label = trimmed } : v).ToList(),
+        });
+    }
+
     private static string RequireName(string name, string what)
     {
         var trimmed = name?.Trim() ?? "";
@@ -402,4 +502,6 @@ public sealed class PhraseLibraryService
     }
 
     private static string NewId() => "p-" + Guid.NewGuid().ToString("N")[..8];
+
+    private static string NewVersionId() => "pv-" + Guid.NewGuid().ToString("N")[..8];
 }

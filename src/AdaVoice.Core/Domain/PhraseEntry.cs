@@ -17,4 +17,8 @@ public sealed record PhraseEntry
     public int SortOrder { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
+
+    /// <summary>Alternate takes on top of the primary recording above — additive field (like
+    /// <see cref="Tags"/>), so an older library file simply has none.</summary>
+    public IReadOnlyList<PhraseVersion> Versions { get; init; } = [];
 }

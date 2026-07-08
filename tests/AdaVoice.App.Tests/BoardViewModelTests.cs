@@ -12,21 +12,32 @@ public class BoardViewModelTests
         FakePlaybackHost host,
         Func<PhraseItemViewModel, bool>? confirmDelete = null,
         Func<PhraseEditViewModel, bool>? showEditDialog = null,
+        Action<PhraseVersionsViewModel>? showVersionsDialog = null,
         Action<CategoriesViewModel>? showManageCategories = null,
         Action<ConversationsViewModel>? showManageConversations = null,
         Action<SetupWizardViewModel>? showSetupWizard = null,
         ISettingsHost? settingsHost = null,
         Action<SettingsWindowViewModel>? showSettings = null,
         Func<RepairPhraseViewModel, bool>? showRepairDialog = null,
-        Action? showRecorder = null) =>
+        Action? showRecorder = null,
+        Random? rng = null) =>
         new(host, host, host, host, settingsHost ?? new FakeSettingsHost(), new StatusViewModel(host),
             new SettingsViewModel(new FakeSettingsHost()),
             getActiveHotkey: () => "Pause", confirmDelete: confirmDelete, showEditDialog: showEditDialog,
+            showVersionsDialog: showVersionsDialog,
             showManageCategories: showManageCategories, showManageConversations: showManageConversations,
             showSetupWizard: showSetupWizard, showSettings: showSettings, showRepairDialog: showRepairDialog,
-            showRecorder: showRecorder);
+            showRecorder: showRecorder, rng: rng);
 
     private static RecordingResult Take() => new(new float[10], GainDb: -3, DurationMs: 1000, PeakDbfs: -6);
+
+    /// <summary>A <see cref="Random"/> that always returns a fixed index — deterministic version-pick
+    /// tests without depending on a real seed's output (which the .NET RNG algorithm gives no
+    /// guarantees about across versions).</summary>
+    private sealed class FixedRandom(int value) : Random
+    {
+        public override int Next(int maxValue) => value;
+    }
 
     [Fact]
     public async Task Starting_a_recording_opens_the_recorder_window()
@@ -38,6 +49,24 @@ public class BoardViewModelTests
         await board.StartRecordingCommand.ExecuteAsync(null);
 
         Assert.True(opened);
+    }
+
+    /// <summary>The real showRecorder callback (MainWindow.ShowRecorder) blocks on ShowDialog until
+    /// the recorder window closes, so StartRecordingCommand's Task is still "running" for the whole
+    /// time the callback is on the stack — exactly where this assertion runs. Without
+    /// AllowConcurrentExecutions on that command, CanExecute would be false here, and the Record
+    /// button inside the dialog would appear permanently disabled.</summary>
+    [Fact]
+    public async Task Record_command_stays_executable_while_the_recorder_window_is_open()
+    {
+        var host = new FakePlaybackHost { State = EngineState.Live };
+        BoardViewModel? board = null;
+        bool? canExecuteWhileDialogIsOpen = null;
+        board = NewBoard(host, showRecorder: () => canExecuteWhileDialogIsOpen = board!.StartRecordingCommand.CanExecute(null));
+
+        await board.StartRecordingCommand.ExecuteAsync(null);
+
+        Assert.True(canExecuteWhileDialogIsOpen);
     }
 
     [Fact]
@@ -77,9 +106,23 @@ public class BoardViewModelTests
     }
 
     [Fact]
-    public async Task A_failed_recording_start_still_opens_the_recorder_window_to_show_why()
+    public async Task Recording_while_stopped_warns_without_opening_the_recorder_window()
     {
-        var host = new FakePlaybackHost { CanRecord = false }; // recorder refuses (not Live)
+        var host = new FakePlaybackHost(); // State defaults to Stopped
+        var opened = false;
+        var board = NewBoard(host, showRecorder: () => opened = true);
+
+        await board.StartRecordingCommand.ExecuteAsync(null);
+
+        Assert.False(opened);
+        Assert.False(board.IsRecording);
+        Assert.NotNull(board.Notice);
+    }
+
+    [Fact]
+    public async Task A_failed_recording_start_while_running_still_opens_the_recorder_window_to_show_why()
+    {
+        var host = new FakePlaybackHost { State = EngineState.Live, CanRecord = false }; // e.g. mic busy
         var opened = false;
         var board = NewBoard(host, showRecorder: () => opened = true);
 
@@ -112,6 +155,102 @@ public class BoardViewModelTests
 
         Assert.Equal("PlayEntry", Assert.Single(host.Calls));
         Assert.Same(item.Entry, host.PlayedEntry);
+    }
+
+    // ---- Phrase versions: random pick during a Conversation step ------------------------------
+
+    [Fact]
+    public void Board_click_always_plays_the_primary_even_when_the_phrase_has_versions()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            Phrases =
+            [
+                new PhraseEntry { Id = "p-1", FileName = "p-1.wav", Versions = [new PhraseVersion { Id = "pv-1" }] },
+            ],
+        };
+        var board = NewBoard(host);
+
+        board.PlayCommand.Execute(board.Phrases[0]);
+
+        Assert.Null(host.PlayedVersion); // no Conversation active — always the primary
+    }
+
+    [Fact]
+    public void Conversation_step_with_the_random_flag_off_always_plays_the_primary()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            Phrases =
+            [
+                new PhraseEntry { Id = "p-1", FileName = "p-1.wav", Versions = [new PhraseVersion { Id = "pv-1" }] },
+            ],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1"], UseRandomVersion = false }],
+        };
+        var board = NewBoard(host);
+        board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+
+        board.PlayCommand.Execute(board.Phrases[0]);
+
+        Assert.Null(host.PlayedVersion); // default off — same as today's behavior, unchanged
+    }
+
+    [Fact]
+    public void Conversation_step_with_the_random_flag_on_can_pick_the_primary()
+    {
+        var version = new PhraseVersion { Id = "pv-1", FileName = "p-1-pv-1.wav" };
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav", Versions = [version] }],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1"], UseRandomVersion = true }],
+        };
+        // Candidates are [primary(null), version] — index 0 is the primary.
+        var board = NewBoard(host, rng: new FixedRandom(0));
+        board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+
+        board.PlayCommand.Execute(board.Phrases[0]);
+
+        Assert.Null(host.PlayedVersion);
+    }
+
+    [Fact]
+    public void Conversation_step_with_the_random_flag_on_can_pick_a_version()
+    {
+        var version = new PhraseVersion { Id = "pv-1", FileName = "p-1-pv-1.wav" };
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav", Versions = [version] }],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1"], UseRandomVersion = true }],
+        };
+        // Candidates are [primary(null), version] — index 1 is the version. Proves the pool really is
+        // primary + all versions, not just the versions.
+        var board = NewBoard(host, rng: new FixedRandom(1));
+        board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+
+        board.PlayCommand.Execute(board.Phrases[0]);
+
+        Assert.Same(version, host.PlayedVersion);
+    }
+
+    [Fact]
+    public void Conversation_step_with_the_random_flag_on_and_no_versions_always_plays_the_primary()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav" }], // no versions
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1"], UseRandomVersion = true }],
+        };
+        var board = NewBoard(host);
+        board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+
+        board.PlayCommand.Execute(board.Phrases[0]);
+
+        Assert.Null(host.PlayedVersion);
     }
 
     [Fact]
@@ -173,6 +312,7 @@ public class BoardViewModelTests
     {
         var host = new FakePlaybackHost
         {
+            State = EngineState.Live, // recording needs the engine running
             CanRecord = true,
             Categories = [new Category { Id = "c-2", Name = "Closers" }],
             Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = "c-2", Tags = ["urgent"] }],
@@ -217,6 +357,7 @@ public class BoardViewModelTests
     {
         var host = new FakePlaybackHost
         {
+            State = EngineState.Live, // recording needs the engine running
             CanRecord = true,
             Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi" }],
             BrokenPhraseIds = ["p-1"],
@@ -267,6 +408,23 @@ public class BoardViewModelTests
         await board.TestOnHeadphonesCommand.ExecuteAsync(board.Phrases[0]);
 
         Assert.Equal("missing audio file: p-1.wav", board.Notice);
+    }
+
+    [Fact]
+    public async Task Test_on_headphones_enables_stop_while_previewing_and_clears_it_after()
+    {
+        var host = new FakePlaybackHost
+        {
+            Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav" }],
+        };
+        var board = NewBoard(host);
+        var canStopDuringPreview = false;
+        host.OnPreviewing = () => canStopDuringPreview = board.CanStop;
+
+        await board.TestOnHeadphonesCommand.ExecuteAsync(board.Phrases[0]);
+
+        Assert.True(canStopDuringPreview); // the STOP button was reachable while it was playing
+        Assert.False(board.CanStop); // and disabled again once the preview finished
     }
 
     [Fact]
@@ -334,7 +492,7 @@ public class BoardViewModelTests
     [Fact]
     public async Task Start_recording_enters_recording_when_the_host_allows_it()
     {
-        var board = NewBoard(new FakePlaybackHost { CanRecord = true });
+        var board = NewBoard(new FakePlaybackHost { State = EngineState.Live, CanRecord = true });
 
         await board.StartRecordingCommand.ExecuteAsync(null);
 
@@ -357,7 +515,7 @@ public class BoardViewModelTests
     [Fact]
     public async Task Start_recording_failure_becomes_a_notice()
     {
-        var board = NewBoard(new FakePlaybackHost { TryStartRecordingThrows = true });
+        var board = NewBoard(new FakePlaybackHost { State = EngineState.Live, TryStartRecordingThrows = true });
 
         await board.StartRecordingCommand.ExecuteAsync(null);
 
@@ -453,6 +611,7 @@ public class BoardViewModelTests
     {
         var host = new FakePlaybackHost
         {
+            State = EngineState.Live, // recording needs the engine running
             Categories = [new Category { Id = "c-2", Name = "Closers" }],
             SetPhraseCategoryThrows = true,
         };
@@ -639,6 +798,171 @@ public class BoardViewModelTests
 
         Assert.Equal("Old", item.Title);
         Assert.Equal("Old", host.Phrases[0].Title);
+    }
+
+    [Fact]
+    public void Closing_the_versions_window_still_reflects_a_version_deleted_eagerly_inside_it()
+    {
+        var host = new FakePlaybackHost
+        {
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Greeting", Versions = [new PhraseVersion { Id = "pv-1", Label = "Take 2" }] }],
+        };
+        var board = NewBoard(host, showVersionsDialog: versions =>
+        {
+            versions.DeleteVersionCommand.Execute(versions.Tiles[1]); // eager — persists immediately (Tiles[0] is the primary)
+        });
+
+        board.ShowVersionsCommand.Execute(board.Phrases[0]);
+
+        Assert.Empty(board.Phrases[0].Entry.Versions); // resynced from the library once the window closes
+        Assert.Empty(host.Phrases[0].Versions);
+    }
+
+    [Fact]
+    public void Add_version_starts_recording_for_that_phrase_without_closing_the_versions_window()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            CanRecord = true,
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Greeting" }],
+        };
+        // The real dialog's ShowDialog() blocks for the whole session (nested recorder included);
+        // .GetAwaiter().GetResult() here mirrors that — a fire-and-forget Execute(null) would let this
+        // fake return before the recording actually starts.
+        var board = NewBoard(host, showVersionsDialog: versions =>
+            versions.RecordVersionCommand.ExecuteAsync(null).GetAwaiter().GetResult());
+
+        board.ShowVersionsCommand.Execute(board.Phrases[0]);
+
+        Assert.True(board.IsRecording);
+    }
+
+    [Fact]
+    public void Saving_a_recorded_version_updates_the_existing_tile_without_adding_a_new_one()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            CanRecord = true,
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Greeting" }],
+        };
+        var board = NewBoard(host, showVersionsDialog: versions =>
+            versions.RecordVersionCommand.ExecuteAsync(null).GetAwaiter().GetResult());
+
+        board.ShowVersionsCommand.Execute(board.Phrases[0]);
+        Assert.True(board.IsRecording);
+
+        board.PendingTake = Take();
+        board.NewTitle = "Warm take";
+
+        board.SaveTakeCommand.Execute(null);
+
+        Assert.Equal("p-1", host.SavedVersionPhraseId);
+        Assert.Equal("Warm take", host.SavedVersionLabel);
+        Assert.Single(board.Phrases); // no new tile — the existing one is refreshed in place
+        Assert.Single(host.Phrases[0].Versions);
+        Assert.Null(board.PendingTake);
+    }
+
+    /// <summary>Regression test: saving a version must not end the session — the operator can keep
+    /// clicking Record/Save inside the same still-open Recorder window to add several versions of the
+    /// same phrase without reopening "Add version" each time.</summary>
+    [Fact]
+    public void Recording_a_second_take_in_the_same_session_also_saves_as_a_version()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            CanRecord = true,
+            NextStopResult = Take(),
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Greeting" }],
+        };
+        var board = NewBoard(host, showVersionsDialog: versions =>
+            versions.RecordVersionCommand.ExecuteAsync(null).GetAwaiter().GetResult());
+
+#pragma warning disable xUnit1031
+        board.ShowVersionsCommand.Execute(board.Phrases[0]);
+        board.StopRecordingCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+        board.NewTitle = "Take A";
+        board.SaveTakeCommand.Execute(null);
+
+        // Still the same session (the Recorder window was never closed) — Record again.
+        board.StartRecordingCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+        board.StopRecordingCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+#pragma warning restore xUnit1031
+        board.NewTitle = "Take B";
+        board.SaveTakeCommand.Execute(null);
+
+        Assert.Equal(2, host.Phrases[0].Versions.Count);
+        Assert.Equal("Take A", host.Phrases[0].Versions[0].Label);
+        Assert.Equal("Take B", host.Phrases[0].Versions[1].Label);
+        Assert.Single(board.Phrases); // still no new tile — both takes filed under the one phrase
+    }
+
+    /// <summary>Regression test: once the Recorder window actually closes, the version stash must be
+    /// gone — otherwise the operator's next, unrelated recording would silently be filed as yet
+    /// another version of the old phrase instead of becoming its own new phrase.</summary>
+    [Fact]
+    public void Ending_the_version_session_lets_the_next_recording_create_a_new_phrase()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            CanRecord = true,
+            NextStopResult = Take(),
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Greeting" }],
+        };
+        var board = NewBoard(host, showVersionsDialog: versions =>
+            versions.RecordVersionCommand.ExecuteAsync(null).GetAwaiter().GetResult());
+
+#pragma warning disable xUnit1031
+        board.ShowVersionsCommand.Execute(board.Phrases[0]);
+        board.StopRecordingCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+        board.NewTitle = "Take A";
+        board.SaveTakeCommand.Execute(null);
+
+        board.EndVersionRecordingSession(); // simulates RecorderDialog.OnClosing
+
+        board.StartRecordingCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+        board.StopRecordingCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+#pragma warning restore xUnit1031
+        board.NewTitle = "Unrelated";
+        board.SaveTakeCommand.Execute(null);
+
+        Assert.Contains(host.Phrases, p => p.Title == "Unrelated"); // a new phrase, not another version
+        Assert.Single(host.Phrases[0].Versions); // the earlier phrase only ever got the one version
+    }
+
+    /// <summary>Regression test for the leak this design explicitly guards against: a stash left over
+    /// from a failed "record a version" attempt must never misfile the operator's next, unrelated
+    /// recording as a version of some old phrase.</summary>
+    [Fact]
+    public void A_failed_version_recording_does_not_leak_into_the_next_unrelated_recording()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            CanRecord = false, // the version-record attempt fails
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Greeting" }],
+        };
+        var board = NewBoard(host, showVersionsDialog: versions =>
+            versions.RecordVersionCommand.ExecuteAsync(null).GetAwaiter().GetResult());
+
+        board.ShowVersionsCommand.Execute(board.Phrases[0]);
+        Assert.False(board.IsRecording); // the version attempt failed, and cleared its own stash
+
+        host.CanRecord = true;
+#pragma warning disable xUnit1031
+        board.StartRecordingCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+#pragma warning restore xUnit1031
+        board.PendingTake = Take();
+        board.NewTitle = "Unrelated";
+
+        board.SaveTakeCommand.Execute(null);
+
+        Assert.Contains(host.Phrases, p => p.Title == "Unrelated"); // a new phrase, not a version
+        Assert.Null(host.SavedVersionPhraseId); // SaveTakeAsVersion was never called
     }
 
     [Fact]
@@ -1018,7 +1342,12 @@ public class BoardViewModelTests
     [Fact]
     public async Task Record_into_category_starts_recording_like_the_normal_Record_button()
     {
-        var host = new FakePlaybackHost { CanRecord = true, Categories = [new Category { Id = "c-2", Name = "Closers" }] };
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live, // recording needs the engine running
+            CanRecord = true,
+            Categories = [new Category { Id = "c-2", Name = "Closers" }],
+        };
         var board = NewBoard(host);
         board.CategoryFilterItems.Single(i => i.Category.Id == "c-2").IsChecked = true;
 
@@ -1030,7 +1359,12 @@ public class BoardViewModelTests
     [Fact]
     public void Record_into_category_applies_the_category_to_the_saved_take()
     {
-        var host = new FakePlaybackHost { CanRecord = true, Categories = [new Category { Id = "c-2", Name = "Closers" }] };
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live, // recording needs the engine running
+            CanRecord = true,
+            Categories = [new Category { Id = "c-2", Name = "Closers" }],
+        };
         var board = NewBoard(host);
         board.CategoryFilterItems.Single(i => i.Category.Id == "c-2").IsChecked = true;
 
@@ -1103,6 +1437,7 @@ public class BoardViewModelTests
     {
         var host = new FakePlaybackHost
         {
+            State = EngineState.Live, // recording needs the engine running
             CanRecord = true,
             Categories = [new Category { Id = "c-2", Name = "Closers" }],
             Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = "c-2", Tags = ["urgent"] }],

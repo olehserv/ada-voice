@@ -17,4 +17,9 @@ public sealed record Conversation
     public int SortOrder { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
+
+    /// <summary>When true, playing a phrase as a step in this conversation picks uniformly at random
+    /// from the phrase's primary recording plus all of its versions, instead of always the primary
+    /// (plan: docs/superpowers/plans/2026-07-07-phrase-versions.md).</summary>
+    public bool UseRandomVersion { get; init; }
 }

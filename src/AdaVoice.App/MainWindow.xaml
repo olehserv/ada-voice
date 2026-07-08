@@ -37,44 +37,42 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Status panel: state pill + error on the first row, engine controls below,
-             window-level actions (setup/settings) top-right as quiet icon buttons. -->
+        <!-- Status panel: engine controls (state dot lives inside Start/Stop), error, and
+             window-level actions (setup/settings) all on one compact line. -->
         <Border Grid.Row="0" Style="{StaticResource PanelStyle}">
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <Grid Grid.Row="0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-                    <!-- Engine state pill: colored dot + label, tinted wash per state. The dot plus
-                         the ALL-CAPS label mean state is never conveyed by color alone. -->
-                    <Border Grid.Column="0" CornerRadius="{StaticResource Radius.Pill}" Padding="10,4"
-                            VerticalAlignment="Center"
-                            AutomationProperties.Name="{Binding Status.StateLabel}">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Background" Value="{StaticResource Status.Stopped.Tint}" />
+                <!-- Engine controls. Start/Stop is one toggle button: CanStart and IsEngineRunning
+                     are exact complements (Stopped vs. everything else), so it's always enabled.
+                     Content/Appearance/Command are set only via the Style (not as local attributes) —
+                     a local value on the element would out-rank the DataTrigger setters below and the
+                     button would never visually or functionally toggle. -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <ui:Button>
+                        <ui:Button.Style>
+                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Setter Property="Appearance" Value="Primary" />
+                                <Setter Property="Command" Value="{Binding StartEngineCommand}" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Status.State}" Value="Live">
-                                        <Setter Property="Background" Value="{StaticResource Status.Live.Tint}" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding Status.State}" Value="OffAir">
-                                        <Setter Property="Background" Value="{StaticResource Status.OffAir.Tint}" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding Status.State}" Value="Degraded">
-                                        <Setter Property="Background" Value="{StaticResource Status.Degraded.Tint}" />
+                                    <DataTrigger Binding="{Binding Status.IsEngineRunning}" Value="True">
+                                        <Setter Property="Appearance" Value="Secondary" />
+                                        <Setter Property="Command" Value="{Binding StopEngineCommand}" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </Border.Style>
+                        </ui:Button.Style>
                         <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="8" Height="8" VerticalAlignment="Center">
+                            <!-- State dot: color tracks the actual engine state, independent of the
+                                 Start/Stop label. Full state name still reaches assistive tech and
+                                 sighted users via AutomationProperties.Name/ToolTip. -->
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,6,0"
+                                     ToolTip="{Binding Status.StateLabel}"
+                                     AutomationProperties.Name="{Binding Status.StateLabel}">
                                 <Ellipse.Style>
                                     <Style TargetType="Ellipse">
                                         <Setter Property="Fill" Value="{StaticResource Status.Stopped}" />
@@ -92,53 +90,20 @@
                                     </Style>
                                 </Ellipse.Style>
                             </Ellipse>
-                            <TextBlock Text="{Binding Status.StateLabel}" FontWeight="SemiBold"
-                                       Margin="6,0,0,0" VerticalAlignment="Center">
+                            <TextBlock VerticalAlignment="Center">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="{StaticResource Text.Secondary}" />
+                                        <Setter Property="Text" Value="Start" />
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Status.State}" Value="Live">
-                                                <Setter Property="Foreground" Value="{StaticResource Status.Live}" />
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding Status.State}" Value="OffAir">
-                                                <Setter Property="Foreground" Value="{StaticResource Status.OffAir}" />
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding Status.State}" Value="Degraded">
-                                                <Setter Property="Foreground" Value="{StaticResource Status.Degraded}" />
+                                            <DataTrigger Binding="{Binding Status.IsEngineRunning}" Value="True">
+                                                <Setter Property="Text" Value="Stop" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </TextBlock.Style>
                             </TextBlock>
                         </StackPanel>
-                    </Border>
-
-                    <!-- Why the engine landed here (e.g. a failed Start's reason). Empty = invisible. -->
-                    <TextBlock Grid.Column="1" Text="{Binding Status.StateError}"
-                               Foreground="{StaticResource Status.Degraded}"
-                               VerticalAlignment="Center" Margin="10,0,8,0"
-                               TextTrimming="CharacterEllipsis"
-                               ToolTip="{Binding Status.StateError}" />
-
-                    <StackPanel Grid.Column="2" Orientation="Horizontal">
-                        <ui:Button Appearance="Transparent" BorderThickness="0" Padding="6"
-                                   Icon="{ui:SymbolIcon Wrench24}"
-                                   Command="{Binding RunSetupCommand}"
-                                   ToolTip="Run setup again" AutomationProperties.Name="Setup" />
-                        <ui:Button Appearance="Transparent" BorderThickness="0" Padding="6" Margin="4,0,0,0"
-                                   Icon="{ui:SymbolIcon Settings24}"
-                                   Command="{Binding RunSettingsCommand}"
-                                   ToolTip="Settings" AutomationProperties.Name="Settings" />
-                    </StackPanel>
-                </Grid>
-
-                <!-- Engine controls. Start is the one primary action while stopped. -->
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,0">
-                    <ui:Button Content="Start" Appearance="Primary" Command="{Binding StartEngineCommand}"
-                               IsEnabled="{Binding Status.CanStart}" />
-                    <ui:Button Content="Stop engine" Appearance="Secondary" Command="{Binding StopEngineCommand}" Margin="8,0,0,0"
-                               IsEnabled="{Binding Status.IsEngineRunning}" />
+                    </ui:Button>
                     <!-- A toggle must show its own state: lit amber (Caution) while off air.
                          The banner this replaced (owner call, 2026-07-06) lives in git history. -->
                     <ui:Button Content="OFF AIR" Command="{Binding ToggleOffAirCommand}" Margin="8,0,0,0"
@@ -158,6 +123,24 @@
                             </Style>
                         </ui:Button.Style>
                     </ui:Button>
+                </StackPanel>
+
+                <!-- Why the engine landed here (e.g. a failed Start's reason). Empty = invisible. -->
+                <TextBlock Grid.Column="1" Text="{Binding Status.StateError}"
+                           Foreground="{StaticResource Status.Degraded}"
+                           VerticalAlignment="Center" Margin="10,0,8,0"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding Status.StateError}" />
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <ui:Button Appearance="Transparent" BorderThickness="0" Padding="6"
+                               Icon="{ui:SymbolIcon Wrench24, FontSize=18}"
+                               Command="{Binding RunSetupCommand}"
+                               ToolTip="Run setup again" AutomationProperties.Name="Setup" />
+                    <ui:Button Appearance="Transparent" BorderThickness="0" Padding="6" Margin="4,0,0,0"
+                               Icon="{ui:SymbolIcon Settings24, FontSize=18}"
+                               Command="{Binding RunSettingsCommand}"
+                               ToolTip="Settings" AutomationProperties.Name="Settings" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -270,6 +253,9 @@
                                     <Separator />
                                     <MenuItem Header="Edit…"
                                               Command="{Binding PlacementTarget.Tag.EditCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                              CommandParameter="{Binding}" />
+                                    <MenuItem Header="Versions…"
+                                              Command="{Binding PlacementTarget.Tag.ShowVersionsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                               CommandParameter="{Binding}" />
                                     <MenuItem Header="Delete"
                                               Command="{Binding PlacementTarget.Tag.DeleteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
@@ -419,7 +405,7 @@
              and the empty-state cards open it.) -->
         <StackPanel Grid.Row="2">
             <ui:Button Content="STOP" Appearance="Danger" Command="{Binding StopCommand}"
-                       IsEnabled="{Binding Status.IsEngineRunning}"
+                       IsEnabled="{Binding CanStop}"
                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                        Height="56" FontSize="{StaticResource FontSize.Title}" FontWeight="Bold" />
             <TextBlock x:Name="HotkeyHint" HorizontalAlignment="Center" Margin="0,6,0,0"

@@ -35,11 +35,13 @@ public partial class BoardViewModel : ObservableObject
     private readonly Action<string> _showSettingsInfo;
     private readonly Func<PhraseItemViewModel, bool> _confirmDelete;
     private readonly Func<PhraseEditViewModel, bool> _showEditDialog;
+    private readonly Action<PhraseVersionsViewModel> _showVersionsDialog;
     private readonly Func<RepairPhraseViewModel, bool> _showRepairDialog;
     private readonly Action<CategoriesViewModel> _showManageCategories;
     private readonly Action<ConversationsViewModel> _showManageConversations;
     private readonly Action _showRecorder;
     private readonly Action<Action> _onUiThread;
+    private readonly Random _rng;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowRecordButton))]
@@ -67,6 +69,21 @@ public partial class BoardViewModel : ObservableObject
     /// <see cref="Notified"/>, not by binding this.</summary>
     [ObservableProperty]
     private string? _notice;
+
+    /// <summary>True while a phrase is actually sounding on the call.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanStop))]
+    private bool _isPhrasePlaying;
+
+    /// <summary>True while a "Test on headphones" preview is sounding. Tracked separately from
+    /// <see cref="IsPhrasePlaying"/> because a preview can run while a call phrase is also playing.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanStop))]
+    private bool _isPreviewPlaying;
+
+    /// <summary>Drives the big STOP button — enabled while there is something to stop, on the call
+    /// or on headphones.</summary>
+    public bool CanStop => IsPhrasePlaying || IsPreviewPlaying;
 
     /// <summary>Raised when the operator should see a message; the view shows it as a
     /// severity-colored toast. Set through <see cref="Notify"/> only.</summary>
@@ -97,6 +114,7 @@ public partial class BoardViewModel : ObservableObject
         Action<Action>? onUiThread = null,
         Func<PhraseItemViewModel, bool>? confirmDelete = null,
         Func<PhraseEditViewModel, bool>? showEditDialog = null,
+        Action<PhraseVersionsViewModel>? showVersionsDialog = null,
         Func<RepairPhraseViewModel, bool>? showRepairDialog = null,
         Action<CategoriesViewModel>? showManageCategories = null,
         Action<ConversationsViewModel>? showManageConversations = null,
@@ -107,8 +125,10 @@ public partial class BoardViewModel : ObservableObject
         Action? confirmAndRestart = null,
         Action<string>? showError = null,
         Action<string>? showSettingsInfo = null,
-        Action? showRecorder = null)
+        Action? showRecorder = null,
+        Random? rng = null)
     {
+        _rng = rng ?? Random.Shared; // overridable so tests can assert a deterministic version pick
         _playback = playback;
         _recorder = recorder;
         _library = library;
@@ -118,6 +138,7 @@ public partial class BoardViewModel : ObservableObject
         _onUiThread = onUiThread ?? (action => action()); // default: inline (unit tests)
         _confirmDelete = confirmDelete ?? (_ => true);     // default: confirm (unit tests)
         _showEditDialog = showEditDialog ?? (_ => false);  // default: cancel (unit tests opt in)
+        _showVersionsDialog = showVersionsDialog ?? (_ => { }); // default: no-op (unit tests opt in)
         _showRepairDialog = showRepairDialog ?? (_ => false); // default: cancel (unit tests opt in)
         _showManageCategories = showManageCategories ?? (_ => { }); // default: no-op (unit tests)
         _showManageConversations = showManageConversations ?? (_ => { }); // default: no-op (unit tests)
@@ -316,12 +337,27 @@ public partial class BoardViewModel : ObservableObject
     /// is the only place left to stop a stash from surviving into an unrelated future recording.</summary>
     private (string? Title, string? CategoryId, IReadOnlyList<string>? Tags) _pendingMetadata;
 
+    /// <summary>The phrase a pending take should be saved as a new *version* of, instead of a new
+    /// phrase — set by <see cref="RecordVersionForPhrase"/> when the Versions window requests "Add
+    /// version". Unlike <see cref="_pendingMetadata"/>, a successful <see cref="SaveTakeAsVersion"/>
+    /// does NOT clear this: the operator can keep clicking Record/Save inside the same still-open
+    /// Recorder window to add several versions in one session. It is cleared by the failed-start paths
+    /// in <see cref="StartRecording"/> below (the window either never opens or is about to, so nothing
+    /// is left to leak) and by <see cref="EndVersionRecordingSession"/>, called once the Recorder
+    /// window actually closes — otherwise the stash would silently misfile the operator's next,
+    /// unrelated recording as a version of some old phrase.</summary>
+    private string? _pendingVersionForPhraseId;
+
     /// <summary>The active conversation's phrase ids in step order, or null when no conversation is
     /// active. A <c>List</c> (not <see cref="IReadOnlyList{T}"/>) so <see cref="AdvanceStepFor"/> can
     /// use <c>IndexOf</c>.</summary>
     private List<string>? _activeConversationPhraseIds;
 
     private HashSet<string>? _activeConversationPhraseIdSet;
+
+    /// <summary>The active conversation's random-version flag — false whenever no conversation is
+    /// active. Consulted by <see cref="Play"/> to decide whether to pick a random take.</summary>
+    private bool _activeConversationUseRandomVersion;
     private int _currentStepIndex;
 
     /// <summary>A phrase matches when its category is in the checked set (or the set is empty — no
@@ -416,6 +452,7 @@ public partial class BoardViewModel : ObservableObject
             // invariant (IsConversationActive == true implies the set is populated) intact throughout.
             _activeConversationPhraseIds = value.PhraseIds.ToList();
             _activeConversationPhraseIdSet = _activeConversationPhraseIds.ToHashSet();
+            _activeConversationUseRandomVersion = value.UseRandomVersion;
             _currentStepIndex = 0;
 
             // Activating a Conversation clears every checked category — mutually exclusive. Never
@@ -438,6 +475,7 @@ public partial class BoardViewModel : ObservableObject
         {
             _activeConversationPhraseIds = null;
             _activeConversationPhraseIdSet = null;
+            _activeConversationUseRandomVersion = false;
             PhrasesView.SortDescriptions.Clear();
         }
 
@@ -523,6 +561,18 @@ public partial class BoardViewModel : ObservableObject
 
     // ---- Playback -------------------------------------------------------------------------------
 
+    /// <summary>Pick uniformly at random from the phrase's primary recording (null) plus all of its
+    /// versions. Null means "play the primary" — <see cref="IPlaybackHost.PlayEntry"/> already treats
+    /// a null version that way, so no separate primary case is needed here.</summary>
+    private PhraseVersion? PickVersion(PhraseEntry entry)
+    {
+        if (entry.Versions.Count == 0)
+            return null;
+
+        var candidates = new PhraseVersion?[] { null }.Concat(entry.Versions).ToArray();
+        return candidates[_rng.Next(candidates.Length)];
+    }
+
     /// <summary>Left-click a phrase: play it to the call. The action is gated (not the button), so the
     /// button still opens its right-click menu when the engine is stopped or the audio is missing.
     /// A broken phrase opens the repair dialog instead of playing.</summary>
@@ -560,13 +610,17 @@ public partial class BoardViewModel : ObservableObject
         }
 
         Notice = null;
-        _playback.PlayEntry(item.Entry);
+        var version = IsConversationActive && _activeConversationUseRandomVersion
+            ? PickVersion(item.Entry) : null;
+        _playback.PlayEntry(item.Entry, version);
         if (IsConversationActive)
             AdvanceStepFor(item.Entry.Id);
     }
 
     /// <summary>Right-click "Test on headphones": preview a phrase on the monitor output, engine or not.
-    /// Preview blocks until playback ends, so it runs off the UI thread; a failure becomes a notice.</summary>
+    /// Preview blocks until playback ends, so it runs off the UI thread; a failure becomes a notice.
+    /// <see cref="IsPreviewPlaying"/> enables the big STOP button for the duration, and
+    /// <see cref="StopCommand"/> (<c>_playback.StopPhrase()</c>) can cut it short.</summary>
     [RelayCommand]
     private async Task TestOnHeadphones(PhraseItemViewModel? item)
     {
@@ -574,6 +628,7 @@ public partial class BoardViewModel : ObservableObject
             return;
 
         Notice = null; // clear any stale notice from a prior action before we preview
+        IsPreviewPlaying = true;
         try
         {
             var error = await Task.Run(() => _playback.PreviewEntry(item.Entry));
@@ -584,6 +639,10 @@ public partial class BoardViewModel : ObservableObject
         {
             // Corrupt WAV, no output device, COM failure — surface it instead of crashing the app.
             _onUiThread(() => Notify("Could not play the preview — check the playback device and try again.", NoticeSeverity.Error));
+        }
+        finally
+        {
+            _onUiThread(() => IsPreviewPlaying = false);
         }
     }
 
@@ -614,6 +673,37 @@ public partial class BoardViewModel : ObservableObject
         }
     }
 
+    /// <summary>Open the Versions window for a phrase — a separate window from Edit (design:
+    /// docs/superpowers/plans/2026-07-07-phrase-versions.md). Add/rename/delete inside it commit
+    /// eagerly, so the item is re-read from the library once it closes regardless of how — there is no
+    /// Save/Cancel distinction here. "Add version" records without closing this window (it calls back
+    /// into <see cref="RecordVersionForPhrase"/>), so this method itself has nothing left to await.</summary>
+    [RelayCommand]
+    private void ShowVersions(PhraseItemViewModel? item)
+    {
+        if (item is null)
+            return;
+
+        var versions = new PhraseVersionsViewModel(_library, _playback, item.Entry, RecordVersionForPhrase);
+        _showVersionsDialog(versions);
+
+        if (_library.Phrases.FirstOrDefault(p => p.Id == item.Entry.Id) is { } current)
+            item.Update(current);
+        ApplyColors();
+        RefreshFilter();
+    }
+
+    /// <summary>Record a new take for an existing phrase, invoked from inside the (still-open) Versions
+    /// window — same recording flow as the board's own Record button, just filed as a version once
+    /// saved (see <see cref="SaveTakeAsVersion"/>). Returns the phrase's current state once the recorder
+    /// window closes, so the Versions window can refresh its tile grid without having to reopen.</summary>
+    private async Task<PhraseEntry?> RecordVersionForPhrase(string phraseId)
+    {
+        _pendingVersionForPhraseId = phraseId;
+        await StartRecording();
+        return _library.Phrases.FirstOrDefault(p => p.Id == phraseId);
+    }
+
     /// <summary>Delete a phrase after confirmation: orphan its WAV, drop it from the board, and toast.</summary>
     [RelayCommand]
     private void Delete(PhraseItemViewModel? item)
@@ -632,6 +722,7 @@ public partial class BoardViewModel : ObservableObject
     private void OnPlayingPhraseChanged(object? sender, string? playingId) =>
         _onUiThread(() =>
         {
+            IsPhrasePlaying = playingId is not null;
             foreach (var item in Phrases)
                 item.IsPlaying = playingId is not null && item.Entry.Id == playingId;
         });
@@ -654,8 +745,13 @@ public partial class BoardViewModel : ObservableObject
     // ---- Recording ------------------------------------------------------------------------------
 
     /// <summary>Start a take. TryStartRecording blocks up to 2 s waiting for OFF AIR (and opens a
-    /// capture device), so it runs off the UI thread — same rule as <see cref="PreviewTake"/>.</summary>
-    [RelayCommand]
+    /// capture device), so it runs off the UI thread — same rule as <see cref="PreviewTake"/>.
+    /// AllowConcurrentExecutions: the recorder window is opened with a blocking ShowDialog, so this
+    /// Task stays "running" for as long as the dialog is open. Without this flag, the default
+    /// AsyncRelayCommand would disable the Record button inside that same dialog for its whole
+    /// lifetime — re-entering this method from there is the intended way to start a second take
+    /// without closing the window first.</summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task StartRecording()
     {
         // A take is already in progress or waiting to be saved — starting another would silently
@@ -663,7 +759,18 @@ public partial class BoardViewModel : ObservableObject
         if (!ShowRecordButton)
         {
             _pendingMetadata = default; // a Re-record/CTA stash must not misfile the waiting take
+            _pendingVersionForPhraseId = null;
             _showRecorder();
+            return;
+        }
+
+        // Recording needs the engine running (TryStartRecording takes it OFF AIR from Live) — warn
+        // instead of opening an empty recorder window over a stopped engine.
+        if (!Status.IsEngineRunning)
+        {
+            _pendingMetadata = default; // same reasoning as the no-signal branches below
+            _pendingVersionForPhraseId = null;
+            Notify("Start the engine before recording.", NoticeSeverity.Warning);
             return;
         }
 
@@ -683,6 +790,7 @@ public partial class BoardViewModel : ObservableObject
                     // stash made before this call (RecordIntoCategory / repair dialog Re-record)
                     // must not survive to misfile the operator's next, unrelated recording.
                     _pendingMetadata = default;
+                    _pendingVersionForPhraseId = null;
                     Notify("Press Start to go Live before recording.", NoticeSeverity.Warning);
                 }
             });
@@ -693,6 +801,7 @@ public partial class BoardViewModel : ObservableObject
             _onUiThread(() =>
             {
                 _pendingMetadata = default;
+                _pendingVersionForPhraseId = null;
                 Notify("Could not start recording — check the microphone and try again.", NoticeSeverity.Error);
             });
         }
@@ -742,6 +851,7 @@ public partial class BoardViewModel : ObservableObject
                     // cleared here or it would leak into the operator's next, unrelated recording.
                     PendingTake = null;
                     _pendingMetadata = default;
+                    _pendingVersionForPhraseId = null;
                     Notify("No signal — nothing recorded.", NoticeSeverity.Warning);
                 }
             });
@@ -753,6 +863,7 @@ public partial class BoardViewModel : ObservableObject
                 // Same reasoning as the no-signal branch above: no take, so no stash may survive.
                 PendingTake = null;
                 _pendingMetadata = default;
+                _pendingVersionForPhraseId = null;
                 Notify("Could not finish the recording — the take was lost.", NoticeSeverity.Error);
             });
         }
@@ -798,6 +909,12 @@ public partial class BoardViewModel : ObservableObject
         if (PendingTake is not { } take)
             return;
 
+        if (_pendingVersionForPhraseId is { } phraseId)
+        {
+            SaveTakeAsVersion(take, phraseId);
+            return;
+        }
+
         PhraseEntry entry;
         try
         {
@@ -834,11 +951,46 @@ public partial class BoardViewModel : ObservableObject
         Saved?.Invoke(this, entry.Title);
     }
 
+    /// <summary>Catalogue the pending take as a new version of an existing phrase instead of a new
+    /// phrase — no new tile, the existing one is refreshed in place. Deliberately does NOT clear
+    /// <see cref="_pendingVersionForPhraseId"/> — the Recorder window stays open (see
+    /// <see cref="RecordVersionForPhrase"/>), so the operator can record another take for the same
+    /// phrase right away; <see cref="EndVersionRecordingSession"/> clears the stash once that window
+    /// finally closes.</summary>
+    private void SaveTakeAsVersion(RecordingResult take, string phraseId)
+    {
+        PhraseEntry? updated;
+        try
+        {
+            updated = _recorder.SaveTakeAsVersion(take, phraseId, NewTitle);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // Nothing persisted yet — keep PendingTake and the stash so the operator can retry.
+            Notify("Could not save the version — check disk space and try again.", NoticeSeverity.Error);
+            return;
+        }
+
+        PendingTake = null;
+        if (updated is { } entry)
+            Phrases.FirstOrDefault(p => p.Entry.Id == entry.Id)?.Update(entry);
+        Notice = null;
+        Saved?.Invoke(this, "New version saved");
+    }
+
     [RelayCommand]
     private void DiscardTake()
     {
         PendingTake = null;
         _pendingMetadata = default;
+        _pendingVersionForPhraseId = null;
         Notify("Take discarded.", NoticeSeverity.Info);
     }
+
+    /// <summary>Called from <c>RecorderDialog.OnClosing</c> once the Recorder window actually closes —
+    /// the one point that reliably ends an "Add version" session, whether it produced one take, several
+    /// (each saved via <see cref="SaveTakeAsVersion"/> without clearing the stash), or none at all.
+    /// Without this, a stash surviving a successful save would silently misfile the operator's next,
+    /// unrelated recording as another version of the same old phrase.</summary>
+    public void EndVersionRecordingSession() => _pendingVersionForPhraseId = null;
 }

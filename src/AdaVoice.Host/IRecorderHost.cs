@@ -19,6 +19,10 @@ public interface IRecorderHost
     /// <summary>Catalogue a recorded take to disk + metadata, and return the stored entry.</summary>
     PhraseEntry SaveTake(RecordingResult result, string title);
 
+    /// <summary>Catalogue a recorded take as a new version of an existing phrase (not a new phrase).
+    /// Returns the updated entry, or null if the phrase id is unknown.</summary>
+    PhraseEntry? SaveTakeAsVersion(RecordingResult result, string phraseId, string label);
+
     /// <summary>Play raw samples to the monitor (to hear a take before saving). Error message, or null.</summary>
     string? Preview(float[] samples, double gainDb);
 }

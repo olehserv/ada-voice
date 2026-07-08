@@ -11,6 +11,8 @@ namespace AdaVoice.App.ViewModels;
 /// chip editor (add a new tag, remove one, or add an existing tag from the registry suggestions).
 /// <see cref="Save"/> writes all three through the <see cref="ILibraryHost"/> and returns the final
 /// stored entry so the caller can refresh the board item. Pure (no XAML), so it is unit-testable.
+/// Phrase versions have their own dialog/view-model (<see cref="PhraseVersionsViewModel"/>), reached
+/// from a separate "Versions…" context-menu entry — not part of this dialog.
 /// </summary>
 public partial class PhraseEditViewModel : ObservableObject
 {

@@ -35,6 +35,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
 
     public List<string> Calls { get; } = [];
     public PhraseEntry? PlayedEntry { get; private set; }
+    public PhraseVersion? PlayedVersion { get; private set; }
 
     // Recording knobs/results the tests configure or inspect.
     public bool CanRecord { get; set; } = true;
@@ -46,6 +47,17 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     // Preview-to-headphones knobs the tests inspect / configure.
     public PhraseEntry? PreviewedEntry { get; private set; }
     public string? PreviewEntryResult { get; set; }
+    public PhraseVersion? PreviewedVersion { get; private set; }
+    public string? PreviewVersionResult { get; set; }
+    /// <summary>Run from inside PreviewEntry/PreviewVersion — lets a test observe view-model state
+    /// while the (fake) preview is "in flight".</summary>
+    public Action? OnPreviewing { get; set; }
+    public int StopPreviewCalls { get; private set; }
+
+    // Version knobs the tests configure or inspect.
+    public bool SaveTakeAsVersionThrows { get; set; }
+    public string? SavedVersionLabel { get; private set; }
+    public string? SavedVersionPhraseId { get; private set; }
 
     // ---- ISetupHost knobs the tests configure or inspect ----
     public IReadOnlyList<EnvironmentCheck> NextChecks { get; set; } = [];
@@ -73,17 +85,33 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     public void EnterOffAir() => Calls.Add("EnterOffAir");
     public void ExitOffAir() => Calls.Add("ExitOffAir");
 
-    public void PlayEntry(PhraseEntry entry)
+    public void PlayEntry(PhraseEntry entry, PhraseVersion? version = null)
     {
         Calls.Add("PlayEntry");
         PlayedEntry = entry;
+        PlayedVersion = version;
     }
 
     public string? PreviewEntry(PhraseEntry entry)
     {
         Calls.Add("PreviewEntry");
         PreviewedEntry = entry;
+        OnPreviewing?.Invoke();
         return PreviewEntryResult;
+    }
+
+    public string? PreviewVersion(PhraseVersion version)
+    {
+        Calls.Add("PreviewVersion");
+        PreviewedVersion = version;
+        OnPreviewing?.Invoke();
+        return PreviewVersionResult;
+    }
+
+    public void StopPreview()
+    {
+        Calls.Add("StopPreview");
+        StopPreviewCalls++;
     }
 
     public void RaiseStateChanged(EngineState state, string? error = null)
@@ -134,6 +162,15 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
         Deleted.Add(existing);
         return existing;
     }
+
+    public PhraseEntry? DeletePhraseVersion(string phraseId, string versionId) =>
+        Edit(phraseId, p => p with { Versions = p.Versions.Where(v => v.Id != versionId).ToList() });
+
+    public PhraseEntry? SetPhraseVersionLabel(string phraseId, string versionId, string label) =>
+        Edit(phraseId, p => p with
+        {
+            Versions = p.Versions.Select(v => v.Id == versionId ? v with { Label = label.Trim() } : v).ToList(),
+        });
 
     private PhraseEntry? Edit(string phraseId, Func<PhraseEntry, PhraseEntry> edit)
     {
@@ -218,6 +255,17 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
         return updated;
     }
 
+    public Conversation? SetConversationUseRandomVersion(string id, bool useRandomVersion)
+    {
+        var existing = Conversations.FirstOrDefault(c => c.Id == id);
+        if (existing is null)
+            return null;
+
+        var updated = existing with { UseRandomVersion = useRandomVersion };
+        Conversations = Conversations.Select(c => c.Id == id ? updated : c).ToList();
+        return updated;
+    }
+
     // ---- IRecorderHost ----
     public bool TryStartRecording()
     {
@@ -249,6 +297,25 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
         var entry = new PhraseEntry { Id = "p-saved", Title = title, CategoryId = Category.DefaultId };
         _phrases.Add(entry);
         return entry;
+    }
+
+    public PhraseEntry? SaveTakeAsVersion(RecordingResult result, string phraseId, string label)
+    {
+        Calls.Add("SaveTakeAsVersion");
+        if (SaveTakeAsVersionThrows)
+            throw new IOException("disk full (simulated)");
+
+        SavedVersionLabel = label;
+        SavedVersionPhraseId = phraseId;
+        var version = new PhraseVersion
+        {
+            Id = "pv-" + Guid.NewGuid().ToString("N")[..8],
+            Label = label,
+            FileName = $"{phraseId}-pv.wav",
+            DurationMs = result.DurationMs,
+            GainDb = result.GainDb,
+        };
+        return Edit(phraseId, p => p with { Versions = [.. p.Versions, version] });
     }
 
     public string? Preview(float[] samples, double gainDb)

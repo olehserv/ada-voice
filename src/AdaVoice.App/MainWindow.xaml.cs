@@ -106,6 +106,11 @@ public partial class MainWindow : FluentWindow
     public bool ShowEditDialog(PhraseEditViewModel edit) =>
         new PhraseEditDialog { DataContext = edit, Owner = this }.ShowDialog() == true;
 
+    /// <summary>Show the modal Versions window (every edit inside it persists immediately, so nothing
+    /// is returned — the caller re-reads the phrase from the library after this returns).</summary>
+    public void ShowVersionsDialog(PhraseVersionsViewModel versions) =>
+        new PhraseVersionsDialog { DataContext = versions, Owner = this }.ShowDialog();
+
     /// <summary>Show the modal repair-phrase prompt; returns true if the operator chose an action
     /// (Re-record or Remove), false if they cancelled.</summary>
     public bool ShowRepairDialog(RepairPhraseViewModel repair) =>
@@ -316,13 +321,8 @@ public partial class MainWindow : FluentWindow
         else
         {
             Log.Warning("Stop hotkey unavailable: Pause and Ctrl+F12 are both taken");
-            new Snackbar(RootSnackbar)
-            {
-                Title = "Stop hotkey unavailable",
-                Content = "Use the on-screen STOP button.",
-                Appearance = ControlAppearance.Caution,
-                Timeout = TimeSpan.FromSeconds(5),
-            }.Show();
+            ShowToast("Use the on-screen STOP button.", ControlAppearance.Caution, TimeSpan.FromSeconds(5),
+                toastTitle: "Stop hotkey unavailable");
         }
     }
 
@@ -339,25 +339,37 @@ public partial class MainWindow : FluentWindow
             },
             TimeSpan.FromSeconds(notification.Severity == NoticeSeverity.Error ? 6 : 4));
 
-    private void ShowToast(string message, ControlAppearance appearance, TimeSpan timeout) =>
-        new Snackbar(RootSnackbar) { Content = message, Appearance = appearance, Timeout = timeout }.Show();
+    private (string? Title, string Message, ControlAppearance Appearance)? _activeToast;
+    private Snackbar? _activeSnackbar;
+
+    /// <summary>Shows a toast, replacing whatever is currently showing — toasts never stack. A repeat
+    /// of the exact same title/message/appearance while it is still on screen (e.g. mashing Record
+    /// while the engine is stopped) is ignored instead of re-triggering it, so it stops spamming;
+    /// a genuinely different toast still immediately takes over.</summary>
+    private void ShowToast(string message, ControlAppearance appearance, TimeSpan timeout, string? toastTitle = null)
+    {
+        var key = (toastTitle, message, appearance);
+        if (_activeSnackbar is { IsShown: true } && _activeToast == key)
+            return;
+
+        // Hide() is protected; IsShown has a public setter and drives the same close animation.
+        if (_activeSnackbar is not null)
+            _activeSnackbar.IsShown = false;
+        _activeToast = key;
+        _activeSnackbar = new Snackbar(RootSnackbar)
+        {
+            Title = toastTitle,
+            Content = message,
+            Appearance = appearance,
+            Timeout = timeout,
+        };
+        _activeSnackbar.Show();
+    }
 
     // Fires on the UI thread (SaveTake runs from a command), so showing the toast here is safe.
     private void OnPhraseSaved(object? sender, string title) =>
-        new Snackbar(RootSnackbar)
-        {
-            Title = "Saved",
-            Content = title,
-            Appearance = ControlAppearance.Success,
-            Timeout = TimeSpan.FromSeconds(3),
-        }.Show();
+        ShowToast(title, ControlAppearance.Success, TimeSpan.FromSeconds(3), toastTitle: "Saved");
 
     private void OnPhraseDeleted(object? sender, string title) =>
-        new Snackbar(RootSnackbar)
-        {
-            Title = "Deleted",
-            Content = title,
-            Appearance = ControlAppearance.Caution,
-            Timeout = TimeSpan.FromSeconds(3),
-        }.Show();
+        ShowToast(title, ControlAppearance.Caution, TimeSpan.FromSeconds(3), toastTitle: "Deleted");
 }

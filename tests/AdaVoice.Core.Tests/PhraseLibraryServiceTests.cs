@@ -101,6 +101,117 @@ public class PhraseLibraryServiceTests : IDisposable
     }
 
     [Fact]
+    public void AddPhraseVersion_writes_audio_before_persisting_and_returns_the_updated_entry()
+    {
+        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var phrase = service.Add("Greeting", "c-default", 1000, 0, _ => { });
+
+        string? writtenFileName = null;
+        var updated = service.AddPhraseVersion(phrase.Id, "Friendly", 900, -1.5,
+            writeAudio: fileName => writtenFileName = fileName);
+
+        var version = Assert.Single(updated!.Versions);
+        Assert.StartsWith("pv-", version.Id); // distinct from the Conversation id prefix ("v-")
+        Assert.Equal(version.FileName, writtenFileName);
+        Assert.Equal("Friendly", version.Label);
+        Assert.Equal(-1.5, version.GainDb, precision: 4);
+
+        var reloaded = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        Assert.Single(Assert.Single(reloaded.Phrases).Versions); // persisted
+    }
+
+    [Fact]
+    public void AddPhraseVersion_unknown_phrase_returns_null_and_never_writes_audio()
+    {
+        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+
+        var audioWritten = false;
+        var result = service.AddPhraseVersion("p-nope", "Label", 100, 0, _ => audioWritten = true);
+
+        Assert.Null(result);
+        Assert.False(audioWritten);
+    }
+
+    [Fact]
+    public void DeletePhraseVersion_removes_it_and_orphans_the_right_file()
+    {
+        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var phrase = service.Add("Greeting", "c-default", 1000, 0, _ => { });
+        var withVersion = service.AddPhraseVersion(phrase.Id, "Friendly", 900, -1.5, _ => { });
+        var versionId = withVersion!.Versions[0].Id;
+        var versionFileName = withVersion.Versions[0].FileName;
+
+        (string from, string to)? renamed = null;
+        var updated = service.DeletePhraseVersion(phrase.Id, versionId, (from, to) => renamed = (from, to));
+
+        Assert.Empty(updated!.Versions);
+        Assert.Equal((versionFileName, "deleted-" + versionFileName), renamed); // never destroyed, just renamed
+        Assert.Empty(new PhraseLibraryService(new JsonPhraseRepository(_root)).Phrases[0].Versions); // persisted
+    }
+
+    [Fact]
+    public void DeletePhraseVersion_unknown_version_or_phrase_is_a_noop_and_does_not_orphan_anything()
+    {
+        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var phrase = service.Add("Greeting", "c-default", 1000, 0, _ => { });
+        service.AddPhraseVersion(phrase.Id, "Friendly", 900, -1.5, _ => { });
+
+        var orphaned = false;
+        Assert.Null(service.DeletePhraseVersion(phrase.Id, "pv-nope", (_, _) => orphaned = true));
+        Assert.Null(service.DeletePhraseVersion("p-nope", "pv-nope", (_, _) => orphaned = true));
+
+        Assert.False(orphaned);
+        Assert.Single(service.Phrases[0].Versions);
+    }
+
+    [Fact]
+    public void SetPhraseVersionLabel_updates_only_the_targeted_version()
+    {
+        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var phrase = service.Add("Greeting", "c-default", 1000, 0, _ => { });
+        var v1 = service.AddPhraseVersion(phrase.Id, "First", 900, -1.5, _ => { })!.Versions[0];
+        var v2 = service.AddPhraseVersion(phrase.Id, "Second", 900, -1.5, _ => { })!.Versions[1];
+
+        var updated = service.SetPhraseVersionLabel(phrase.Id, v2.Id, "  Renamed  ");
+
+        Assert.Equal("First", updated!.Versions.Single(v => v.Id == v1.Id).Label); // untouched
+        Assert.Equal("Renamed", updated.Versions.Single(v => v.Id == v2.Id).Label); // trimmed
+    }
+
+    [Fact]
+    public void SetPhraseVersionLabel_unknown_version_or_phrase_returns_null()
+    {
+        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var phrase = service.Add("Greeting", "c-default", 1000, 0, _ => { });
+        service.AddPhraseVersion(phrase.Id, "First", 900, -1.5, _ => { });
+
+        Assert.Null(service.SetPhraseVersionLabel(phrase.Id, "pv-nope", "x"));
+        Assert.Null(service.SetPhraseVersionLabel("p-nope", "pv-nope", "x"));
+    }
+
+    [Fact]
+    public void SetConversationUseRandomVersion_updates_the_flag_and_persists()
+    {
+        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var conversation = service.AddConversation("Script");
+        Assert.False(conversation.UseRandomVersion);
+
+        var updated = service.SetConversationUseRandomVersion(conversation.Id, true);
+
+        Assert.True(updated!.UseRandomVersion);
+        var reloaded = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        Assert.True(reloaded.Conversations[0].UseRandomVersion);
+    }
+
+    [Fact]
+    public void SetConversationUseRandomVersion_unknown_id_returns_null()
+    {
+        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+
+        Assert.Null(service.SetConversationUseRandomVersion("v-nope", true));
+    }
+
+    [Fact]
     public void Reload_picks_up_changes_made_to_the_store_underneath_it()
     {
         var repo = new JsonPhraseRepository(_root);
@@ -133,6 +244,9 @@ public class PhraseLibraryServiceTests : IDisposable
         Assert.Throws<InvalidOperationException>(() => service.UpdateCategory("c-x", "n", "#ffffff"));
         Assert.Throws<InvalidOperationException>(() => service.DeleteCategory("c-x"));
         Assert.Throws<InvalidOperationException>(() => service.SetPhraseTitle("p-1", "t"));
+        Assert.Throws<InvalidOperationException>(() => service.AddPhraseVersion("p-1", "l", 100, 0, _ => audioWritten = true));
+        Assert.Throws<InvalidOperationException>(() => service.DeletePhraseVersion("p-1", "pv-1", (_, _) => { }));
+        Assert.Throws<InvalidOperationException>(() => service.SetConversationUseRandomVersion("v-1", true));
 
         Assert.False(audioWritten); // the guard runs before the WAV write, so nothing lands on disk
         Assert.Equal(0, repo.SaveCount);

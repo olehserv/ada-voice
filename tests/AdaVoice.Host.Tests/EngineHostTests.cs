@@ -30,6 +30,18 @@ public class EngineHostTests : IDisposable
         Assert.Empty(host.Phrases);
     }
 
+    // StopPreview() with an active preview needs a real render device (WASAPI), so it is not covered
+    // here — this only guards the no-op contract when there is nothing to stop.
+    [Fact]
+    public void Stop_preview_is_a_no_op_when_nothing_is_previewing()
+    {
+        using var host = NewHost();
+
+        var ex = Record.Exception(() => host.StopPreview());
+
+        Assert.Null(ex);
+    }
+
     [Fact]
     public void A_locked_library_file_surfaces_a_read_error_warning()
     {

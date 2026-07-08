@@ -50,6 +50,61 @@ public class JsonPhraseRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void Save_then_load_roundtrips_phrase_versions_and_the_conversation_random_flag()
+    {
+        var repo = new JsonPhraseRepository(_root);
+        var library = repo.Load().Library;
+        library.Phrases.Add(new PhraseEntry
+        {
+            Id = "p-1",
+            FileName = "p-1.wav",
+            Versions =
+            [
+                new PhraseVersion
+                {
+                    Id = "pv-1",
+                    Label = "Friendly",
+                    FileName = "p-1-pv-1.wav",
+                    DurationMs = 900,
+                    GainDb = -2.1,
+                    CreatedAt = new DateTime(2026, 7, 7, 0, 0, 0, DateTimeKind.Utc),
+                },
+            ],
+        });
+        library.Conversations.Add(new Conversation { Id = "v-1", Name = "Script", UseRandomVersion = true });
+        repo.Save(library);
+
+        var reloaded = new JsonPhraseRepository(_root).Load().Library;
+
+        var phrase = Assert.Single(reloaded.Phrases);
+        var version = Assert.Single(phrase.Versions);
+        Assert.Equal("pv-1", version.Id);
+        Assert.Equal("Friendly", version.Label);
+        Assert.Equal(-2.1, version.GainDb, precision: 4);
+
+        var conversation = Assert.Single(reloaded.Conversations);
+        Assert.True(conversation.UseRandomVersion);
+    }
+
+    // Additive-field backward compat (like Conversations before it): an older library.json simply
+    // lacks these keys, and must load with safe defaults rather than failing to parse.
+    [Fact]
+    public void Old_format_json_without_versions_or_the_random_flag_loads_with_safe_defaults()
+    {
+        WriteLibrary("""
+            {"version":1,"categories":[],"phrases":[{"id":"p-1","title":"","categoryId":"","tags":[],"fileName":"p-1.wav","durationMs":0,"gainDb":0,"sortOrder":0,"createdAt":"2026-07-01T00:00:00Z","updatedAt":"2026-07-01T00:00:00Z"}],"tags":[],"conversations":[{"id":"v-1","name":"Script","phraseIds":[],"sortOrder":0,"createdAt":"2026-07-01T00:00:00Z","updatedAt":"2026-07-01T00:00:00Z"}]}
+            """);
+
+        var result = new JsonPhraseRepository(_root).Load();
+
+        Assert.Equal(LibraryLoadStatus.Loaded, result.Status);
+        var phrase = Assert.Single(result.Library.Phrases);
+        Assert.Empty(phrase.Versions);
+        var conversation = Assert.Single(result.Library.Conversations);
+        Assert.False(conversation.UseRandomVersion);
+    }
+
+    [Fact]
     public void Save_writes_valid_json_and_leaves_no_temp_file()
     {
         var repo = new JsonPhraseRepository(_root);

@@ -49,6 +49,11 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     private Recorder? _recorder;
     private IAudioCaptureDevice? _recordingCapture;
 
+    // The in-flight headphone preview (if any). Preview() runs on a background thread and blocks
+    // until playback ends; StopPreview() is called from the UI thread, hence the lock.
+    private readonly object _previewLock = new();
+    private WasapiRenderDevice? _previewRender;
+
     /// <param name="factory">Device factory override — tests inject a fake; null = real WASAPI.</param>
     /// <param name="monitor">Device monitor override — tests inject a fake; null = real COM monitor.</param>
     /// <param name="clock">Engine clock override — tests inject a manual clock; null = system clock.</param>
@@ -201,6 +206,17 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     public PhraseEntry? SetPhraseCategory(string phraseId, string categoryId) => _library.SetPhraseCategory(phraseId, categoryId);
     public PhraseEntry? SetPhraseTags(string phraseId, IEnumerable<string> tags) => _library.SetPhraseTags(phraseId, tags);
 
+    public PhraseEntry? DeletePhraseVersion(string phraseId, string versionId) =>
+        _library.DeletePhraseVersion(phraseId, versionId, (current, orphan) =>
+        {
+            var src = AdaVoicePaths.AudioPath(_dataRoot, current);
+            if (File.Exists(src))
+                File.Move(src, AdaVoicePaths.AudioPath(_dataRoot, orphan), overwrite: true);
+        });
+
+    public PhraseEntry? SetPhraseVersionLabel(string phraseId, string versionId, string label) =>
+        _library.SetPhraseVersionLabel(phraseId, versionId, label);
+
     public Category AddCategory(string name, string color) => _library.AddCategory(name, color);
     public Category? UpdateCategory(string id, string name, string color) => _library.UpdateCategory(id, name, color);
     public bool DeleteCategory(string id) => _library.DeleteCategory(id);
@@ -210,6 +226,8 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     public bool DeleteConversation(string id) => _library.DeleteConversation(id);
     public Conversation? SetConversationPhrases(string id, IReadOnlyList<string> phraseIds) =>
         _library.SetConversationPhrases(id, phraseIds);
+    public Conversation? SetConversationUseRandomVersion(string id, bool useRandomVersion) =>
+        _library.SetConversationUseRandomVersion(id, useRandomVersion);
 
     public void Start()
     {
@@ -225,7 +243,15 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
 
     public void Stop() => _engine.Stop();
     public void Play(Phrase phrase) => _engine.Play(phrase);
-    public void StopPhrase() => _engine.StopPhrase();
+
+    /// <summary>Stops a phrase playing to the call and/or an in-progress headphone preview — the
+    /// operator's one STOP button silences whatever is currently audible.</summary>
+    public void StopPhrase()
+    {
+        _engine.StopPhrase();
+        StopPreview();
+    }
+
     public void EnterOffAir() => _engine.EnterOffAir();
     public void ExitOffAir() => _engine.ExitOffAir();
 
@@ -239,8 +265,11 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
 
     /// <summary>Load a catalogued phrase from disk, apply its loudness-match gain, and play it toward
     /// the call (the cable). The engine routes Play to the cable only when Live, so this is a no-op
-    /// otherwise. A missing audio file is logged and skipped, never thrown.</summary>
-    public void PlayEntry(PhraseEntry entry)
+    /// otherwise. A missing audio file is logged and skipped, never thrown. When <paramref name="version"/>
+    /// is given, that take's file and gain are used instead of the entry's own — the phrase id used
+    /// downstream (for <see cref="PlayingPhraseChanged"/>) is always the entry's, regardless of which
+    /// take played.</summary>
+    public void PlayEntry(PhraseEntry entry, PhraseVersion? version = null)
     {
         if (State != EngineState.Live)
         {
@@ -249,15 +278,17 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
             return;
         }
 
-        var path = AdaVoicePaths.AudioPath(_dataRoot, entry.FileName);
+        var fileName = version?.FileName ?? entry.FileName;
+        var gainDb = version?.GainDb ?? entry.GainDb;
+        var path = AdaVoicePaths.AudioPath(_dataRoot, fileName);
         if (!File.Exists(path))
         {
-            _log($"cannot play {entry.Id}: missing audio file {entry.FileName}");
+            _log($"cannot play {entry.Id}: missing audio file {fileName}");
             return;
         }
 
         var samples = WavFile.Load(path);
-        var gain = RampGain.DbToLinear(entry.GainDb);
+        var gain = RampGain.DbToLinear(gainDb);
         for (var i = 0; i < samples.Length; i++)
             samples[i] *= gain;
 
@@ -337,6 +368,13 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
         _library.Add(title, DefaultCategoryId, result.DurationMs, result.GainDb,
             fileName => WavFile.Save(AdaVoicePaths.AudioPath(_dataRoot, fileName), result.Samples));
 
+    /// <summary>Catalogue a recorded take as a new version of an existing phrase (WAV written before
+    /// metadata, same discipline as <see cref="SaveTake"/>). Returns the updated entry, or null if the
+    /// phrase id is unknown.</summary>
+    public PhraseEntry? SaveTakeAsVersion(RecordingResult result, string phraseId, string label) =>
+        _library.AddPhraseVersion(phraseId, label, result.DurationMs, result.GainDb,
+            fileName => WavFile.Save(AdaVoicePaths.AudioPath(_dataRoot, fileName), result.Samples));
+
     /// <summary>Delete a phrase: drop the metadata and rename its WAV to <c>deleted-{id}.wav</c> in
     /// place (never destroyed — design 04 §3). Returns the removed entry, or null if not found.</summary>
     public PhraseEntry? DeleteEntry(PhraseEntry entry) =>
@@ -347,10 +385,14 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
                 File.Move(src, AdaVoicePaths.AudioPath(_dataRoot, orphan), overwrite: true);
         });
 
-    /// <summary>Export the library (metadata + active phrase WAVs) to a zip. Returns the path written.</summary>
+    /// <summary>Export the library (metadata + active phrase WAVs) to a zip. Returns the path written.
+    /// Version recordings are not included (v1 limitation) — logged when any are dropped, so this
+    /// never loses takes without a trace.</summary>
     public string ExportLibrary(string destinationZipPath)
     {
-        _archive.Export(destinationZipPath);
+        var droppedVersions = _archive.Export(destinationZipPath);
+        if (droppedVersions > 0)
+            _log($"export: dropped {droppedVersions} version recording(s) — not included in exports (v1 limitation)");
         return destinationZipPath;
     }
 
@@ -373,6 +415,17 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
             return $"missing audio file: {entry.FileName}";
 
         return Preview(WavFile.Load(path), entry.GainDb);
+    }
+
+    /// <summary>Load one version of a phrase from disk and preview it. Returns an error message, or
+    /// null on success.</summary>
+    public string? PreviewVersion(PhraseVersion version)
+    {
+        var path = AdaVoicePaths.AudioPath(_dataRoot, version.FileName);
+        if (!File.Exists(path))
+            return $"missing audio file: {version.FileName}";
+
+        return Preview(WavFile.Load(path), version.GainDb);
     }
 
     // ---- ISettingsHost --------------------------------------------------------------------------
@@ -501,13 +554,36 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
                 done.Set();
         };
 
-        render.Init(source);
-        render.Start();
+        lock (_previewLock)
+            _previewRender = render;
+        try
+        {
+            render.Init(source);
+            render.Start();
 
-        var durationMs = samples.Length * 1000L / AudioFormats.SampleRate;
-        done.Wait(TimeSpan.FromMilliseconds(durationMs + 1000)); // backstop in case the tail is delayed
-        render.Stop();
-        return null;
+            var durationMs = samples.Length * 1000L / AudioFormats.SampleRate;
+            done.Wait(TimeSpan.FromMilliseconds(durationMs + 1000)); // backstop in case the tail is delayed, or StopPreview() cuts it short
+            render.Stop();
+            return null;
+        }
+        finally
+        {
+            lock (_previewLock)
+            {
+                if (ReferenceEquals(_previewRender, render))
+                    _previewRender = null;
+            }
+        }
+    }
+
+    /// <summary>Stop the in-flight preview, if any — <see cref="Preview"/>'s blocking wait unblocks as
+    /// soon as the render device reports Stopped.</summary>
+    public void StopPreview()
+    {
+        WasapiRenderDevice? render;
+        lock (_previewLock)
+            render = _previewRender;
+        render?.Stop();
     }
 
     /// <summary>The output previews play to: the configured monitor device, falling back to the OS

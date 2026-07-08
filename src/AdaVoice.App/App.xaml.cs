@@ -68,6 +68,7 @@ public partial class App : Application
             action => Dispatcher.BeginInvoke(action),
             confirmDelete: window.ConfirmDelete,
             showEditDialog: window.ShowEditDialog,
+            showVersionsDialog: window.ShowVersionsDialog,
             showManageCategories: window.ShowManageCategories,
             showManageConversations: window.ShowManageConversations,
             showRecorder: window.ShowRecorder,

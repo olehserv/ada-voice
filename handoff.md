@@ -10,17 +10,71 @@ back up. It answers one question: *where are we right now?*
 - Details of past work live in git history and in the dated docs under `docs/reviews/`.
   This file stays short on purpose.
 
-_Last updated: 2026-07-07._
+_Last updated: 2026-07-08._
 
 ## Status in one line
 
 **The app is built and verified on the target machine** — engine, recorder, library, Board UI,
 setup wizard, Settings window, stop hotkey, backups, export/import, **Conversations** (ordered
-phrase scripts with a step-by-step highlight); 402 tests green (83 Core + 97 Audio + 8 Wasapi +
-5 Host + 209 App). Monetization exists as a full design (no code yet).
+phrase scripts with a step-by-step highlight), **phrase versions** (alternate takes, randomized
+during a Conversation step); 444 tests green (95 Core + 97 Audio + 8 Wasapi + 6 Host + 238 App).
+Monetization exists as a full design (no code yet).
+
+## Latest work (2026-07-08)
+
+- **Fixed: "Add version" closed the Versions window, and a second take in the same session silently
+  went to the wrong place.** Two bugs found via user testing of the phrase-versions feature above.
+  (1) Clicking "Add version (record)…" used to close the Versions window before opening the
+  Recorder, so seeing the new take meant reopening Versions by hand. Fix: the Recorder now opens
+  on top of the still-open Versions window (`PhraseVersionsViewModel.RecordVersionCommand` calls
+  back into `BoardViewModel.RecordVersionForPhrase`, replacing the old close-then-read-a-flag
+  handoff); Versions refreshes its own tile grid once the Recorder closes. (2) Recording, saving,
+  then recording *again* without closing the Recorder silently created a brand-new unrelated phrase
+  instead of a second version — `SaveTakeAsVersion` cleared the "which phrase is this a version of"
+  stash right after the first save, so a second save in the same session found no stash and fell
+  through to the normal "new phrase" path. Fix: the stash now persists across multiple takes in one
+  Recorder session, and is cleared exactly once — in `BoardViewModel.EndVersionRecordingSession()`,
+  called from `RecorderDialog.OnClosing` — so it can't leak into a later, unrelated recording either.
+  4 new regression tests. User-verified on the real app (both fixes).
+- **Fixed: no way to stop a headphone preview.** "Test on headphones" and the Versions window's
+  ▶ both used `EngineHost.Preview` — a blocking call with no stop hook, so the big STOP button
+  did nothing to it, and closing the Versions window left it playing. Root cause: `Preview` built
+  its own `WasapiRenderDevice` without keeping a reference anywhere reachable. Fix: `EngineHost`
+  now tracks the in-flight preview device and exposes `StopPreview()` (new on `IPlaybackHost`);
+  `StopPhrase()` — the one action behind the STOP button and the hotkey — calls it too, so a
+  single control silences either the call or a preview. Board: `IsPreviewPlaying` (separate from
+  `IsPhrasePlaying`, since both can be true at once) drives a new `CanStop` that the STOP button
+  binds to. Versions window: each tile's ▶ toggles to ■ while it plays (needed
+  `AllowConcurrentExecutions` on the Play command — its default disables the button for the whole
+  call, which would have made the ■ unclickable); closing the window (any way) now stops playback
+  via the dialog's `Closed` handler. 10 new tests. **Needs a hardware smoke test** — the actual
+  stop path (`WasapiOut.Stop()` → the render device reporting Stopped) can't be exercised by the
+  fakes; confirm on the real app that STOP/■/Close all actually cut the audio.
+  Follow-up fix: the ▶→■ toggle never showed — `Content="▶"`/`ToolTip="Play"` were set as local
+  XAML values on the button, which always outrank a `Style.Triggers` `Setter` in WPF's property
+  precedence, so the `IsPlaying` trigger could never win. Fixed by moving both into the `Style` as
+  plain `Setter`s (same tier as the trigger, where triggers correctly take priority). No test
+  added — this is a pure XAML-rendering bug and the repo has no view-rendering test harness (only
+  view-model tests), and adding one for this alone isn't worth it (project style, "good enough for
+  now"); it's part of the same hardware smoke test above.
 
 ## Latest work (2026-07-07)
 
+- **Phrase versions shipped:** a phrase keeps its primary recording and can gain extra alternate
+  takes ("versions"), managed from a dedicated **Versions window** (`PhraseVersionsDialog`) — a
+  board-like tile grid (primary tile first, then one tile per version), each playable, versions
+  renamable inline and deletable, plus "Add version (record)…". Opened via the phrase tile's
+  "Versions…" context-menu item (its own command, separate from Edit). A new per-conversation
+  "Play a random version" checkbox (`ManageConversationsDialog`) makes each phrase play a uniformly
+  random pick from primary + all versions while stepping through that conversation; a plain board
+  click always plays the primary, unaffected. Data model is additive (`PhraseEntry.Versions`,
+  `Conversation.UseRandomVersion`) — no `Library.Version` bump. Library export/import intentionally
+  drops version audio for v1 (logged when it happens). Plan (combined with design, went through Plan
+  Mode instead of the brainstorming skill, revised 2026-07-08 when versions moved out of the Edit
+  dialog into their own window): [phrase-versions plan](docs/superpowers/plans/2026-07-07-phrase-versions.md).
+  **Needs a user smoke test** — record a phrase, add two versions, build a conversation with the
+  random flag on, and confirm playback actually varies (not exercised here: no audio hardware in
+  this environment).
 - **Conversations shipped:** a new entity — an ordered, named group of existing phrases for a
   call script. `ManageConversationsDialog` (add/rename/delete a conversation, add/remove/reorder
   its phrases). The Board's Conversation filter shows only that script's phrases, in order, and

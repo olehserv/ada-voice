@@ -39,8 +39,10 @@ public sealed class LibraryArchiveService(string root, IPhraseRepository reposit
 
     /// <summary>Write a zip of the current library's metadata + active phrase WAVs to
     /// <paramref name="destinationZipPath"/>. Built into a temp file then moved into place so a
-    /// partial zip is never left at the destination.</summary>
-    public void Export(string destinationZipPath)
+    /// partial zip is never left at the destination. Phrase versions are not carried by an export
+    /// (v1 limitation — see <see cref="CreateArchive"/>); returns how many were dropped so the caller
+    /// can tell the operator, rather than losing them silently.</summary>
+    public int Export(string destinationZipPath)
     {
         var library = repository.Load().Library;
 
@@ -48,8 +50,9 @@ public sealed class LibraryArchiveService(string root, IPhraseRepository reposit
         var tmp = destinationZipPath + ".tmp";
         try
         {
-            CreateArchive(tmp, library);
+            var droppedVersions = CreateArchive(tmp, library);
             File.Move(tmp, destinationZipPath, overwrite: true);
+            return droppedVersions;
         }
         catch
         {
@@ -89,13 +92,16 @@ public sealed class LibraryArchiveService(string root, IPhraseRepository reposit
         // Normalize the catalogue before anything else: drop blank-id phrases and duplicate ids
         // (keep the first) so the re-key and merge maths below are well-defined. Also flatten
         // every file name, so a crafted entry can never put a path-traversal value into the WAV
-        // lookup — the zip entry is looked up by this bare name.
+        // lookup — the zip entry is looked up by this bare name. Versions are stripped defensively:
+        // an export never carries version audio (see CreateArchive), so a hand-crafted or
+        // third-party archive claiming versions would otherwise catalogue references to files that
+        // were never staged.
         imported = imported with
         {
             Phrases = imported.Phrases
                 .Where(p => !string.IsNullOrWhiteSpace(p.Id))
                 .DistinctBy(p => p.Id)
-                .Select(p => p with { FileName = Path.GetFileName(p.FileName) })
+                .Select(p => p with { FileName = Path.GetFileName(p.FileName), Versions = [] })
                 .ToList(),
         };
 
@@ -183,20 +189,32 @@ public sealed class LibraryArchiveService(string root, IPhraseRepository reposit
         return (result, added);
     }
 
-    private void CreateArchive(string zipPath, Library library)
+    /// <summary>Build the zip and return how many version recordings were dropped from it. Only the
+    /// primary WAV is ever zipped (v1 limitation, not yet worth the re-keying/staging work a version
+    /// archive would need); the embedded <c>library.json</c>'s <c>Versions</c> lists are stripped too,
+    /// so an import can never see a version it has no audio for.</summary>
+    private int CreateArchive(string zipPath, Library library)
     {
+        var droppedVersions = library.Phrases.Sum(p => p.Versions.Count);
+        var stripped = library with
+        {
+            Phrases = library.Phrases.Select(p => p with { Versions = [] }).ToList(),
+        };
+
         using var zip = ZipFile.Open(zipPath, ZipArchiveMode.Create);
 
         var entry = zip.CreateEntry("library.json");
         using (var writer = new StreamWriter(entry.Open()))
-            writer.Write(LibraryJson.Serialize(library)); // re-serialize, never copy a stale/corrupt file
+            writer.Write(LibraryJson.Serialize(stripped)); // re-serialize, never copy a stale/corrupt file
 
-        foreach (var phrase in library.Phrases) // active phrases only — orphans aren't referenced
+        foreach (var phrase in stripped.Phrases) // active phrases only — orphans aren't referenced
         {
             var path = AdaVoicePaths.AudioPath(root, phrase.FileName);
             if (File.Exists(path)) // a broken phrase (missing WAV) is skipped, not fatal
                 zip.CreateEntryFromFile(path, "audio/" + phrase.FileName);
         }
+
+        return droppedVersions;
     }
 
     /// <summary>Extract one WAV to a <c>.importing</c> temp file next to its final name and record

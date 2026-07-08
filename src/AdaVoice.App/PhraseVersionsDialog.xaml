@@ -1,0 +1,98 @@
+<ui:FluentWindow x:Class="AdaVoice.App.PhraseVersionsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="{Binding Title, StringFormat='Versions — {0}'}"
+        Width="480" SizeToContent="Height" MaxHeight="560"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="None"
+        WindowCornerPreference="Round"
+        Background="{StaticResource Surface.Window}"
+        TextElement.Foreground="{StaticResource Text.Primary}"
+        FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="{Binding Title, StringFormat='Versions — {0}'}"
+                     ShowMinimize="False" ShowMaximize="False" CanMaximize="False" />
+
+        <StackPanel Grid.Row="1" Margin="16,8,16,16">
+            <!-- A board-like tile grid: the primary recording first, then every alternate take. -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="380">
+                <ItemsControl ItemsSource="{Binding Tiles}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Width="150" MinHeight="96" Margin="4" Padding="10"
+                                    CornerRadius="{StaticResource Radius.Control}"
+                                    Background="{StaticResource Surface.Overlay}"
+                                    BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                <StackPanel>
+                                    <!-- Read-only for the primary tile — its label is fixed ("Primary"),
+                                         never persisted; a version's label renames on focus loss. -->
+                                    <TextBox Text="{Binding Label, UpdateSourceTrigger=LostFocus}"
+                                             IsReadOnly="{Binding IsPrimary}"
+                                             FontWeight="SemiBold" BorderThickness="0" Padding="0"
+                                             Background="Transparent" />
+                                    <TextBlock Text="{Binding DurationLabel}" Typography.NumeralAlignment="Tabular"
+                                               FontSize="{StaticResource FontSize.Label}" Opacity="0.75"
+                                               Margin="0,6,0,0" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                        <!-- Doubles as Stop while this tile is playing (PlayCommand
+                                             toggles on PhraseVersionRowViewModel.IsPlaying). -->
+                                        <ui:Button Appearance="Secondary"
+                                                   Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                   CommandParameter="{Binding}">
+                                            <ui:Button.Style>
+                                                <!-- Content/ToolTip must be Setters here, not local values on
+                                                     the element — a local value outranks a Style.Triggers
+                                                     Setter in WPF's property precedence, so the trigger below
+                                                     would silently never apply otherwise. -->
+                                                <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                                    <Setter Property="Content" Value="▶" />
+                                                    <Setter Property="ToolTip" Value="Play" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                                            <Setter Property="Content" Value="■" />
+                                                            <Setter Property="ToolTip" Value="Stop" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ui:Button.Style>
+                                        </ui:Button>
+                                        <!-- The primary tile has nothing to delete here — it's managed
+                                             from the board tile itself (Edit/Delete). -->
+                                        <ui:Button Content="✕" ToolTip="Delete" Appearance="Secondary" Margin="6,0,0,0"
+                                                   Command="{Binding DataContext.DeleteVersionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                   CommandParameter="{Binding}">
+                                            <ui:Button.Style>
+                                                <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsPrimary}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ui:Button.Style>
+                                        </ui:Button>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <ui:Button Content="Add version (record)…" Appearance="Secondary" Margin="0,12,0,0"
+                       Command="{Binding RecordVersionCommand}" />
+
+            <ui:Button Content="Close" Appearance="Secondary" IsCancel="True"
+                       HorizontalAlignment="Right" Margin="0,16,0,0" />
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>

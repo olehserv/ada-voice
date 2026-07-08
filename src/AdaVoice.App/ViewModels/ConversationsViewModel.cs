@@ -91,13 +91,21 @@ public partial class ConversationRowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(AddablePhrases))]
     private PhraseEntry? _phraseToAdd;
 
+    [ObservableProperty]
+    private bool _useRandomVersion;
+
     public ConversationRowViewModel(Conversation conversation, ILibraryHost library)
     {
         _library = library;
         Id = conversation.Id;
         _name = conversation.Name;
+        _useRandomVersion = conversation.UseRandomVersion;
         Members = new ObservableCollection<ConversationPhraseRowViewModel>(BuildMembers(conversation.PhraseIds));
     }
+
+    /// <summary>Persist the random-version flag immediately, like every other edit in this row — no
+    /// separate Save step.</summary>
+    partial void OnUseRandomVersionChanged(bool value) => _library.SetConversationUseRandomVersion(Id, value);
 
     /// <summary>The conversation's phrases, in call order.</summary>
     public ObservableCollection<ConversationPhraseRowViewModel> Members { get; }

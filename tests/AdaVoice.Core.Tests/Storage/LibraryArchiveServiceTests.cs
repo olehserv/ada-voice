@@ -57,6 +57,57 @@ public class LibraryArchiveServiceTests : IDisposable
     }
 
     [Fact]
+    public void Export_drops_version_audio_and_reports_how_many()
+    {
+        var src = Root("src");
+        var repo = new JsonPhraseRepository(src);
+        var library = repo.Load().Library;
+        library.Phrases.Add(new PhraseEntry
+        {
+            Id = "p-1",
+            FileName = "p-1.wav",
+            Versions = [new PhraseVersion { Id = "pv-1", FileName = "p-1-pv-1.wav" }],
+        });
+        repo.Save(library);
+        Directory.CreateDirectory(AdaVoicePaths.AudioDir(src));
+        File.WriteAllBytes(AdaVoicePaths.AudioPath(src, "p-1.wav"), [1]);
+        File.WriteAllBytes(AdaVoicePaths.AudioPath(src, "p-1-pv-1.wav"), [2]);
+
+        var zip = Zip("export");
+        var dropped = Archive(src).Export(zip);
+
+        Assert.Equal(1, dropped);
+        using (var archive = ZipFile.OpenRead(zip))
+        {
+            Assert.NotNull(archive.GetEntry("audio/p-1.wav"));    // primary is exported
+            Assert.Null(archive.GetEntry("audio/p-1-pv-1.wav")); // version audio is not (v1 limitation)
+        }
+
+        // The embedded metadata carries no version references either — an import must never see a
+        // version it has no audio for.
+        var dest = Root("dest");
+        var result = Archive(dest).Import(zip, ImportMode.Merge);
+        Assert.True(result.Success);
+        var imported = Assert.Single(new JsonPhraseRepository(dest).Load().Library.Phrases);
+        Assert.Empty(imported.Versions);
+    }
+
+    [Fact]
+    public void Import_strips_a_crafted_archives_claimed_versions()
+    {
+        var dest = Root("dest");
+        var zip = Zip("crafted-versions");
+        WriteZipWithLibraryJson(zip, "{\"version\":1,\"categories\":[],\"phrases\":[" +
+            "{\"id\":\"p-1\",\"fileName\":\"p-1.wav\",\"versions\":[{\"id\":\"pv-1\",\"fileName\":\"p-1-pv-1.wav\"}]}]}");
+
+        var result = Archive(dest).Import(zip, ImportMode.Merge);
+
+        Assert.True(result.Success);
+        var imported = Assert.Single(new JsonPhraseRepository(dest).Load().Library.Phrases);
+        Assert.Empty(imported.Versions); // never staged — the archive never actually carried this audio
+    }
+
+    [Fact]
     public void Merge_skips_duplicate_ids_and_adds_new_ones()
     {
         var src = Root("src");
