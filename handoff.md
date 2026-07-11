@@ -10,15 +10,31 @@ back up. It answers one question: *where are we right now?*
 - Details of past work live in git history and in the dated docs under `docs/reviews/`.
   This file stays short on purpose.
 
-_Last updated: 2026-07-08._
+_Last updated: 2026-07-11._
 
 ## Status in one line
 
 **The app is built and verified on the target machine** — engine, recorder, library, Board UI,
 setup wizard, Settings window, stop hotkey, backups, export/import, **Conversations** (ordered
 phrase scripts with a step-by-step highlight), **phrase versions** (alternate takes, randomized
-during a Conversation step); 444 tests green (95 Core + 97 Audio + 8 Wasapi + 6 Host + 238 App).
+during a Conversation step); 446 tests green (97 Core + 97 Audio + 8 Wasapi + 6 Host + 238 App).
 Monetization exists as a full design (no code yet).
+
+## Latest work (2026-07-11)
+
+- **Security fix: path traversal via `library.json`.** A security review (security-review skill +
+  Semgrep Guardian) found three confirmed issues sharing one root cause: phrase/version `FileName`
+  fields were read verbatim from `library.json` and passed straight into file APIs via
+  `AdaVoicePaths.AudioPath` (a raw `Path.Combine`, so an absolute or `..\` name escapes `audio\`).
+  An attacker able to write `library.json` (other local software, a tampered folder sync, a
+  malicious backup restore) could (1) exfiltrate an arbitrary file into an export zip the operator
+  then shares, (2) move/relocate an arbitrary file when a phrase is deleted, (3) read an arbitrary
+  file into playback. The library **import** path already flattened the same field with
+  `Path.GetFileName` — this was an inconsistent trust boundary, not a missing concept. Fix: one
+  choke point — `LibraryJson.TryParse` (the single JSON→`Library` path for load, backup recovery,
+  and import) now flattens every `FileName` to a bare name, so all downstream sinks inherit the
+  guarantee. Well-formed libraries are unchanged. 2 new tests (unit-level flatten + end-to-end
+  "export doesn't leak an outside file"). 97 Core tests green; full solution builds clean.
 
 ## Latest work (2026-07-08)
 

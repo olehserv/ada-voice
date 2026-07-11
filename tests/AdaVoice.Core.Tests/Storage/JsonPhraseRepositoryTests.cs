@@ -104,6 +104,29 @@ public class JsonPhraseRepositoryTests : IDisposable
         Assert.False(conversation.UseRandomVersion);
     }
 
+    // Security: library.json is an external trust boundary — other local software or a tampered folder
+    // sync could set a FileName to a traversal/absolute path. The load path must flatten it to a bare
+    // name so no later file op (play/export/delete) can escape audio\. Well-formed names stay untouched.
+    [Fact]
+    public void Load_flattens_a_traversal_or_absolute_FileName_to_a_bare_name()
+    {
+        var absolute = OperatingSystem.IsWindows() ? @"C:\\Windows\\System32\\evil.wav" : "/etc/evil.wav";
+        WriteLibrary($$"""
+            {"version":1,"categories":[],"phrases":[
+              {"id":"p-1","title":"","categoryId":"","tags":[],"fileName":"..\\..\\..\\evil.wav","durationMs":0,"gainDb":0,"sortOrder":0,"createdAt":"2026-07-01T00:00:00Z","updatedAt":"2026-07-01T00:00:00Z",
+               "versions":[{"id":"pv-1","label":"","fileName":"{{absolute}}","durationMs":0,"gainDb":0,"createdAt":"2026-07-01T00:00:00Z"}]},
+              {"id":"p-2","title":"","categoryId":"","tags":[],"fileName":"p-2.wav","durationMs":0,"gainDb":0,"sortOrder":0,"createdAt":"2026-07-01T00:00:00Z","updatedAt":"2026-07-01T00:00:00Z"}
+            ],"tags":[],"conversations":[]}
+            """);
+
+        var library = new JsonPhraseRepository(_root).Load().Library;
+
+        var tampered = library.Phrases.Single(p => p.Id == "p-1");
+        Assert.Equal("evil.wav", tampered.FileName);                       // traversal segments stripped
+        Assert.Equal("evil.wav", Assert.Single(tampered.Versions).FileName); // absolute path stripped too
+        Assert.Equal("p-2.wav", library.Phrases.Single(p => p.Id == "p-2").FileName); // well-formed unchanged
+    }
+
     [Fact]
     public void Save_writes_valid_json_and_leaves_no_temp_file()
     {
