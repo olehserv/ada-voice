@@ -486,3 +486,7 @@ $RECYCLE.BIN/
 # Claude Code linked worktrees — the worktree folder must never be tracked
 # (its nested .git makes git treat it as a submodule and breaks `git status`).
 .claude/worktrees/
+
+# Window screenshots are local dev artifacts, regenerated on demand by the
+# opt-in screenshot tests (ADAVOICE_SCREENSHOTS=1). Not tracked to avoid binary churn.
+docs/ui/screenshots/
