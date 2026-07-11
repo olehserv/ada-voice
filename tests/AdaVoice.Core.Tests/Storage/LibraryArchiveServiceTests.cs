@@ -56,6 +56,37 @@ public class LibraryArchiveServiceTests : IDisposable
         Assert.Null(archive.GetEntry("audio/deleted-p-9.wav"));
     }
 
+    // Security (confused-deputy exfiltration): a tampered library.json whose FileName points OUTSIDE
+    // audio\ must NOT pull that file into the export zip the operator then shares. The load-time
+    // FileName flattening turns the traversal into a bare name that doesn't exist under audio\, so
+    // export simply skips it (the "broken phrase" path) and the secret never leaves the machine.
+    [Fact]
+    public void Export_does_not_leak_a_file_outside_audio_named_by_a_tampered_FileName()
+    {
+        var src = Root("src");
+        Directory.CreateDirectory(src);
+        var secret = Path.Combine(_work, "secret.txt");
+        File.WriteAllBytes(secret, "TOP-SECRET"u8.ToArray());
+
+        // Write library.json by hand so the traversal FileName survives to the repository (Seed uses
+        // a clean "{id}.wav"). From src\audio\, "..\..\secret.txt" resolves to _work\secret.txt.
+        File.WriteAllText(AdaVoicePaths.LibraryFile(src),
+            "{\"version\":1,\"categories\":[],\"phrases\":[" +
+            "{\"id\":\"p-1\",\"fileName\":\"..\\\\..\\\\secret.txt\"}]}");
+
+        var zip = Zip("export");
+        Archive(src).Export(zip);
+
+        using var archive = ZipFile.OpenRead(zip);
+        Assert.All(archive.Entries, e => Assert.NotEqual("secret.txt", Path.GetFileName(e.FullName)));
+        // And no entry carries the secret's bytes under any name.
+        foreach (var entry in archive.Entries.Where(e => e.Name.EndsWith(".txt") || e.FullName.StartsWith("audio/")))
+        {
+            using var reader = new StreamReader(entry.Open());
+            Assert.DoesNotContain("TOP-SECRET", reader.ReadToEnd());
+        }
+    }
+
     [Fact]
     public void Export_drops_version_audio_and_reports_how_many()
     {
