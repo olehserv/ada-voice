@@ -9,7 +9,10 @@ Stack: WPF on .NET, MVVM (CommunityToolkit.Mvvm), WPF-UI (Fluent theme), NAudio/
 audio, Serilog file logging, xunit tests. No web layer, no database.
 
 **Start here:** `handoff.md` is the live project status — read it first when picking up
-work. Design docs and decisions live under `docs/`.
+work. Design docs and decisions live under `docs/`. UX/layout mechanics rules (window
+behavior, dialog structure, button rules) live in
+[docs/design/wpf-ux-design-rules.md](docs/design/wpf-ux-design-rules.md) — visual tokens
+stay in `docs/design/09-design-system.md`.
 
 ## Solution layout
 
