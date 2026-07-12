@@ -130,6 +130,12 @@ drive the *mechanical* rules below, not just visuals:
   open decision** — see
   [ui-ux-localization-scope.md](../../plans/ui-ux-localization-scope.md). Don't build it as a
   side effect of a UX polish pass; it needs its own design decision first.
+- **Phrase tile sizing is planned but not yet shipped** — fixed `Width`/`Height` regardless of
+  tag count, a title clamp, and a capped tag list with a "+N" overflow chip (full tag list stays
+  reachable via the tile's "Edit…" context-menu item). See `Pass 6` in
+  [ux-structural-fix-plan.md](plans/ux-structural-fix-plan.md) for the design and the open
+  fixed-count-vs-measured-width decision. Don't add ad-hoc tile-height special-casing anywhere
+  else until that pass lands and this note is replaced with the actual shipped rule.
 
 ## 7. WPF layout implementation rules
 

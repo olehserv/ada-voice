@@ -45,8 +45,17 @@ Monetization exists as a full design (no code yet).
   name/color edits now auto-persist on blur/selection-change via a new code-behind pattern
   (`RowField_Committed`, mirrors `SettingsWindow`'s existing slider-commit pattern), no
   ViewModel changes; new-conversation "Add" now sits on the same line as its input and is a
-  green checkmark. 238/238 App tests green throughout. Remaining plan passes (MainWindow resize
-  check, `MessageBox`→`ContentDialog`) still await approval, one window at a time.
+  green checkmark. 238/238 App tests green throughout. **Pass 3 (C1, MainWindow resize check)
+  verified, no fix needed** — rather than a manual live-app resize, added a permanent
+  regression screenshot (`MainWindow_board_wide`, 1366×780, 10 phrases) proving the search/
+  filter row and phrase `WrapPanel` hold up at desktop width: no wrap/clip/overlap, STOP stays
+  full-width and readable. 238/238 App tests still green. **New owner UX concern captured as
+  Pass 6 (docs only, no code yet):** phrase tiles on the board have inconsistent height
+  depending on tag count (and the pre-existing F1 finding about long-title height was folded
+  in); plan is a fixed tile `Width`/`Height`, a title clamp, and a capped tag list with a "+N"
+  overflow chip (full tags stay visible via the tile's existing "Edit…" menu item) — see `Pass 6`
+  in [ux-structural-fix-plan.md](docs/design/plans/ux-structural-fix-plan.md), promoted ahead of
+  Pass 2b. Both Pass 6 and Pass 2b (`MessageBox`→`ContentDialog`) await approval to start.
 
 ## Latest work (2026-07-11)
 

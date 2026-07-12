@@ -12,7 +12,8 @@ approval after each), per the workflow's critical rules.
 | 1 | Modal/dialog resizing stabilization | ✅ No work needed (verified in audit) |
 | 2 | `SettingsWindow` footer fix (B1) | ✅ **Shipped** — commits `4c41715`, `26b4dd0`, `fa85f18` (2 fix rounds — a stray full-file `xstyler` reformat, then a margin regression). Review: [settings-window-review.md](../screenshots/review/settings-window-review.md) |
 | 4 | Button/action consistency (D1, D2) | ✅ **Shipped** — commit `c47167c`. Review: [button-consistency-review.md](../screenshots/review/button-consistency-review.md) |
-| 3 | `MainWindow` resize verification (C1) | ⬜ **Not started** — manual check, no code expected |
+| 3 | `MainWindow` resize verification (C1) | ✅ **Verified, no fix needed** — see Pass 3 below |
+| 6 | Phrase tile fixed size + tag overflow (F1, expanded) | ⬜ **Not started** — owner request 2026-07-12, promoted ahead of Pass 2b |
 | 2b | `MessageBox` → `ContentDialog` (E2) | ⬜ **Not started** — biggest/riskiest remaining item |
 | 5 | Form layout cleanup | ✅ No work needed (verified in audit) |
 
@@ -29,7 +30,9 @@ buttons, matched row heights, auto-persist pattern) are now documented in
 [wpf-ux-design-rules.md](../wpf-ux-design-rules.md) rule 5 — follow them for any further work
 on these dialogs or new ones like them.
 
-**Next step: Pass 3, then Pass 2b — both still need approval to start.**
+**Next step: Pass 6, then Pass 2b — both still need approval to start.** Pass 6 was added
+2026-07-12 from direct owner feedback (not a re-run of the audit) and moved ahead of Pass 2b in
+the suggested order — see below.
 
 ## Pass 1 — Modal/dialog resizing stabilization
 
@@ -107,25 +110,33 @@ low-risk wins that shouldn't wait on it.
 **Rollback:** revert `MainWindow.xaml.cs`; no XAML changes required for this pass (the dialogs
 are raised entirely from code-behind today).
 
-## Pass 3 — MainWindow layout stability (audit C1)
+## Pass 3 — MainWindow layout stability (audit C1) — ✅ VERIFIED, NO FIX NEEDED
 
 **Status: investigation, not a code change.** `MinWidth`/`MinHeight` are already set and
-correct. There is no `MaxWidth`/`MaxHeight`, and the single shipped layout has never been
+correct. There was no `MaxWidth`/`MaxHeight`, and the single shipped layout had never been
 verified above the 420×640 default screenshot size.
 
-**Action:** manually resize the real app from 420 px up to a typical 1080p desktop width and
-confirm: the search/filter row doesn't wrap or clip, the phrase `WrapPanel` re-flows cleanly,
-STOP stays full-width and readable, nothing overlaps. Document the result in this file's
-follow-up note (or a short addendum) rather than changing code — if it holds up, the finding is
-closed with "verified, no fix needed." If it doesn't hold up, that becomes new pass 3b, sized
-to whatever's actually found (not more of the automatic responsive-layout guess).
+**Action taken:** rather than a manual live-app resize, added a permanent regression screenshot
+— `WindowScreenshotTests.MainWindow_board_wide` renders `MainWindow` at 1366×780 (a typical
+laptop width, chosen to fit this dev machine's 1536×816 work area) with 10 phrases (up from the
+default 4) so the `WrapPanel` actually has to reflow across multiple rows. Saved as
+`docs/ui/screenshots/after/main-board-wide.png`.
+
+**Result:** confirmed at 1366×780 — the search box stretches full-width with no wrap or clip,
+the two filter menu buttons + Record stay on one line (the `*`-width Grid column between them
+absorbs the extra space), the phrase `WrapPanel` reflows cleanly into as many columns as fit
+with fixed tile sizes, and STOP stays full-width and readable with nothing overlapping. Finding
+closed: **verified, no fix needed.** (One cosmetic observation, not a C1 defect: on a short
+board with a tall window, there's a large empty gap between the last phrase row and STOP —
+expected consequence of the `ScrollViewer`'s `Grid.Row="*"` sizing, not a wrap/clip/overlap bug;
+not actioned here.)
 
 **Explicitly out of scope for this pass:** building the Full/Docked 720 px responsive layout —
 that's a separate, already-owned feature decision
 ([ui-ux-localization-scope.md](../ui-ux-localization-scope.md) slice 3), not a structural bug
 fix. Don't fold it into this UX pass without a separate go-ahead.
 
-**Risk:** none (no code change) unless the manual check surfaces a real problem.
+**Risk:** none — no product code changed, only a new test.
 
 ## Pass 4 — Button/action consistency (audit D1, D2) — ✅ SHIPPED
 
@@ -149,6 +160,70 @@ screenshot set should visibly show the color change), screenshot each of the 4 f
 **Actual outcome:** shipped exactly as planned, clean on first review — see
 [button-consistency-review.md](../screenshots/review/button-consistency-review.md).
 
+## Pass 6 — Phrase tile fixed size + tag overflow indicator (audit F1, expanded)
+
+**Status: not started.** Added 2026-07-12 from direct owner feedback while reviewing the board
+screenshots (not a re-run of the audit) and promoted ahead of Pass 2b. This absorbs and expands
+the audit's original **F1** finding (tile height varies with title-wrap length), which had been
+deferred as low/cosmetic — the owner now wants it fixed directly, plus a second, related problem
+the audit didn't cover: tile height/width also varies with **tag count**, and there's no cap on
+how many tags a tile can show.
+
+**Problem:** in `MainWindow.xaml`'s phrase tile `DataTemplate` (~lines 224–332), the tile's
+outer container has no explicit size — height and width both grow with content. A phrase with
+0 tags renders visibly shorter than one with 2 tags; a phrase with a long title (original F1)
+renders taller still. In the board's `WrapPanel`, mismatched tile heights within the same row
+look uneven. There's also no upper bound on tag count — a phrase with many tags could grow a
+tile arbitrarily tall.
+
+**Target:** `src/AdaVoice.App/MainWindow.xaml` (phrase tile `DataTemplate`), and, if the
+recommended fixed-count cap (Option A below) is chosen, `src/AdaVoice.App/ViewModels/
+PhraseItemViewModel.cs` + `BoardViewModel.cs:556` (where `TagChips` is populated per tile today).
+
+**Proposed change:**
+1. **Fixed tile size** — give the tile an explicit `Width`/`Height` so every tile in the
+   `WrapPanel` is identical regardless of tag count or title length. Reserve room for: category
+   edge marker + title (existing 2-line wrap, `MaxWidth="130"`) + duration + at most one row of
+   tag chips. Exact pixel values to be tuned during implementation and checked against the
+   `MainWindow_board_wide` screenshot test (added for Pass 3) — its 10 sample phrases already mix
+   0/1/2-tag phrases, so it doubles as a ready-made regression check for this pass.
+2. **Title overflow** — with a fixed tile height, a title that would wrap to a 3rd line needs a
+   hard stop: add `TextTrimming="CharacterEllipsis"` (with a matching `MaxHeight`) on top of the
+   existing `TextWrapping="Wrap"`, so a very long title clips with an ellipsis instead of
+   pushing content out of the fixed box. This folds the original F1 problem into the same fix.
+3. **Tag overflow indicator** — cap visible tags to a small fixed count (start at 2, tune by
+   eye) and show a trailing "+N" chip when there are more, styled like the existing tag chip
+   (`Scrim.Tag` background) but with a neutral/secondary border since it isn't a real tag. No
+   click behavior needed on the chip itself — the tile's existing context menu already has
+   "Edit…", which opens `PhraseEditDialog` and lists every tag in full (verified:
+   `PhraseEditDialog.xaml` line 43's `ItemsControl` over the complete `Tags` collection). That
+   already satisfies "the user can see all tags by opening the phrase's details" — no new dialog
+   needed.
+
+**Decision needed before implementation (flag for approval, not resolved here):** where the
+"cap to N, show +N more" logic lives.
+- **Option A — fixed-count cap (recommended).** `BoardViewModel` (which already populates
+  `TagChips` per item) also computes a bounded list + overflow count, exposed as new
+  `PhraseItemViewModel` properties (e.g. `VisibleTagChips`, `HiddenTagCount`). Deterministic, no
+  runtime measurement, a small and contained ViewModel change — matches the project's existing
+  pattern of view-model-computed display state (same shape as `DurationLabel`).
+- **Option B — true width-measured overflow** (show only as many chips as actually fit the
+  tile's pixel width). More visually precise — two short tags might both fit where two long tags
+  wouldn't — but needs a measuring behavior/converter in code-behind, real extra machinery for a
+  cosmetic feature. Not recommended given the project's "good enough for now" bias unless Option
+  A looks visually wrong once tried.
+
+**Risk:** Low-medium. Mostly a visual change, plus (if Option A) one small, contained ViewModel
+addition — no behavior change to editing, deleting, or playing phrases.
+
+**Verification:** same 5 steps as other passes — build, `xstyler`, full `AdaVoice.App.Tests` run
+(a new bounded tag-list property needs its own small unit tests alongside the existing
+`TagChips` coverage), screenshot the board with a mix of 0/1/2/5+-tag phrases (extend the
+`MainWindow_board_wide` fixture added for Pass 3 rather than building a new one), visual review.
+
+**Rollback:** revert the XAML file (and the ViewModel addition, if made) — independent of
+Pass 2b/3.
+
 ## Pass 5 — Form layout cleanup
 
 **Status: no work needed.** The audit found labels aligned, sections grouped in
@@ -161,9 +236,11 @@ per `handoff.md`'s open follow-ups) is added without following the rules in
 
 1. ✅ Pass 2 (Settings footer) — done.
 2. ✅ Pass 4 (button semantics) — done.
-3. Pass 3 (MainWindow verification) — no code risk, but needs a live app run; do it before
-   Pass 2b so any real resize bug it finds doesn't get buried under the bigger dialog rewrite.
-4. Pass 2b (ContentDialog migration) — last, biggest, needs its own careful review.
-5. Pass 1 and 5 — already done; no implementation turn needed, just recorded here.
+3. ✅ Pass 3 (MainWindow verification) — done, verified no fix needed.
+4. **Pass 6 (phrase tile fixed size + tag overflow)** — owner priority, added 2026-07-12;
+   do this before Pass 2b since it's lower-risk (mostly visual, at most one small ViewModel
+   addition) than the dialog-signature rewrite below.
+5. Pass 2b (ContentDialog migration) — last, biggest, needs its own careful review.
+6. Pass 1 and 5 — already done; no implementation turn needed, just recorded here.
 
-**Waiting for approval before starting Pass 3.**
+**Waiting for approval before starting Pass 6.**
