@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Infrastructure: EF Core, crypto, email (added in later phases). Depends on Domain. -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AdaVoice.Server.Domain\AdaVoice.Server.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

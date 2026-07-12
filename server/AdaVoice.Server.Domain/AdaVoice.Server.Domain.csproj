@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Domain layer: entities + status values (added in Phase 1). Bottom of the server
+         stack: Api -> Infrastructure -> Domain. No dependencies, ever. -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+</Project>

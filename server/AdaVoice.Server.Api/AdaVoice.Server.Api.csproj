@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <!-- REST API + admin Razor Pages (later phases). Composition root of the server.
+         Depends on Infrastructure (-> Domain). -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AdaVoice.Server.Infrastructure\AdaVoice.Server.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

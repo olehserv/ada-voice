@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Background jobs. MVP: hosted inside the Api process (split out Later).
+         Depends on Infrastructure. -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AdaVoice.Server.Infrastructure\AdaVoice.Server.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

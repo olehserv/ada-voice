@@ -16,4 +16,11 @@
   <Folder Name="/tools/">
     <Project Path="tools/AudioSeamCheck/AudioSeamCheck.csproj" />
   </Folder>
+  <Folder Name="/server/">
+    <Project Path="server/AdaVoice.Server.Domain/AdaVoice.Server.Domain.csproj" />
+    <Project Path="server/AdaVoice.Server.Infrastructure/AdaVoice.Server.Infrastructure.csproj" />
+    <Project Path="server/AdaVoice.Server.Api/AdaVoice.Server.Api.csproj" />
+    <Project Path="server/AdaVoice.Server.Workers/AdaVoice.Server.Workers.csproj" />
+    <Project Path="server/AdaVoice.Server.Tests/AdaVoice.Server.Tests.csproj" />
+  </Folder>
 </Solution>
