@@ -36,8 +36,17 @@ Monetization exists as a full design (no code yet).
   the automated reviewer missed but a screenshot caught. **Pass 4 (D1/D2) shipped** — Danger
   appearance on 4 destructive buttons (category/conversation Delete, phrase Remove, version ✕)
   across 3 dialogs, `IsDefault` added to Recorder's Save; clean on first review, visually
-  confirmed. Remaining passes (MainWindow resize check, `MessageBox`→`ContentDialog`) await
-  approval, one window at a time.
+  confirmed. **Owner UX rework batch shipped** (ad-hoc feedback after reviewing screenshots, not
+  part of the original audit): `SettingsWindow`/`ManageCategoriesDialog`/
+  `ManageConversationsDialog` Done buttons now green (`Success`); row heights matched across
+  text/dropdown/button controls; category Delete and conversation-member Remove are now
+  icon-only red "✕" (conversation-level Delete deliberately left as text); category color
+  dropdown shows swatch only, no hex; per-row Save buttons removed in both manage dialogs —
+  name/color edits now auto-persist on blur/selection-change via a new code-behind pattern
+  (`RowField_Committed`, mirrors `SettingsWindow`'s existing slider-commit pattern), no
+  ViewModel changes; new-conversation "Add" now sits on the same line as its input and is a
+  green checkmark. 238/238 App tests green throughout. Remaining plan passes (MainWindow resize
+  check, `MessageBox`→`ContentDialog`) still await approval, one window at a time.
 
 ## Latest work (2026-07-11)
 
