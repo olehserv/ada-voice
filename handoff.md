@@ -274,10 +274,9 @@ OQ-12/OC-06 (device vs per-seat limits).
   error surfaced.
 - **Fill in `spike/PHASE0-RESULTS.md` measured numbers** (latency, AGC notes) if they are
   ever re-measured; the gate itself passed.
-- **Screenshot harness renders `after-light/` in dark colors.** `ADAVOICE_SCREENSHOT_THEME=Light`
-  writes to the right folder but the light theme doesn't visually apply before capture — the
-  token file itself is correct (`Tokens.Light.xaml`'s `Surface.Window="#F6F7F9"`), so this is a
-  `WpfAppFixture`/`App.ApplyTheme` timing issue in the test harness, not a design bug. Found
-  2026-07-12 during the UX workstream's Settings screenshot review; not investigated further
-  (out of scope for that pass).
+- ✅ **Screenshot harness `after-light/` dark-theme bug — fixed (2026-07-12, commit `adda0a7`).**
+  Root cause: closing a WPF-UI `FluentWindow` resets `ApplicationThemeManager` back to the OS
+  theme as a side effect, so the fixture's one-time theme apply at startup only held for the
+  first window. Fix: `ScreenshotHarness` now re-applies `WpfAppFixture.Theme` before building
+  every window. Verified — `after-light/settings.png` now renders correctly light.
 - Post-MVP backlog lives in the [roadmap](docs/roadmaps/mvp-roadmap.md#deferred-post-mvp-backlog).
