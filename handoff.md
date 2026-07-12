@@ -225,7 +225,7 @@ domain code yet.
   2 days trial), DPAPI client storage, refresh-token rotation, manual invoice billing v1,
   payment-provider webhooks v2. Next: answer OQ-12/OC-06 (device vs per-seat limits) in
   [open-questions](docs/monetize/open-questions.md), then Phase 0 of the
-  [monetize roadmap](docs/monetize/implementation-roadmap.md).
+  [monetize roadmap](docs/monetize/implementation-roadmap.md). _(Superseded 2026-07-12: Phase 0 shipped; OQ-12/OC-06 gates Phase 4, not Phase 0 — see "Next action".)_
 - **Slice 2 (interaction-state gaps) shipped:** repair dialog for broken phrases,
   category-empty CTA, search Clear + query echo, Recorder Processing state + hardened
   `SaveTake` (closes review finding M15), wizard per-check spinner. Fully reviewed;
