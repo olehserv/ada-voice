@@ -34,6 +34,14 @@ public class DependencyDirectionTests
         Assert.Contains("AdaVoice.Server.Infrastructure", ProjectReferencesOf("AdaVoice.Server.Workers"));
     }
 
+    [Fact]
+    public void Workers_does_not_reference_Api()
+    {
+        // Api hosts the workers as hosted services (Api -> Workers in Phase 8), so Workers
+        // must never reference Api back — that would be a dependency cycle.
+        Assert.DoesNotContain("AdaVoice.Server.Api", ProjectReferencesOf("AdaVoice.Server.Workers"));
+    }
+
     [Theory]
     [InlineData("AdaVoice.Server.Domain")]
     [InlineData("AdaVoice.Server.Infrastructure")]
