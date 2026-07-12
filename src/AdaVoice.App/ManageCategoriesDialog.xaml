@@ -12,12 +12,11 @@
         TextElement.Foreground="{DynamicResource Text.Primary}"
         FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
     <Window.Resources>
-        <!-- One dropdown row: a colour square + its hex. The item's DataContext is the hex string. -->
+        <!-- One dropdown row: a colour square only (swatch-only, no hex text). The item's DataContext is the hex string. -->
         <DataTemplate x:Key="ColorItemTemplate">
             <StackPanel Orientation="Horizontal">
-                <Border Width="16" Height="16" CornerRadius="{StaticResource Radius.Small}" VerticalAlignment="Center"
+                <Border Width="20" Height="20" CornerRadius="{StaticResource Radius.Small}" VerticalAlignment="Center"
                         Background="{Binding Converter={StaticResource HexToBrush}}" />
-                <TextBlock Text="{Binding}" Margin="8,0,0,0" VerticalAlignment="Center" />
             </StackPanel>
         </DataTemplate>
     </Window.Resources>
@@ -39,18 +38,16 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" VerticalAlignment="Center"
-                                     Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
-                            <ComboBox Grid.Column="1" Width="130" Margin="8,0,0,0" VerticalAlignment="Center"
+                            <TextBox Grid.Column="0" Height="36" VerticalAlignment="Center"
+                                     Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                     LostFocus="RowField_Committed" />
+                            <ComboBox Grid.Column="1" Width="130" Height="36" Margin="8,0,0,0" VerticalAlignment="Center"
                                       ItemsSource="{Binding ColorOptions}"
                                       SelectedItem="{Binding Color, Mode=TwoWay}"
-                                      ItemTemplate="{StaticResource ColorItemTemplate}" />
-                            <ui:Button Grid.Column="2" Content="Save" Appearance="Secondary" Margin="8,0,0,0"
-                                       Command="{Binding DataContext.SaveCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                       CommandParameter="{Binding}" />
-                            <ui:Button Grid.Column="3" Content="Delete" Appearance="Danger" Margin="8,0,0,0"
+                                      ItemTemplate="{StaticResource ColorItemTemplate}"
+                                      SelectionChanged="RowField_Committed" />
+                            <ui:Button Grid.Column="2" Content="✕" ToolTip="Delete" Height="36" Appearance="Danger" Margin="8,0,0,0"
                                        Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                        CommandParameter="{Binding}">
                                 <ui:Button.Style>
@@ -79,13 +76,13 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <ui:TextBox Grid.Column="0" PlaceholderText="New category name" VerticalAlignment="Center"
+                <ui:TextBox Grid.Column="0" Height="36" PlaceholderText="New category name" VerticalAlignment="Center"
                             Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}" />
-                <ComboBox Grid.Column="1" Width="130" Margin="8,0,0,0" VerticalAlignment="Center"
+                <ComboBox Grid.Column="1" Width="130" Height="36" Margin="8,0,0,0" VerticalAlignment="Center"
                           ItemsSource="{Binding Palette}"
                           SelectedItem="{Binding NewColor, Mode=TwoWay}"
                           ItemTemplate="{StaticResource ColorItemTemplate}" />
-                <ui:Button Grid.Column="2" Content="Add" Appearance="Primary" Margin="8,0,0,0"
+                <ui:Button Grid.Column="2" Content="✓" Height="36" Appearance="Success" Margin="8,0,0,0"
                            Command="{Binding AddCommand}" />
             </Grid>
         </Border>

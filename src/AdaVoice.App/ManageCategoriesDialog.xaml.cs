@@ -1,4 +1,5 @@
 using System.Windows;
+using AdaVoice.App.ViewModels;
 
 namespace AdaVoice.App;
 
@@ -7,4 +8,15 @@ namespace AdaVoice.App;
 public partial class ManageCategoriesDialog : Wpf.Ui.Controls.FluentWindow
 {
     public ManageCategoriesDialog() => InitializeComponent();
+
+    // Auto-persist a row on blur (name TextBox) or selection change (colour ComboBox), mirroring
+    // SettingsWindow.xaml.cs's DuckSlider_Committed pattern — no per-row Save button to click.
+    private void RowField_Committed(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: CategoryRowViewModel row } &&
+            DataContext is CategoriesViewModel vm)
+        {
+            vm.SaveCommand.Execute(row);
+        }
+    }
 }
