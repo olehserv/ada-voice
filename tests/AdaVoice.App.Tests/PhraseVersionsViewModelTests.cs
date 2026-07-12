@@ -29,6 +29,29 @@ public class PhraseVersionsViewModelTests
     }
 
     [Fact]
+    public void A_version_with_a_missing_audio_file_is_flagged_broken_without_flagging_the_primary()
+    {
+        var entry = new PhraseEntry
+        {
+            Id = "p-1",
+            Title = "T",
+            Versions =
+            [
+                new PhraseVersion { Id = "pv-ok", Label = "Good" },
+                new PhraseVersion { Id = "pv-gone", Label = "Missing file" },
+            ],
+        };
+        var host = HostWith(entry);
+        host.BrokenVersionIds = ["pv-gone"]; // primary and pv-ok are fine
+
+        var vm = new PhraseVersionsViewModel(host, host, entry);
+
+        Assert.False(vm.Tiles[0].IsBroken); // primary
+        Assert.False(vm.Tiles[1].IsBroken); // pv-ok
+        Assert.True(vm.Tiles[2].IsBroken);  // pv-gone
+    }
+
+    [Fact]
     public async Task Record_version_passes_the_phrase_id_to_the_injected_callback()
     {
         var entry = new PhraseEntry { Id = "p-1", Title = "T" };

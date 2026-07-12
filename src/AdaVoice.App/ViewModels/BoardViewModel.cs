@@ -157,7 +157,9 @@ public partial class BoardViewModel : ObservableObject
             _library.Phrases.Select(e => new PhraseItemViewModel(e) { IsBroken = broken.Contains(e.Id) }));
 
         // A problem loading the library must be visible, or an empty board looks like an empty library.
-        _notice = library.LibraryWarning;
+        // A settings reset (which drops the mic calibration) is shown too — the library warning wins if
+        // both happened, since an empty board is the more alarming surprise.
+        _notice = library.LibraryWarning ?? settingsHost.SettingsWarning;
 
         ApplyColors(); // tint each tile with its category colour and resolve its tag chips
 

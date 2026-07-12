@@ -106,6 +106,28 @@ public class BoardViewModelTests
     }
 
     [Fact]
+    public void A_settings_warning_shows_on_the_board_at_startup()
+    {
+        var host = new FakePlaybackHost(); // no library warning
+        var settingsHost = new FakeSettingsHost { SettingsWarning = "Your saved settings were reset." };
+
+        var board = NewBoard(host, settingsHost: settingsHost);
+
+        Assert.Equal("Your saved settings were reset.", board.Notice);
+    }
+
+    [Fact]
+    public void A_library_warning_takes_priority_over_a_settings_warning()
+    {
+        var host = new FakePlaybackHost { LibraryWarning = "library problem" };
+        var settingsHost = new FakeSettingsHost { SettingsWarning = "settings problem" };
+
+        var board = NewBoard(host, settingsHost: settingsHost);
+
+        Assert.Equal("library problem", board.Notice);
+    }
+
+    [Fact]
     public async Task Recording_while_stopped_warns_without_opening_the_recorder_window()
     {
         var host = new FakePlaybackHost(); // State defaults to Stopped

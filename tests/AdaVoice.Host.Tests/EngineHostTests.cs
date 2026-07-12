@@ -43,6 +43,25 @@ public class EngineHostTests : IDisposable
     }
 
     [Fact]
+    public void A_corrupt_settings_file_surfaces_a_settings_warning()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "settings.json"), "{ not valid json");
+
+        using var host = NewHost();
+
+        Assert.NotNull(host.SettingsWarning);
+    }
+
+    [Fact]
+    public void A_clean_data_root_has_no_settings_warning()
+    {
+        using var host = NewHost();
+
+        Assert.Null(host.SettingsWarning);
+    }
+
+    [Fact]
     public void A_locked_library_file_surfaces_a_read_error_warning()
     {
         // Seed a real library file, then hold it exclusively (like an AV scan would).

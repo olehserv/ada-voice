@@ -119,6 +119,31 @@ public class JsonSettingsRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void A_corrupt_settings_file_falls_back_to_defaults_and_reports_it()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(AdaVoicePaths.SettingsFile(_root), "{ not valid json");
+
+        var repo = new JsonSettingsRepository(_root);
+        repo.Load();
+
+        Assert.True(repo.LoadReplacedCorruptFile); // so the operator can be told the calibration was lost
+    }
+
+    [Fact]
+    public void A_missing_or_clean_settings_file_is_not_reported_as_corrupt()
+    {
+        var missing = new JsonSettingsRepository(_root);
+        missing.Load();
+        Assert.False(missing.LoadReplacedCorruptFile);
+
+        missing.Save(new Settings { MicDuckDb = -9 });
+        var clean = new JsonSettingsRepository(_root);
+        clean.Load();
+        Assert.False(clean.LoadReplacedCorruptFile);
+    }
+
+    [Fact]
     public void Empty_file_loads_defaults()
     {
         Directory.CreateDirectory(_root);

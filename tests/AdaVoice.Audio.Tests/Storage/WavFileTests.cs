@@ -96,6 +96,22 @@ public class WavFileTests
         finally { File.Delete(file); }
     }
 
+    [Fact]
+    public void Load_refuses_a_file_larger_than_the_cap_instead_of_exhausting_memory()
+    {
+        // A hand-placed or synced-in WAV could be huge; Load must reject it, not read it into a
+        // doubling float list until it runs out of memory (security scan finding 4).
+        var path = TempWavPath();
+        try
+        {
+            using (var fs = File.Create(path))
+                fs.SetLength(256L * 1024 * 1024 + 1); // over the load cap
+
+            Assert.Throws<InvalidDataException>(() => WavFile.Load(path));
+        }
+        finally { Cleanup(path); }
+    }
+
     private static string TempWavPath() =>
         Path.Combine(Path.GetTempPath(), "adavoice-" + Guid.NewGuid().ToString("N") + ".wav");
 

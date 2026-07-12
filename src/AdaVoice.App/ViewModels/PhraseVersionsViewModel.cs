@@ -35,8 +35,9 @@ public partial class PhraseVersionsViewModel : ObservableObject
         Title = entry.Title;
 
         Tiles = new ObservableCollection<PhraseVersionRowViewModel>(
-            [PhraseVersionRowViewModel.ForPrimary(entry),
-             .. entry.Versions.Select(v => new PhraseVersionRowViewModel(library, entry.Id, v))]);
+            [PhraseVersionRowViewModel.ForPrimary(entry, library.BrokenPhraseIds.Contains(entry.Id)),
+             .. entry.Versions.Select(v =>
+                 new PhraseVersionRowViewModel(library, entry.Id, v, library.BrokenVersionIds.Contains(v.Id)))]);
     }
 
     /// <summary>The phrase's title — shown in the window's title bar.</summary>
@@ -64,9 +65,9 @@ public partial class PhraseVersionsViewModel : ObservableObject
     private void Refresh(PhraseEntry entry)
     {
         Tiles.Clear();
-        Tiles.Add(PhraseVersionRowViewModel.ForPrimary(entry));
+        Tiles.Add(PhraseVersionRowViewModel.ForPrimary(entry, _library.BrokenPhraseIds.Contains(entry.Id)));
         foreach (var version in entry.Versions)
-            Tiles.Add(new PhraseVersionRowViewModel(_library, entry.Id, version));
+            Tiles.Add(new PhraseVersionRowViewModel(_library, entry.Id, version, _library.BrokenVersionIds.Contains(version.Id)));
     }
 
     /// <summary>Play a tile (primary or version) on the monitor, to hear it — or, if that tile is
@@ -135,21 +136,27 @@ public partial class PhraseVersionRowViewModel : ObservableObject
     private readonly ILibraryHost? _library; // null for the primary tile — nothing to rename
     private readonly string? _phraseId;
 
-    private PhraseVersionRowViewModel(PhraseEntry primary)
+    private PhraseVersionRowViewModel(PhraseEntry primary, bool isBroken)
     {
         PrimaryEntry = primary;
         _label = "Primary";
+        IsBroken = isBroken;
     }
 
-    public PhraseVersionRowViewModel(ILibraryHost library, string phraseId, PhraseVersion version)
+    public PhraseVersionRowViewModel(ILibraryHost library, string phraseId, PhraseVersion version, bool isBroken = false)
     {
         _library = library;
         _phraseId = phraseId;
         Version = version;
         _label = version.Label;
+        IsBroken = isBroken;
     }
 
-    public static PhraseVersionRowViewModel ForPrimary(PhraseEntry entry) => new(entry);
+    public static PhraseVersionRowViewModel ForPrimary(PhraseEntry entry, bool isBroken = false) => new(entry, isBroken);
+
+    /// <summary>True when this tile's audio file is missing — the view shows a "missing audio" marker so
+    /// a silent no-op ▶ is explained (security scan 2026-07-12 finding 5).</summary>
+    public bool IsBroken { get; }
 
     /// <summary>Set only for the primary tile.</summary>
     public PhraseEntry? PrimaryEntry { get; }

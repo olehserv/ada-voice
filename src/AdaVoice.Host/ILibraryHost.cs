@@ -27,6 +27,10 @@ public interface ILibraryHost
     /// crashing playback.</summary>
     IReadOnlyList<string> BrokenPhraseIds { get; }
 
+    /// <summary>Ids of phrase versions whose audio file is missing — the Versions window flags the one
+    /// tile, without marking the whole phrase broken (security scan 2026-07-12 finding 5).</summary>
+    IReadOnlyList<string> BrokenVersionIds { get; }
+
     /// <summary>Operator-readable warning about how the library loaded (locked file, corrupt file,
     /// restored backup), or null when the load was clean. The board shows it at startup so an empty
     /// board is never mistaken for an empty library (design 04 §3).</summary>

@@ -33,6 +33,11 @@
   true removal means deleting the file manually or via a future "purge orphans" tool.
 - The app never captures the client's side of a conversation — only the operator's
   microphone, and only while she records phrases or runs passthrough live.
+- **Path-traversal via `library.json` — fully closed (2026-07-12).** The 2026-07-11 fix flattened
+  every phrase/version `FileName` on load; the follow-up flattens the version WAV name built from a
+  phrase `Id` too (`PhraseLibraryService.AddPhraseVersion`), so a crafted `Id` can no longer write a
+  recorded version outside `audio\`. See
+  [reviews/2026-07-12-security-scan.md](../reviews/2026-07-12-security-scan.md) finding 1.
 - The installer is **not code-signed in v1** (decision #19): SmartScreen will show an
   "unrecognized app" warning on first install. Accepted for personal/family use; the user
   guide explains the warning. Revisit (EV/OV certificate) if the app is ever distributed.

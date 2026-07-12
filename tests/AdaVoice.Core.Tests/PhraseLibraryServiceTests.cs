@@ -268,6 +268,23 @@ public class PhraseLibraryServiceTests : IDisposable
         Assert.Equal(1, repo.SaveCount);
     }
 
+    [Fact]
+    public void AddPhraseVersion_flattens_a_traversal_phrase_id_so_the_take_stays_in_the_audio_folder()
+    {
+        // A tampered library.json can carry a phrase id with path traversal. The version file name is
+        // built from that id, so it must be flattened before it reaches a file API (security scan finding 1).
+        var library = new Library();
+        library.Phrases.Add(new PhraseEntry { Id = @"..\..\..\evil", FileName = "evil.wav" });
+        var service = new PhraseLibraryService(
+            new StubRepository(new LibraryLoadResult(library, LibraryLoadStatus.Loaded)));
+
+        string? writtenFileName = null;
+        service.AddPhraseVersion(@"..\..\..\evil", "Label", 100, 0, f => writtenFileName = f);
+
+        Assert.NotNull(writtenFileName);
+        Assert.Equal(Path.GetFileName(writtenFileName), writtenFileName); // bare name — no directory parts
+    }
+
     private sealed class StubRepository(LibraryLoadResult result) : IPhraseRepository
     {
         public LibraryLoadResult Result { get; set; } = result;

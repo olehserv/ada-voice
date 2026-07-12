@@ -248,6 +248,41 @@ public class JsonPhraseRepositoryTests : IDisposable
         Assert.Empty(result.Library.Phrases);
     }
 
+    [Fact]
+    public void A_null_phrases_array_is_corrupt_not_a_startup_crash()
+    {
+        WriteLibrary("""{ "version": 1, "phrases": null }""");
+
+        var result = new JsonPhraseRepository(_root).Load();
+
+        Assert.Equal(LibraryLoadStatus.Corrupt, result.Status);
+        Assert.NotEmpty(QuarantineFiles());
+    }
+
+    [Fact]
+    public void A_phrase_with_a_null_versions_array_loads_with_no_versions()
+    {
+        WriteLibrary("""{ "version": 1, "phrases": [ { "id": "p-1", "fileName": "p-1.wav", "versions": null } ] }""");
+
+        var result = new JsonPhraseRepository(_root).Load();
+
+        Assert.Equal(LibraryLoadStatus.Loaded, result.Status);
+        Assert.Empty(Assert.Single(result.Library.Phrases).Versions);
+    }
+
+    [Fact]
+    public void An_oversized_library_file_is_refused_without_being_read()
+    {
+        Directory.CreateDirectory(_root);
+        // 16 MB is the load cap; make the file one byte larger. SetLength creates it instantly.
+        using (var fs = File.Create(AdaVoicePaths.LibraryFile(_root)))
+            fs.SetLength(16L * 1024 * 1024 + 1);
+
+        var result = new JsonPhraseRepository(_root).Load();
+
+        Assert.Equal(LibraryLoadStatus.ReadError, result.Status);
+    }
+
     private void WriteLibrary(string content)
     {
         Directory.CreateDirectory(_root);

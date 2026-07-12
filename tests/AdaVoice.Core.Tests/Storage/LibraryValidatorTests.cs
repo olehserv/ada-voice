@@ -29,4 +29,28 @@ public class LibraryValidatorTests
 
         Assert.Empty(broken);
     }
+
+    [Fact]
+    public void Returns_version_ids_whose_audio_is_missing()
+    {
+        var library = new Library
+        {
+            Phrases =
+            [
+                new PhraseEntry
+                {
+                    Id = "p-1", FileName = "p-1.wav",
+                    Versions =
+                    [
+                        new PhraseVersion { Id = "pv-a", FileName = "p-1-pv-a.wav" },
+                        new PhraseVersion { Id = "pv-b", FileName = "p-1-pv-b.wav" },
+                    ],
+                },
+            ],
+        };
+
+        var broken = LibraryValidator.FindBrokenVersionIds(library, name => name != "p-1-pv-b.wav");
+
+        Assert.Equal(["pv-b"], broken);
+    }
 }

@@ -13,6 +13,15 @@ public static class WavFile
     /// <summary>Read a WAV file into engine-format float samples (the saved files are 48 kHz mono).</summary>
     public static float[] Load(string path)
     {
+        // Cap the read before opening the file: Load expands the whole WAV into a doubling float list,
+        // so a huge hand-placed or synced-in file could exhaust memory. 256 MB (~46 min mono) is well
+        // past any real take (security scan 2026-07-12 finding 4).
+        const long maxBytes = 256L * 1024 * 1024;
+        var length = new FileInfo(path).Length;
+        if (length > maxBytes)
+            throw new InvalidDataException(
+                $"WAV file is {length / (1024 * 1024)} MB, over the {maxBytes / (1024 * 1024)} MB limit.");
+
         using var reader = new WaveFileReader(path);
         var provider = reader.ToSampleProvider();
         var all = new List<float>();

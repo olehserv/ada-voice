@@ -25,6 +25,11 @@ public sealed class WasapiRenderDevice : IAudioRenderDevice
     private readonly MMDevice _device;
     private readonly bool _optOutOfDucking;
     private readonly int _latencyMs;
+    // Guards Stop/Dispose: Preview() disposes on its own thread while STOP calls Stop() from the UI
+    // thread, so without this a Stop() could hit an already-disposed WasapiOut (security scan
+    // 2026-07-12 finding 6).
+    private readonly object _sync = new();
+    private bool _disposed;
     private WasapiOut? _output;
 
     public WasapiRenderDevice(MMDevice device, bool optOutOfDucking = true, int latencyMs = 20)
@@ -81,22 +86,37 @@ public sealed class WasapiRenderDevice : IAudioRenderDevice
         }
     }
 
-    public void Stop() => _output?.Stop();
+    public void Stop()
+    {
+        lock (_sync)
+        {
+            if (_disposed)
+                return; // a concurrent Dispose already tore the output down; nothing to stop
+            _output?.Stop();
+        }
+    }
 
     private void OnPlaybackStopped(object? sender, StoppedEventArgs e) =>
         SetState(e.Exception is null ? DeviceState.Stopped : DeviceState.Faulted, e.Exception);
 
     public void Dispose()
     {
-        if (_output is not null)
+        lock (_sync)
         {
-            _output.PlaybackStopped -= OnPlaybackStopped;
-            _output.Dispose();
-        }
+            if (_disposed)
+                return;
+            _disposed = true;
 
-        // The seam owns the MMDevice it was handed: the factory resolves a fresh one on every
-        // rebuild, so this must be released or a flapping device slowly leaks COM objects.
-        _device.Dispose();
+            if (_output is not null)
+            {
+                _output.PlaybackStopped -= OnPlaybackStopped;
+                _output.Dispose();
+            }
+
+            // The seam owns the MMDevice it was handed: the factory resolves a fresh one on every
+            // rebuild, so this must be released or a flapping device slowly leaks COM objects.
+            _device.Dispose();
+        }
     }
 
     private void SetState(DeviceState state, Exception? error = null)

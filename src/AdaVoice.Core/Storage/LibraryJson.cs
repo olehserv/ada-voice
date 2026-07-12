@@ -32,8 +32,12 @@ internal static class LibraryJson
         {
             return Sanitize(JsonSerializer.Deserialize<Library>(json, Options));
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or NullReferenceException)
         {
+            // Malformed JSON, or a null in a spot the shape forbids (e.g. a null array element that
+            // System.Text.Json produces from `"phrases": [null]`). Either way it is not a usable
+            // library — return null so Load quarantines and tries backup recovery, instead of letting
+            // the exception crash startup (security scan 2026-07-12 finding 2).
             return null;
         }
     }
@@ -44,16 +48,30 @@ internal static class LibraryJson
     // escape the audio\ directory. Well-formed names are unchanged.
     private static Library? Sanitize(Library? library)
     {
-        if (library is null)
+        // A null phrase list means "no valid library": treat it as invalid so it is quarantined, never
+        // coalesced to empty — that would be the silently-empty library design 04 §3 forbids. The other
+        // collections are additive (an older/partial file legitimately has none), so a malformed null
+        // there is normalized to empty rather than failing the whole load (security scan finding 2).
+        if (library is null || library.Phrases is null)
             return null;
+
+        library = library with
+        {
+            Categories = library.Categories ?? [],
+            Tags = library.Tags ?? [],
+            Conversations = library.Conversations ?? [],
+        };
 
         for (var i = 0; i < library.Phrases.Count; i++)
         {
             var phrase = library.Phrases[i];
             library.Phrases[i] = phrase with
             {
-                FileName = Path.GetFileName(phrase.FileName),
-                Versions = phrase.Versions.Select(v => v with { FileName = Path.GetFileName(v.FileName) }).ToList(),
+                FileName = Path.GetFileName(phrase.FileName ?? ""),
+                Tags = phrase.Tags ?? [],
+                Versions = (phrase.Versions ?? [])
+                    .Select(v => v with { FileName = Path.GetFileName(v.FileName ?? "") })
+                    .ToList(),
             };
         }
 

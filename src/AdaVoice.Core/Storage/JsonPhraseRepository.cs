@@ -20,6 +20,15 @@ public sealed class JsonPhraseRepository(string root, Func<Library?>? recoverFro
         if (!File.Exists(path))
             return new LibraryLoadResult(Default(), LibraryLoadStatus.SeededDefault);
 
+        // Cap the read: real metadata is a few MB even with thousands of phrases, so anything past the
+        // archive limit is a crafted or runaway file we must not pull into memory. ReadError keeps the
+        // file and disables writes, so a good-but-huge file is never overwritten (security scan finding 4).
+        var length = new FileInfo(path).Length;
+        if (length > LibraryArchiveService.MaxLibraryJsonBytes)
+            return new LibraryLoadResult(Default(), LibraryLoadStatus.ReadError,
+                $"library.json is {length / (1024 * 1024)} MB, over the " +
+                $"{LibraryArchiveService.MaxLibraryJsonBytes / (1024 * 1024)} MB limit; not loaded.");
+
         string json;
         try
         {

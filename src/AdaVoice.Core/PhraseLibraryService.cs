@@ -45,6 +45,10 @@ public sealed class PhraseLibraryService
     /// than crashing playback. Runtime-only; never persisted.</summary>
     public IReadOnlyList<string> BrokenPhraseIds { get; private set; } = [];
 
+    /// <summary>Ids of phrase versions whose audio file is missing. Separate from
+    /// <see cref="BrokenPhraseIds"/> so a bad version never marks a whole phrase broken. Runtime-only.</summary>
+    public IReadOnlyList<string> BrokenVersionIds { get; private set; } = [];
+
     /// <summary>Re-read the library from storage, discarding the in-memory copy. Used after an
     /// operation changes the store underneath the service (e.g. an import) so the running session
     /// reflects the new state without a restart.</summary>
@@ -71,6 +75,7 @@ public sealed class PhraseLibraryService
         LoadStatus = result.Status;
         LoadDetail = result.Detail;
         BrokenPhraseIds = LibraryValidator.FindBrokenPhraseIds(_library, _audioExists);
+        BrokenVersionIds = LibraryValidator.FindBrokenVersionIds(_library, _audioExists);
 
         // One-time migrations: give a colour to any tag that predates the registry, and drop any
         // conversation reference to a phrase that no longer exists (e.g. a hand-edited or
@@ -417,7 +422,10 @@ public sealed class PhraseLibraryService
             return null;
 
         var versionId = NewVersionId();
-        var fileName = $"{phraseId}-{versionId}.wav";
+        // Flatten the composed name: a tampered library.json can carry a phrase id with path traversal,
+        // and this file name reaches a real file write — keep the take inside audio\ (security scan
+        // 2026-07-12 finding 1; the load-time flatten in LibraryJson does not cover the id).
+        var fileName = Path.GetFileName($"{phraseId}-{versionId}.wav");
         writeAudio(fileName);
 
         var version = new PhraseVersion

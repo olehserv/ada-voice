@@ -42,6 +42,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     private readonly PhraseLibraryService _library;
     private readonly LibraryArchiveService _archive;
     private readonly JsonSettingsRepository _settingsRepository;
+    private readonly string? _settingsWarning;
     private Settings _settings;
     private volatile bool _running;
 
@@ -70,6 +71,10 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
         _dataRoot = dataRoot ?? AdaVoicePaths.DefaultRoot;
         _settingsRepository = new JsonSettingsRepository(_dataRoot);
         _settings = _settingsRepository.Load();
+        if (_settingsRepository.LoadReplacedCorruptFile)
+            _settingsWarning =
+                "Your saved settings could not be read and were reset to defaults — including the " +
+                "microphone calibration. Re-run setup calibration so phrases play at the right level.";
         // The wizard-calibrated mic reference (if any) drives the recorder's loudness-match.
         _recorderOptions = _recorderOptions with { ReferenceRms = _settings.MicReferenceRms };
 
@@ -90,8 +95,11 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
         _archive = new LibraryArchiveService(_dataRoot, repository);
 
         var detail = _library.LoadDetail is null ? "" : $" — {_library.LoadDetail}";
+        // Don't log the data-root path: it contains the Windows username, and this log file already
+        // lives in that folder, so the path adds nothing but PII to a log an operator might share
+        // for support (security scan 2026-07-12 finding 7).
         _log($"library: {_library.Phrases.Count} phrase(s), status={_library.LoadStatus}{detail}, " +
-             $"{_library.BrokenPhraseIds.Count} broken at {_dataRoot}");
+             $"{_library.BrokenPhraseIds.Count} broken");
         if (_library.LoadStatus == LibraryLoadStatus.Corrupt)
             _log("WARNING: library.json was corrupt and quarantined; started with an empty library (your takes are not lost — see the library.corrupt-*.json file).");
         else if (_library.LoadStatus == LibraryLoadStatus.RecoveredFromBackup)
@@ -186,6 +194,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     public IReadOnlyList<TagInfo> Tags => _library.Tags;
     public IReadOnlyList<Conversation> Conversations => _library.Conversations;
     public IReadOnlyList<string> BrokenPhraseIds => _library.BrokenPhraseIds;
+    public IReadOnlyList<string> BrokenVersionIds => _library.BrokenVersionIds;
 
     /// <summary>Maps the load status to operator text. Mirrors the log warnings in the constructor,
     /// but reaches the board — an operator never reads the log.</summary>
@@ -201,6 +210,8 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
             "Your phrase library was restored from the latest daily backup — very recent changes may be missing.",
         _ => null,
     };
+
+    public string? SettingsWarning => _settingsWarning;
 
     public PhraseEntry? SetPhraseTitle(string phraseId, string title) => _library.SetPhraseTitle(phraseId, title);
     public PhraseEntry? SetPhraseCategory(string phraseId, string categoryId) => _library.SetPhraseCategory(phraseId, categoryId);

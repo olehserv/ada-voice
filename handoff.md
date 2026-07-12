@@ -22,6 +22,22 @@ Monetization exists as a full design (no code yet).
 
 ## Latest work (2026-07-12)
 
+- **Security scan + fixes (whole codebase, monetize excluded).** A read-only scan
+  ([reviews/2026-07-12-security-scan.md](docs/reviews/2026-07-12-security-scan.md)) found 7 issues;
+  all fixed the same day, test-driven where testable. Highlights: **(1, High)** the 2026-07-11
+  path-traversal fix flattened `FileName` but not the phrase `Id` that version WAV names are built
+  from — recording a version for a crafted `library.json` phrase could write outside `audio\`; now
+  the composed name is flattened in `PhraseLibraryService.AddPhraseVersion`. **(2, High)** a malformed
+  `library.json` (`"phrases": null`) crashed startup and skipped quarantine (`LibraryJson.Sanitize`
+  NRE, only `JsonException` caught) — now null collections are normalized/quarantined and the app
+  starts. **(3)** a corrupt `settings.json` silently reset the mic calibration with no notice — now a
+  startup toast (`ISettingsHost.SettingsWarning`). **(4)** size caps on the normal `library.json` and
+  `WavFile.Load` reads (OOM guard). **(5)** the Versions window now flags a version whose WAV is
+  missing (`ILibraryHost.BrokenVersionIds`) without marking the whole phrase broken. **(6)**
+  `WasapiRenderDevice.Stop/Dispose` now lock + disposed-guard (STOP-during-preview race). **(7)** the
+  Windows username no longer logged. Two seams gained a read-only member; no public API removed. Full
+  suite green (104 Core + 98 Audio + 8 Wasapi + 8 Host + 256 App). Relevant to monetization: findings
+  1–2 live in the Core storage code phases 0–6 extend, so worth having closed first.
 - **UX modernization workstream started** — audit
   ([ux-layout-style-audit.md](docs/design/audits/ux-layout-style-audit.md)) confirmed most of
   the owner's known-issue list was already fixed by the 2026-07-11 redesign, and found the real

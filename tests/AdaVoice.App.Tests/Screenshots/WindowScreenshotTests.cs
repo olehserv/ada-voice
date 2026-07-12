@@ -79,6 +79,17 @@ public sealed class WindowScreenshotTests(WpfAppFixture app)
             "phrase-versions");
     }
 
+    /// <summary>Security scan 2026-07-12 finding 5: a version whose WAV is missing shows an
+    /// "audio missing" marker (sample phrase p-1's version pv-1, flagged broken).</summary>
+    [ScreenshotFact]
+    public void PhraseVersionsDialog_brokenVersion()
+    {
+        var host = SampleHost();
+        host.BrokenVersionIds = ["pv-1"];
+        Save(() => new PhraseVersionsDialog { DataContext = new PhraseVersionsViewModel(host, host, host.Phrases[0]) },
+            "phrase-versions-broken");
+    }
+
     [ScreenshotFact]
     public void RepairPhraseDialog() =>
         Save(() => new RepairPhraseDialog { DataContext = new RepairPhraseViewModel(SampleHost().Phrases[0]) },

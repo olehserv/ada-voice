@@ -20,8 +20,15 @@ public sealed class JsonSettingsRepository(string root)
         WriteIndented = true,
     };
 
+    /// <summary>True when the last <see cref="Load"/> found a settings file it could not use and fell
+    /// back to defaults. The host surfaces this: a silent reset also drops the wizard mic-calibration
+    /// reference, which changes how loud phrases play — the operator must know to re-run calibration
+    /// (security scan 2026-07-12 finding 3). A missing or empty file is a clean first run, not this.</summary>
+    public bool LoadReplacedCorruptFile { get; private set; }
+
     public Settings Load()
     {
+        LoadReplacedCorruptFile = false;
         var path = AdaVoicePaths.SettingsFile(root);
         if (!File.Exists(path))
             return new Settings();
@@ -29,13 +36,21 @@ public sealed class JsonSettingsRepository(string root)
         try
         {
             var json = File.ReadAllText(path);
-            return string.IsNullOrWhiteSpace(json)
-                ? new Settings()
-                : JsonSerializer.Deserialize<Settings>(json, Options) ?? new Settings();
+            if (string.IsNullOrWhiteSpace(json))
+                return new Settings();
+
+            var settings = JsonSerializer.Deserialize<Settings>(json, Options);
+            if (settings is not null)
+                return settings;
+
+            LoadReplacedCorruptFile = true; // a real file that held the literal `null`
+            return new Settings();
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
-            // Preferences are regenerable — fall back to defaults rather than fail startup.
+            // Preferences are regenerable — fall back to defaults rather than fail startup, but flag it
+            // so the lost calibration is not silent.
+            LoadReplacedCorruptFile = true;
             return new Settings();
         }
     }
