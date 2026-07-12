@@ -67,7 +67,7 @@
                                         </ui:Button>
                                         <!-- The primary tile has nothing to delete here — it's managed
                                              from the board tile itself (Edit/Delete). -->
-                                        <ui:Button Content="✕" ToolTip="Delete" Appearance="Secondary" Margin="6,0,0,0"
+                                        <ui:Button Content="✕" ToolTip="Delete" Appearance="Danger" Margin="6,0,0,0"
                                                    Command="{Binding DataContext.DeleteVersionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                    CommandParameter="{Binding}">
                                             <ui:Button.Style>

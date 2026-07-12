@@ -60,7 +60,7 @@
                 </Grid>
                 <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                     <ui:Button Content="Preview" Appearance="Secondary" Command="{Binding PreviewTakeCommand}" />
-                    <ui:Button Content="Save" Appearance="Primary" Command="{Binding SaveTakeCommand}" Margin="8,0,0,0" />
+                    <ui:Button Content="Save" Appearance="Primary" IsDefault="True" Command="{Binding SaveTakeCommand}" Margin="8,0,0,0" />
                     <ui:Button Content="Discard" Appearance="Secondary" Command="{Binding DiscardTakeCommand}" Margin="8,0,0,0" />
                 </StackPanel>
             </StackPanel>

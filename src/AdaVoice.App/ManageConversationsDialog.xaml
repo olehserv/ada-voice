@@ -60,7 +60,7 @@
                         <ui:Button Grid.Column="1" Content="Save" Appearance="Secondary" Margin="8,0,0,0"
                                    Command="{Binding DataContext.RenameCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                    CommandParameter="{Binding}" />
-                        <ui:Button Grid.Column="2" Content="Delete" Appearance="Secondary" Margin="8,0,0,0"
+                        <ui:Button Grid.Column="2" Content="Delete" Appearance="Danger" Margin="8,0,0,0"
                                    Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                    CommandParameter="{Binding}" />
                     </Grid>
@@ -86,7 +86,7 @@
                                         <ui:Button Grid.Column="2" Content="↓" Margin="4,0,0,0" Appearance="Secondary"
                                                    Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                    CommandParameter="{Binding}" />
-                                        <ui:Button Grid.Column="3" Content="Remove" Margin="4,0,0,0" Appearance="Secondary"
+                                        <ui:Button Grid.Column="3" Content="Remove" Margin="4,0,0,0" Appearance="Danger"
                                                    Command="{Binding DataContext.RemovePhraseCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                    CommandParameter="{Binding}" />
                                     </Grid>

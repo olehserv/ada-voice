@@ -50,7 +50,7 @@
                             <ui:Button Grid.Column="2" Content="Save" Appearance="Secondary" Margin="8,0,0,0"
                                        Command="{Binding DataContext.SaveCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                        CommandParameter="{Binding}" />
-                            <ui:Button Grid.Column="3" Content="Delete" Appearance="Secondary" Margin="8,0,0,0"
+                            <ui:Button Grid.Column="3" Content="Delete" Appearance="Danger" Margin="8,0,0,0"
                                        Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                        CommandParameter="{Binding}">
                                 <ui:Button.Style>
