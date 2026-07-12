@@ -12,6 +12,8 @@
 # Connection string (EF Core / Npgsql), matching the defaults below:
 #   Host=localhost;Port=5432;Database=adavoice;Username=adavoice;Password=adavoice_dev
 #
+# The published port is bound to 127.0.0.1 only, so the dev DB is not reachable from other hosts.
+#
 # The password below is a throwaway LOCAL DEV credential. It is not a secret and must never be
 # reused in staging or production, which take real secrets from environment variables (see
 # docs/monetize/security-design.md). Override any value locally via a .env file (git-ignored).
@@ -24,7 +26,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-adavoice}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-adavoice_dev}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - adavoice-pgdata:/var/lib/postgresql/data
     healthcheck:
