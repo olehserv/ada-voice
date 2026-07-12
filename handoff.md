@@ -17,8 +17,9 @@ _Last updated: 2026-07-12._
 **The app is built and verified on the target machine** — engine, recorder, library, Board UI,
 setup wizard, Settings window, stop hotkey, backups, export/import, **Conversations** (ordered
 phrase scripts with a step-by-step highlight), **phrase versions** (alternate takes, randomized
-during a Conversation step); 446 tests green (97 Core + 97 Audio + 8 Wasapi + 6 Host + 238 App).
-Monetization exists as a full design (no code yet).
+during a Conversation step); 465 tests passed + 16 skipped across 6 projects (104 Core + 98 Audio +
+8 Wasapi + 8 Host + 241 App + 6 Server). Monetization: Phase 0 (server scaffold) shipped, no
+domain code yet.
 
 ## Latest work (2026-07-12)
 
@@ -72,6 +73,13 @@ Monetization exists as a full design (no code yet).
   overflow chip (full tags stay visible via the tile's existing "Edit…" menu item) — see `Pass 6`
   in [ux-structural-fix-plan.md](docs/design/plans/ux-structural-fix-plan.md), promoted ahead of
   Pass 2b. Both Pass 6 and Pass 2b (`MessageBox`→`ContentDialog`) await approval to start.
+- **Monetization Phase 0 (repo scaffold) shipped, docs only otherwise.** Five empty-but-buildable
+  `server/` projects (Api → Infrastructure → Domain, Workers → Infrastructure) wired into
+  `AdaVoice.slnx`, with a dependency-direction guard test; dev-only Postgres 16
+  `docker-compose.yml` (loopback-bound). Hosting/API-URL (OQ-01/OQ-02) deferred to Phase 11,
+  owner Oleh, 2026-07-12 — see [open-questions §9](docs/monetize/open-questions.md#9-resolved).
+  Plan: [2026-07-12-monetize-phase-0.md](docs/superpowers/plans/2026-07-12-monetize-phase-0.md).
+  Next: Phase 1 (domain model + database).
 
 ## Latest work (2026-07-11)
 
@@ -289,12 +297,12 @@ confirm the step highlight follows correctly, delete a phrase that's in an activ
 4. **Localization retrofit (UA/PL/EN)** — last, after slice 3's strings exist. All UI strings
    so far are English-only; a `.resx` retrofit is known debt.
 
-Separately, **monetization** is blocked on the owner answering OQ-12/OC-06 (device vs per-seat
-limits) before Phase 0 of the [monetize roadmap](docs/monetize/implementation-roadmap.md) starts.
+Separately, **monetization**: Phase 0 (repo scaffold) is done. Phase 1 (domain model + database)
+is next and is **not** blocked. OQ-12/OC-06 (device vs per-seat limits) must be answered before
+Phase 4 (device activation), not before Phase 0/1.
 
-**Monetization** — next step is Phase 0 of the
-[monetize roadmap](docs/monetize/implementation-roadmap.md), after the owner answers
-OQ-12/OC-06 (device vs per-seat limits).
+**Monetization** — next step is Phase 1 of the
+[monetize roadmap](docs/monetize/implementation-roadmap.md) (domain model + database).
 
 ## Open follow-ups (named so they're not lost)
 

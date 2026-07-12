@@ -130,7 +130,9 @@ Keep the process light but written down:
 
 ## 9. Resolved
 
-Nothing resolved yet. Move rows here as decisions land, newest first, in this form:
+Move rows here as decisions land, newest first, in this form:
 
 | Date | ID | Decision (one line) |
 |---|---|---|
+| 2026-07-12 | OQ-02 | Phase 0 gate: domain / API base URL **deferred** with OQ-01. Client keeps the base URL replaceable. Owner: Oleh. Needed by Phase 6 (staging URL), final by Phase 11. |
+| 2026-07-12 | OQ-01 | Phase 0 gate: hosting location/provider **deferred**. MVP Phases 1–10 run on local Docker Postgres 16 (`docker-compose.yml`). Owner: Oleh. Revisit at Phase 11 (production deploy). |
