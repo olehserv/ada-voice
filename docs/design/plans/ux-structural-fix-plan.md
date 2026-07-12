@@ -5,6 +5,32 @@ Sized to what [the audit](../audits/ux-layout-style-audit.md) actually found, no
 padded. Each pass becomes its own Phase 5 implementation turn (one window at a time, stop for
 approval after each), per the workflow's critical rules.
 
+## Status (read this first when resuming)
+
+| Pass | What | Status |
+|---|---|---|
+| 1 | Modal/dialog resizing stabilization | ✅ No work needed (verified in audit) |
+| 2 | `SettingsWindow` footer fix (B1) | ✅ **Shipped** — commits `4c41715`, `26b4dd0`, `fa85f18` (2 fix rounds — a stray full-file `xstyler` reformat, then a margin regression). Review: [settings-window-review.md](../screenshots/review/settings-window-review.md) |
+| 4 | Button/action consistency (D1, D2) | ✅ **Shipped** — commit `c47167c`. Review: [button-consistency-review.md](../screenshots/review/button-consistency-review.md) |
+| 3 | `MainWindow` resize verification (C1) | ⬜ **Not started** — manual check, no code expected |
+| 2b | `MessageBox` → `ContentDialog` (E2) | ⬜ **Not started** — biggest/riskiest remaining item |
+| 5 | Form layout cleanup | ✅ No work needed (verified in audit) |
+
+**A separate, larger batch of ad-hoc owner UX feedback** (not audit findings — direct feedback
+after reviewing Pass 2/4 screenshots) was also implemented on `SettingsWindow`,
+`ManageCategoriesDialog`, and `ManageConversationsDialog`: Done buttons → green, row-height
+consistency, icon-only delete/remove buttons, swatch-only color dropdown, removing per-row
+Save buttons in favor of auto-persist-on-blur, new-conversation Add on one line + green
+checkmark. See commits `29a514d`..`a3c75af` and
+[manage-categories-rework-review.md](../screenshots/review/manage-categories-rework-review.md) /
+[manage-conversations-rework-review.md](../screenshots/review/manage-conversations-rework-review.md).
+The resulting conventions (Done=Success on autosave dialogs, Danger on icon-only destructive
+buttons, matched row heights, auto-persist pattern) are now documented in
+[wpf-ux-design-rules.md](../wpf-ux-design-rules.md) rule 5 — follow them for any further work
+on these dialogs or new ones like them.
+
+**Next step: Pass 3, then Pass 2b — both still need approval to start.**
+
 ## Pass 1 — Modal/dialog resizing stabilization
 
 **Status: no work needed.** All 8 dialogs already use `ResizeMode="NoResize"` with either
@@ -12,7 +38,7 @@ approval after each), per the workflow's critical rules.
 states (`RecorderDialog`). Verified by direct read of every dialog's root element during the
 audit. Nothing to implement; this pass exists in the plan only to record that it was checked.
 
-## Pass 2 — Fixed footer action bars (audit B1)
+## Pass 2 — Fixed footer action bars (audit B1) — ✅ SHIPPED
 
 **Target:** `src/AdaVoice.App/SettingsWindow.xaml`
 
@@ -42,6 +68,12 @@ stays on the button so `Esc` still closes the window.
    stays put (the existing fixture is too short — see the screenshot inventory's noted gap)
 
 **Rollback:** revert the single file; no other file references the moved button.
+
+**Actual outcome:** shipped, but took 2 fix rounds beyond the plan above — see
+[settings-window-review.md](../screenshots/review/settings-window-review.md) for what
+actually happened (a stray whole-file `xstyler` reformat, then a margin regression the
+automated reviewer missed but a screenshot caught). Also received the separate green-Done /
+row-height owner feedback afterward (see the Status table above).
 
 ## Pass 2b — Replace `MessageBox` with `ui:ContentDialog` (audit E2)
 
@@ -95,7 +127,7 @@ fix. Don't fold it into this UX pass without a separate go-ahead.
 
 **Risk:** none (no code change) unless the manual check surfaces a real problem.
 
-## Pass 4 — Button/action consistency (audit D1, D2)
+## Pass 4 — Button/action consistency (audit D1, D2) — ✅ SHIPPED
 
 **Targets:**
 - `ManageCategoriesDialog.xaml` (Delete button, line ~53)
@@ -114,6 +146,9 @@ screenshot set should visibly show the color change), screenshot each of the 4 f
 
 **Rollback:** revert the attribute per file — fully independent, can be done/undone per file.
 
+**Actual outcome:** shipped exactly as planned, clean on first review — see
+[button-consistency-review.md](../screenshots/review/button-consistency-review.md).
+
 ## Pass 5 — Form layout cleanup
 
 **Status: no work needed.** The audit found labels aligned, sections grouped in
@@ -124,11 +159,11 @@ per `handoff.md`'s open follow-ups) is added without following the rules in
 
 ## Suggested implementation order
 
-1. Pass 2 (Settings footer) — quick, isolated, highest user-visible payoff for its size.
-2. Pass 4 (button semantics) — quick, no risk, four small edits.
+1. ✅ Pass 2 (Settings footer) — done.
+2. ✅ Pass 4 (button semantics) — done.
 3. Pass 3 (MainWindow verification) — no code risk, but needs a live app run; do it before
    Pass 2b so any real resize bug it finds doesn't get buried under the bigger dialog rewrite.
 4. Pass 2b (ContentDialog migration) — last, biggest, needs its own careful review.
 5. Pass 1 and 5 — already done; no implementation turn needed, just recorded here.
 
-Waiting for approval before starting Pass 2.
+**Waiting for approval before starting Pass 3.**

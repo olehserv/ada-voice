@@ -21,6 +21,12 @@ the living design reference. Live status: [handoff.md](../../handoff.md).
 | [07-risks-security.md](07-risks-security.md) | Error handling, edge cases, security/privacy, legal/ethical notes, risk register |
 | [08-testing.md](08-testing.md) | Test strategy: device seams, DSP tests, state-machine tests, manual call checklist |
 | [09-design-system.md](09-design-system.md) | **Canonical visual system**: theme, color tokens, typography, spacing, layout rules (what 05's screens are built from) |
+| [10-ui-redesign-brief.md](10-ui-redesign-brief.md) | The "Studio Graphite" redesign brief (2026-07-11) |
+| [wpf-ux-design-rules.md](wpf-ux-design-rules.md) | Layout-mechanics/interaction rulebook (window behavior, dialog structure, button rules) — companion to 09, not a replacement |
+
+The ongoing UX modernization workstream (started 2026-07-12) lives under `audits/`, `plans/`,
+and `screenshots/` in this folder — start at
+[plans/ux-structural-fix-plan.md](plans/ux-structural-fix-plan.md) for current status.
 
 Planning docs:
 [roadmap](../roadmaps/mvp-roadmap.md) (strategy) ·

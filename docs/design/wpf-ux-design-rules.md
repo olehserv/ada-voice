@@ -49,13 +49,16 @@ drive the *mechanical* rules below, not just visuals:
 ```
 
 - The primary dismiss/commit button (`Done`, `Close`, `Save`, `Cancel`) always lives in the
-  **footer row**, outside the `ScrollViewer`. This is rule B1 from the audit — `SettingsWindow`
-  is the one place it's currently violated; every other dialog already does this correctly and
-  is the reference example (`ManageCategoriesDialog`, `ManageConversationsDialog`,
-  `PhraseVersionsDialog`).
-- Per-row action buttons *inside* a list (e.g. a row's own "Save"/"Delete" in
-  `ManageCategoriesDialog`) are fine inside the `ScrollViewer` — the rule is about the dialog's
-  own primary action, not every button on the screen.
+  **footer row**, outside the `ScrollViewer`. This was audit finding B1 — `SettingsWindow` was
+  the one place it violated this; **fixed in Pass 2** (see
+  [screenshots/review/settings-window-review.md](screenshots/review/settings-window-review.md)).
+  Every dialog now does this correctly; `ManageCategoriesDialog`, `ManageConversationsDialog`,
+  `PhraseVersionsDialog` remain the reference examples.
+- Per-row action buttons *inside* a list (e.g. a row's own "Delete" in `ManageCategoriesDialog`)
+  are fine inside the `ScrollViewer` — the rule is about the dialog's own primary action, not
+  every button on the screen. (Per-row "Save" buttons used to be an example here too, but
+  `ManageCategoriesDialog`/`ManageConversationsDialog` no longer have them — see rule 5's
+  auto-persist note.)
 - Dialogs short enough to never need a `ScrollViewer` (`PhraseEditDialog`, `RepairPhraseDialog`,
   `RecorderDialog`) don't need this structure — don't add a `ScrollViewer` "for consistency"
   where the content already fits.
@@ -83,11 +86,33 @@ drive the *mechanical* rules below, not just visuals:
   `ManageCategoriesDialog`, where "Done" is the only footer button and there's nothing to
   default to).
 - **Destructive actions get `Appearance="Danger"`** (Delete, Remove, Discard-that-loses-work).
-  Today every destructive button uses `Secondary` — see audit finding D1. Non-destructive
-  secondary actions (Cancel, Close, Done, per-row Save) stay `Secondary`.
+  This was audit finding D1 (every destructive button used `Secondary`) — **fixed in Pass 4**:
+  category/conversation Delete, conversation-member Remove, and phrase-version delete are all
+  `Danger` now. Icon-only destructive buttons (a bare "✕") use `Danger` too — see
+  `ManageCategoriesDialog`'s Delete and `ManageConversationsDialog`'s member Remove for the
+  reference pattern (owner UX feedback, 2026-07-12).
+- **"Done" is `Appearance="Success"` (green) on pure list-management dialogs that auto-persist
+  every edit** (`SettingsWindow`, `ManageCategoriesDialog`, `ManageConversationsDialog` — owner
+  decision, 2026-07-12): there's no separate "Save" to distinguish it from, so Done doubles as
+  the implicit "you're finished" confirmation. **`Close`/`Cancel` stay `Secondary`** on dialogs
+  that pair a dismiss action with a distinct primary action elsewhy (`PhraseVersionsDialog`'s
+  "Close", `RecorderDialog`'s "Close", `PhraseEditDialog`/`RepairPhraseDialog`/
+  `SetupWizardWindow`'s "Cancel") — don't turn those green too; the green signal is specifically
+  for "this dialog has no Save step, closing it is the confirm."
+- **Auto-persist on blur/selection-change instead of a per-row "Save" button**, for inline-
+  editable list rows whose parent dialog has no single primary action (owner decision,
+  2026-07-12). Wire the editable `TextBox`'s `LostFocus` and any paired `ComboBox`'s
+  `SelectionChanged` to a code-behind handler that calls the existing `[RelayCommand]` — see
+  `ManageCategoriesDialog.xaml.cs`/`ManageConversationsDialog.xaml.cs`'s `RowField_Committed`
+  (mirrors `SettingsWindow.xaml.cs`'s pre-existing `DuckSlider_Committed` pattern). Do **not**
+  add persistence logic to the row ViewModel itself — the view only changes what *triggers* the
+  existing Save/Rename command, the ViewModel's public API stays untouched.
 - **Minimum interactive target:** 32 px height (WPF-UI default), consistent with the
   [dotnet-wpf-design skill](../../.claude/skills/dotnet-wpf-design/SKILL.md)'s Fluent sizing
-  table.
+  table. When a row mixes a `TextBox`/`ComboBox` with a `Button`, give all of them the SAME
+  explicit `Height` (currently `36` — see `ManageCategoriesDialog`/`ManageConversationsDialog`)
+  — WPF-UI's default Button height and default ComboBox height don't match on their own, so
+  `MinHeight` alone won't fix a row where the button renders shorter than its neighbors.
 - **Guard before mutate:** any action that overwrites in-memory state without an obvious undo
   (Discard take, Restore/Reset if one is ever added) confirms *before* touching state — see
   CTRL-008 in the dotnet-wpf-design skill for the exact pattern (confirm as the first line of

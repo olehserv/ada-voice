@@ -1,5 +1,14 @@
 # UX / Layout / Style Audit — 2026-07-12
 
+**Status as of 2026-07-12 (later the same day):** B1, D1, D2 are fixed (Pass 2, Pass 4 — see
+[the plan](../plans/ux-structural-fix-plan.md) and the review notes in
+[screenshots/review/](../screenshots/review/)). E2 and C1 are still open — E2 (`Pass 2b`) and
+C1 (`Pass 3`) await approval to start. F1 is still open, deferred to a future polish pass. A
+separate batch of owner UX feedback (Done button color, row-height consistency, icon-only
+delete/remove buttons, swatch-only color dropdown, autosave) was also implemented — those were
+not audit findings, see the plan's "Owner UX rework batch" section and
+[wpf-ux-design-rules.md](../wpf-ux-design-rules.md) rule 5 for the resulting conventions.
+
 Scope: `src/AdaVoice.App` (9 windows/dialogs) against the problems named in the modernization
 request, plus a fresh look at layout, buttons, and visual consistency.
 
@@ -31,37 +40,42 @@ problems named in the modernization brief are **already fixed** and were re-veri
 
 Real, current issues found:
 
-- **B1 (High):** `SettingsWindow`'s "Done" button sits *inside* the scrollable content — the
-  exact "Save hidden below scroll" bug named in the brief. It is **isolated to this one window**
-  — every other dialog with a `ScrollViewer` already keeps its footer button outside it.
-- **E2 (High):** every confirm/error/info prompt in normal app flow uses the raw Win32
-  `MessageBox` (6 call sites in `MainWindow.xaml.cs`), which renders with OS chrome — a jarring
-  break from the FluentWindow look everywhere else. This is the single biggest
-  "looks like an old enterprise tool" tell in the app.
-- **D1 (Medium):** destructive actions (Delete category, Delete conversation, Remove phrase,
-  Delete version) all use `Appearance="Secondary"` — visually identical to non-destructive
-  actions. No button anywhere uses `Appearance="Danger"`.
-- **C1 (Medium):** `MainWindow` has `MinWidth`/`MinHeight` but no `MaxWidth`/`MaxHeight`, and
-  ships one layout at every width above the 420 px minimum (the Full/Docked responsive layout
-  is a known, already-tracked open item — see
+- **B1 (High) — ✅ FIXED (Pass 2).** `SettingsWindow`'s "Done" button sat *inside* the
+  scrollable content — the exact "Save hidden below scroll" bug named in the brief. It was
+  **isolated to this one window** — every other dialog with a `ScrollViewer` already kept its
+  footer button outside it. Fixed by moving Done to a footer row outside the `ScrollViewer`;
+  see [settings-window-review.md](../screenshots/review/settings-window-review.md).
+- **E2 (High) — still open (`Pass 2b`).** Every confirm/error/info prompt in normal app flow
+  uses the raw Win32 `MessageBox` (6 call sites in `MainWindow.xaml.cs`), which renders with OS
+  chrome — a jarring break from the FluentWindow look everywhere else. This is the single
+  biggest "looks like an old enterprise tool" tell left in the app.
+- **D1 (Medium) — ✅ FIXED (Pass 4).** Destructive actions (Delete category, Delete
+  conversation, Remove phrase, Delete version) all used `Appearance="Secondary"` — visually
+  identical to non-destructive actions. Now `Appearance="Danger"`; see
+  [button-consistency-review.md](../screenshots/review/button-consistency-review.md).
+- **C1 (Medium) — still open (`Pass 3`).** `MainWindow` has `MinWidth`/`MinHeight` but no
+  `MaxWidth`/`MaxHeight`, and ships one layout at every width above the 420 px minimum (the
+  Full/Docked responsive layout is a known, already-tracked open item — see
   [ui-ux-localization-scope.md](../../plans/ui-ux-localization-scope.md)). Nothing breaks
-  today, but nothing was verified at large window sizes either.
-- **F1 (Low):** phrase tile titles wrap without a true 2-line clamp, so unusually long titles
-  can make one tile taller than its row-mates in the `WrapPanel`.
+  today, but nothing was verified at large window sizes either — Pass 3 is a manual
+  verification pass, not necessarily a code change.
+- **F1 (Low) — still open, deferred.** Phrase tile titles wrap without a true 2-line clamp, so
+  unusually long titles can make one tile taller than its row-mates in the `WrapPanel`.
+  Deferred to a future polish pass (Phase 6/7), not part of the structural fix plan.
 
 Everything else audited (button order, `IsDefault`/`IsCancel`, spacing, focus, keyboard) is
 already in good shape — see the full findings below for what was checked and passed.
 
 ## Findings
 
-| ID | Area | Severity | File(s) | Fix pattern | Risk |
-|----|------|----------|---------|-------------|------|
-| B1 | Dialog footer buttons | **High** | `SettingsWindow.xaml` | Move Grid to header/scroll-content/footer 3-row structure; "Done" outside `ScrollViewer` | Low — pure layout move, no logic touched |
-| E2 | Visual consistency | **High** | `MainWindow.xaml.cs` (6 sites), `App.xaml.cs` (2 sites) | Replace in-flow `MessageBox.Show` with `ui:ContentDialog` via `IContentDialogService`; **keep** the 2 in `App.xaml.cs` (single-instance notice before any window exists, global crash handler) as `MessageBox` — a `ContentDialog` needs a live `ContentPresenter`/theme host that may not be reliable during a crash | Medium — touches call sites returning `bool`/tuples; must stay `async`, not `async void`, per dotnet-wpf-design skill CTRL-008 |
-| D1 | Button semantics | Medium | `ManageCategoriesDialog.xaml`, `ManageConversationsDialog.xaml`, `PhraseVersionsDialog.xaml` | `Appearance="Danger"` on Delete/Remove buttons (CTRL-002 in dotnet-wpf-design skill) | Low — `Appearance` is a single attribute swap |
-| C1 | MainWindow resize stability | Medium | `MainWindow.xaml` | Decide + document behavior above 720 px (this is the same open decision already logged in [ui-ux-localization-scope.md](../../plans/ui-ux-localization-scope.md) slice 3 — not a new problem); at minimum verify no clipping/overlap between 420 px and typical desktop widths | Low for verification; Medium if slice 3's responsive layout is pulled forward |
-| F1 | Tile height consistency | Low | `MainWindow.xaml` (phrase tile `DataTemplate`) | Either accept variable height (`WrapPanel` already handles it) or add a real clamp (fixed `Height` + `TextTrimming="CharacterEllipsis"` instead of `TextWrapping="Wrap"`) | Low — cosmetic only |
-| D2 | `IsDefault` consistency | Low | `RecorderDialog.xaml` | The "Save" button in the pending-take state has no `IsDefault="True"` (unlike `PhraseEditDialog`/`RepairPhraseDialog`, which do); each state's button is mutually exclusive via `Visibility`, so this is safe to add | Low |
+| ID | Area | Severity | Status | File(s) | Fix pattern | Risk |
+|----|------|----------|--------|---------|-------------|------|
+| B1 | Dialog footer buttons | **High** | ✅ Fixed (Pass 2) | `SettingsWindow.xaml` | Move Grid to header/scroll-content/footer 3-row structure; "Done" outside `ScrollViewer` | Low — pure layout move, no logic touched |
+| E2 | Visual consistency | **High** | Open (`Pass 2b`) | `MainWindow.xaml.cs` (6 sites), `App.xaml.cs` (2 sites) | Replace in-flow `MessageBox.Show` with `ui:ContentDialog` via `IContentDialogService`; **keep** the 2 in `App.xaml.cs` (single-instance notice before any window exists, global crash handler) as `MessageBox` — a `ContentDialog` needs a live `ContentPresenter`/theme host that may not be reliable during a crash | Medium — touches call sites returning `bool`/tuples; must stay `async`, not `async void`, per dotnet-wpf-design skill CTRL-008 |
+| D1 | Button semantics | Medium | ✅ Fixed (Pass 4) | `ManageCategoriesDialog.xaml`, `ManageConversationsDialog.xaml`, `PhraseVersionsDialog.xaml` | `Appearance="Danger"` on Delete/Remove buttons (CTRL-002 in dotnet-wpf-design skill) | Low — `Appearance` is a single attribute swap |
+| C1 | MainWindow resize stability | Medium | Open (`Pass 3`) | `MainWindow.xaml` | Decide + document behavior above 720 px (this is the same open decision already logged in [ui-ux-localization-scope.md](../../plans/ui-ux-localization-scope.md) slice 3 — not a new problem); at minimum verify no clipping/overlap between 420 px and typical desktop widths | Low for verification; Medium if slice 3's responsive layout is pulled forward |
+| F1 | Tile height consistency | Low | Open, deferred | `MainWindow.xaml` (phrase tile `DataTemplate`) | Either accept variable height (`WrapPanel` already handles it) or add a real clamp (fixed `Height` + `TextTrimming="CharacterEllipsis"` instead of `TextWrapping="Wrap"`) | Low — cosmetic only |
+| D2 | `IsDefault` consistency | Low | ✅ Fixed (Pass 4) | `RecorderDialog.xaml` | The "Save" button in the pending-take state has no `IsDefault="True"` (unlike `PhraseEditDialog`/`RepairPhraseDialog`, which do); each state's button is mutually exclusive via `Visibility`, so this is safe to add | Low |
 
 ### What was checked and already passes (no action needed)
 
@@ -81,21 +95,26 @@ already in good shape — see the full findings below for what was checked and p
 
 ## Priority order for fixing
 
-1. **B1** — Settings footer fix (isolated, high user-visible impact, lowest risk).
+1. ✅ **B1** — Settings footer fix (isolated, high user-visible impact, lowest risk). Done.
 2. **E2** — `ContentDialog` migration for in-flow prompts (highest "professional feel" payoff).
-3. **D1** — Danger appearance on destructive buttons (trivial, high clarity payoff).
-4. **D2** — `IsDefault` on Recorder's Save.
+   Still open — next up whenever approved (`Pass 2b`).
+3. ✅ **D1** — Danger appearance on destructive buttons (trivial, high clarity payoff). Done.
+4. ✅ **D2** — `IsDefault` on Recorder's Save. Done.
 5. **C1** — MainWindow resize verification (investigation now; implementation only if slice 3
-   is pulled forward — that's a feature decision for the owner, not a bug fix).
-6. **F1** — tile height clamp (cosmetic, defer to the polish pass, Phase 6/7).
+   is pulled forward — that's a feature decision for the owner, not a bug fix). Still open
+   (`Pass 3`).
+6. **F1** — tile height clamp (cosmetic, defer to the polish pass, Phase 6/7). Still open.
 
 ## Windows/screens in priority order for modernization passes
 
-1. `SettingsWindow` (B1)
-2. `MainWindow` (E2 partial, D2 n/a, C1, F1)
-3. `ManageCategoriesDialog`, `ManageConversationsDialog`, `PhraseVersionsDialog` (D1)
-4. `RecorderDialog` (D2, E2 partial via Discard confirm if one is added later)
-5. Everything else — no open findings.
+1. ✅ `SettingsWindow` (B1) — done.
+2. `MainWindow` (E2 partial, C1, F1 — still open; D2 n/a here).
+3. ✅ `ManageCategoriesDialog`, `ManageConversationsDialog`, `PhraseVersionsDialog` (D1) — done.
+4. ✅ `RecorderDialog` (D2) — done. E2 partial (a Discard confirm dialog, if one is ever added)
+   still open.
+5. Everything else — no open audit findings. (Separately, `ManageCategoriesDialog` and
+   `ManageConversationsDialog` also received an owner UX rework batch beyond this audit's
+   scope — see the plan and their review notes.)
 
 ## Legacy / unused styles
 
