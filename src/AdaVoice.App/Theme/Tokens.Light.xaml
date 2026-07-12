@@ -1,0 +1,45 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Direction A "Studio Graphite" — LIGHT color tokens. Keys match Tokens.Dark.xaml exactly.
+         New in the 2026-07-11 redesign (the app was dark-only before). Text/surface pairs verified
+         >= 4.5:1; status colors are darkened so their PILL TEXT stays legible on light tint washes. -->
+
+    <!-- Surfaces: near-white ramp. Depth = ramp + subtle borders, no shadows. -->
+    <SolidColorBrush x:Key="Surface.Window" Color="#F6F7F9" />
+    <SolidColorBrush x:Key="Surface.Raised" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="Surface.Overlay" Color="#EDEFF3" />
+
+    <!-- Borders: black at low alpha so they hold on every surface step. -->
+    <SolidColorBrush x:Key="Border.Subtle" Color="#17000000" />
+    <SolidColorBrush x:Key="Border.Strong" Color="#29000000" />
+
+    <!-- Text: all three hold >= 4.5:1 on Surface.Raised, Surface.Window, and Surface.Overlay
+         (verified 2026-07-11). -->
+    <SolidColorBrush x:Key="Text.Primary" Color="#14181D" />
+    <SolidColorBrush x:Key="Text.Secondary" Color="#4C555F" />
+    <SolidColorBrush x:Key="Text.Muted" Color="#616872" />
+
+    <!-- Status: darkened vs dark theme so the LABEL holds >= 4.5:1 on its own light tint wash AND
+         reads as a solid dot (verified 2026-07-11). -->
+    <SolidColorBrush x:Key="Status.Live" Color="#0F6E31" />
+    <SolidColorBrush x:Key="Status.OffAir" Color="#854B00" />
+    <SolidColorBrush x:Key="Status.Degraded" Color="#A82817" />
+    <SolidColorBrush x:Key="Status.Live.Tint" Color="#260F6E31" />
+    <SolidColorBrush x:Key="Status.OffAir.Tint" Color="#26854B00" />
+    <SolidColorBrush x:Key="Status.Degraded.Tint" Color="#26A82817" />
+    <SolidColorBrush x:Key="Status.Stopped" Color="#616872" />
+    <SolidColorBrush x:Key="Status.Stopped.Tint" Color="#14000000" />
+
+    <!-- One accent, used sparingly: focus, playing ring, Primary buttons. Darker than the dark-theme
+         azure so white button text (>= 4.5:1) and the focus ring hold contrast on light surfaces. -->
+    <SolidColorBrush x:Key="Accent" Color="#1A72B8" />
+
+    <!-- Interaction overlays: black at low alpha on light surfaces (pressed dimmer than hover). -->
+    <SolidColorBrush x:Key="Overlay.Hover" Color="#0D000000" />
+    <SolidColorBrush x:Key="Overlay.Pressed" Color="#14000000" />
+
+    <!-- Subtle recess behind tag chips; chip text is Text.Primary, the tag colour lives on the border. -->
+    <SolidColorBrush x:Key="Scrim.Tag" Color="#0F000000" />
+
+</ResourceDictionary>

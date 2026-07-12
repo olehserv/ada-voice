@@ -7,7 +7,7 @@
     </UserControl.Resources>
     <StackPanel>
         <TextBlock Text="Voice calibration" Style="{StaticResource SectionTitleStyle}" />
-        <TextBlock TextWrapping="Wrap" Margin="0,0,0,12" Foreground="{StaticResource Text.Secondary}"
+        <TextBlock TextWrapping="Wrap" Margin="0,0,0,12" Foreground="{DynamicResource Text.Secondary}"
                    Text="Speak normally for 5 seconds so AdaVoice can match your recorded phrases to your live voice level." />
 
         <ui:Button Content="Start" Appearance="Primary" Command="{Binding StartCalibrationCommand}"
@@ -17,14 +17,14 @@
         <Grid Width="44" Height="44" Margin="0,0,0,8" HorizontalAlignment="Left"
               Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}">
             <!-- Static background track. -->
-            <Ellipse Width="44" Height="44" Stroke="{StaticResource Text.Secondary}" StrokeThickness="4" />
+            <Ellipse Width="44" Height="44" Stroke="{DynamicResource Text.Secondary}" StrokeThickness="4" />
 
             <!-- Foreground ring: one dash and one gap, each equal to the full circumference (in
                  StrokeThickness-relative units: 125.664 / 4 = 31.416), rotated -90 degrees so the
                  drain starts at 12 o'clock. StrokeDashOffset animates 0 -> 31.416 (same
                  thickness-relative units as StrokeDashArray) over exactly 5 seconds while
                  IsRecording is true. -->
-            <Ellipse x:Name="CountdownRing" Width="44" Height="44" Stroke="{StaticResource Accent}"
+            <Ellipse x:Name="CountdownRing" Width="44" Height="44" Stroke="{DynamicResource Accent}"
                      StrokeThickness="4" StrokeDashArray="31.416,31.416" StrokeDashOffset="0"
                      RenderTransformOrigin="0.5,0.5">
                 <Ellipse.RenderTransform>
@@ -55,11 +55,11 @@
         <TextBlock Text="Recording… speak now" FontWeight="SemiBold" Margin="0,0,0,8"
                    Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}" />
 
-        <TextBlock Text="Voice level captured ✓" Foreground="{StaticResource Status.Live}" FontWeight="SemiBold"
+        <TextBlock Text="Voice level captured ✓" Foreground="{DynamicResource Status.Live}" FontWeight="SemiBold"
                    Visibility="{Binding Succeeded, Converter={StaticResource BoolToVis}}" />
 
         <StackPanel Visibility="{Binding HasMessage, Converter={StaticResource BoolToVis}}">
-            <TextBlock Text="{Binding Result.Message}" Foreground="{StaticResource Status.Degraded}"
+            <TextBlock Text="{Binding Result.Message}" Foreground="{DynamicResource Status.Degraded}"
                        TextWrapping="Wrap" Margin="0,4,0,8" />
             <ui:Button Content="Try again" Appearance="Secondary" Command="{Binding StartCalibrationCommand}"
                        HorizontalAlignment="Left" />

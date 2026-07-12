@@ -8,9 +8,9 @@
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="None"
         WindowCornerPreference="Round"
-        Background="{StaticResource Surface.Window}"
-        TextElement.Foreground="{StaticResource Text.Primary}"
-        FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
+        Background="{DynamicResource Surface.Window}"
+        TextElement.Foreground="{DynamicResource Text.Primary}"
+        FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
     <Window.Resources>
         <!-- One dropdown row: a colour square + its hex. The item's DataContext is the hex string. -->
         <DataTemplate x:Key="ColorItemTemplate">
@@ -28,7 +28,7 @@
         </Grid.RowDefinitions>
         <ui:TitleBar Grid.Row="0" Title="Manage categories" ShowMinimize="False" ShowMaximize="False" CanMaximize="False" />
 
-        <StackPanel Grid.Row="1" Margin="16,8,16,16">
+        <StackPanel Grid.Row="1" Margin="{StaticResource Space.DialogContent}">
         <!-- Existing categories: edit name/colour inline; the default is protected (no Delete) -->
         <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="360">
             <ItemsControl ItemsSource="{Binding Rows}">
@@ -54,7 +54,9 @@
                                        Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                        CommandParameter="{Binding}">
                                 <ui:Button.Style>
-                                    <Style TargetType="ui:Button">
+                                    <!-- BasedOn keeps the Fluent chrome — a bare Style would strip it,
+                                         leaving a raw grey button (only this one lacked it). -->
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsDefault}" Value="True">
                                                 <Setter Property="Visibility" Value="Collapsed" />
@@ -89,7 +91,7 @@
         </Border>
 
         <ui:Button Content="Done" Appearance="Secondary" IsCancel="True"
-                   HorizontalAlignment="Right" Margin="0,16,0,0" />
+                   HorizontalAlignment="Right" Margin="{StaticResource Space.ButtonRow}" />
         </StackPanel>
     </Grid>
 </ui:FluentWindow>

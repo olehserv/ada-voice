@@ -7,9 +7,9 @@
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="None"
         WindowCornerPreference="Round"
-        Background="{StaticResource Surface.Window}"
-        TextElement.Foreground="{StaticResource Text.Primary}"
-        FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
+        Background="{DynamicResource Surface.Window}"
+        TextElement.Foreground="{DynamicResource Text.Primary}"
+        FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
@@ -75,16 +75,16 @@
                                      AutomationProperties.Name="{Binding Status.StateLabel}">
                                 <Ellipse.Style>
                                     <Style TargetType="Ellipse">
-                                        <Setter Property="Fill" Value="{StaticResource Status.Stopped}" />
+                                        <Setter Property="Fill" Value="{DynamicResource Status.Stopped}" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding Status.State}" Value="Live">
-                                                <Setter Property="Fill" Value="{StaticResource Status.Live}" />
+                                                <Setter Property="Fill" Value="{DynamicResource Status.Live}" />
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding Status.State}" Value="OffAir">
-                                                <Setter Property="Fill" Value="{StaticResource Status.OffAir}" />
+                                                <Setter Property="Fill" Value="{DynamicResource Status.OffAir}" />
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding Status.State}" Value="Degraded">
-                                                <Setter Property="Fill" Value="{StaticResource Status.Degraded}" />
+                                                <Setter Property="Fill" Value="{DynamicResource Status.Degraded}" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -127,7 +127,7 @@
 
                 <!-- Why the engine landed here (e.g. a failed Start's reason). Empty = invisible. -->
                 <TextBlock Grid.Column="1" Text="{Binding Status.StateError}"
-                           Foreground="{StaticResource Status.Degraded}"
+                           Foreground="{DynamicResource Status.Degraded}"
                            VerticalAlignment="Center" Margin="10,0,8,0"
                            TextTrimming="CharacterEllipsis"
                            ToolTip="{Binding Status.StateError}" />
@@ -262,44 +262,53 @@
                                               CommandParameter="{Binding}" />
                                 </ContextMenu>
                             </ui:Button.ContextMenu>
-                            <!-- Full-bleed fill = the category colour; every text mark uses the same
-                                 auto-contrast (black/white) brush so nothing goes illegible on a fill. -->
+                            <!-- Direction A: a neutral tile. The category colour is a slim inset edge
+                                 marker down the left, not a full fill — so every text mark uses theme
+                                 brushes and stays legible in both light and dark, no auto-contrast. -->
                             <Grid>
-                                <Border Style="{StaticResource PhraseTileFillStyle}"
-                                        Background="{Binding CategoryColor, Converter={StaticResource HexToBrush}}">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
-                                                   FontSize="{StaticResource FontSize.SectionTitle}"
-                                                   TextWrapping="Wrap" MaxWidth="170"
-                                                   Foreground="{Binding CategoryColor, Converter={StaticResource ContrastText}}" />
-                                        <TextBlock Text="{Binding DurationLabel}" Typography.NumeralAlignment="Tabular"
-                                                   FontSize="{StaticResource FontSize.Label}" Opacity="0.75" Margin="0,6,0,0"
-                                                   Foreground="{Binding CategoryColor, Converter={StaticResource ContrastText}}" />
-                                        <TextBlock Text="⚠ audio missing" FontSize="{StaticResource FontSize.Label}"
-                                                   Margin="0,4,0,0"
-                                                   Foreground="{Binding CategoryColor, Converter={StaticResource ContrastText}}"
-                                                   Visibility="{Binding IsBroken, Converter={StaticResource BoolToVis}}" />
+                                <Border Style="{StaticResource PhraseTileFillStyle}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <!-- Category identity: a slim colour bar down the left edge. -->
+                                        <Border Grid.Column="0" Style="{StaticResource CategoryEdgeMarkerStyle}"
+                                                Background="{Binding CategoryColor, Converter={StaticResource HexToBrush}}" />
+                                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                            <TextBlock Text="{Binding Title}" FontWeight="{StaticResource Weight.Strong}"
+                                                       FontSize="{StaticResource FontSize.SectionTitle}"
+                                                       TextWrapping="Wrap" MaxWidth="130"
+                                                       Foreground="{DynamicResource Text.Primary}" />
+                                            <TextBlock Text="{Binding DurationLabel}" Typography.NumeralAlignment="Tabular"
+                                                       FontSize="{StaticResource FontSize.Label}" Margin="0,6,0,0"
+                                                       Foreground="{DynamicResource Text.Secondary}" />
+                                            <TextBlock Text="⚠ audio missing" FontSize="{StaticResource FontSize.Label}"
+                                                       Margin="0,4,0,0"
+                                                       Foreground="{DynamicResource Status.Degraded}"
+                                                       Visibility="{Binding IsBroken, Converter={StaticResource BoolToVis}}" />
 
-                                        <!-- Tag chips: the tag's colour lives on the border (its identity);
-                                             the text stays primary-on-scrim so a dark tag colour can never
-                                             make its own name unreadable. -->
-                                        <ItemsControl ItemsSource="{Binding TagChips}" Margin="0,6,0,0">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
-                                                            Margin="0,0,4,4" Padding="6,1"
-                                                            Background="{StaticResource Scrim.Tag}"
-                                                            BorderBrush="{Binding Color, Converter={StaticResource HexToBrush}}">
-                                                        <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSize.Label}"
-                                                                   Foreground="{StaticResource Text.Primary}" />
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
+                                            <!-- Tag chips: the tag's colour lives on the border (its identity);
+                                                 the text stays primary-on-scrim so a dark tag colour can never
+                                                 make its own name unreadable. -->
+                                            <ItemsControl ItemsSource="{Binding TagChips}" Margin="0,6,0,0">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border CornerRadius="{StaticResource Radius.Small}" BorderThickness="1"
+                                                                Margin="0,0,4,4" Padding="6,1"
+                                                                Background="{DynamicResource Scrim.Tag}"
+                                                                BorderBrush="{Binding Color, Converter={StaticResource HexToBrush}}">
+                                                            <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSize.Label}"
+                                                                       Foreground="{DynamicResource Text.Primary}" />
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Grid>
                                 </Border>
                                 <!-- Hover/press feedback over any category fill. Not hit-testable, so
                                      clicks and the context menu pass straight through it. -->
@@ -309,10 +318,10 @@
                                             <Setter Property="Background" Value="Transparent" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="True">
-                                                    <Setter Property="Background" Value="{StaticResource Overlay.Hover}" />
+                                                    <Setter Property="Background" Value="{DynamicResource Overlay.Hover}" />
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding IsPressed, RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="True">
-                                                    <Setter Property="Background" Value="{StaticResource Overlay.Pressed}" />
+                                                    <Setter Property="Background" Value="{DynamicResource Overlay.Pressed}" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -332,7 +341,7 @@
                 <TextBlock Text="Your phrase board is empty" HorizontalAlignment="Center"
                            FontSize="{StaticResource FontSize.SectionTitle}" FontWeight="SemiBold" />
                 <TextBlock Text="Record your first phrase — it takes about 30 seconds."
-                           Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Text.Secondary}" TextWrapping="Wrap"
                            TextAlignment="Center" Margin="0,8,0,16" />
                 <ui:Button Content="Record" Appearance="Primary" HorizontalAlignment="Center"
                            Command="{Binding StartRecordingCommand}" />
@@ -393,7 +402,7 @@
                     <Run Text="No phrases in " /><Run Text="{Binding SelectedConversationFilter.Name, Mode=OneWay}" /><Run Text=" yet." />
                 </TextBlock>
                 <TextBlock Text="Add phrases to it from Conversations…" TextWrapping="Wrap"
-                           TextAlignment="Center" Foreground="{StaticResource Text.Secondary}" Margin="0,8,0,0" />
+                           TextAlignment="Center" Foreground="{DynamicResource Text.Secondary}" Margin="0,8,0,0" />
             </StackPanel>
         </ui:Card>
         </Grid>
@@ -410,7 +419,7 @@
                        Height="56" FontSize="{StaticResource FontSize.Title}" FontWeight="Bold" />
             <TextBlock x:Name="HotkeyHint" HorizontalAlignment="Center" Margin="0,6,0,0"
                        Visibility="Collapsed"
-                       Foreground="{StaticResource Text.Muted}"
+                       Foreground="{DynamicResource Text.Muted}"
                        FontSize="{StaticResource FontSize.Label}" />
         </StackPanel>
         </Grid>

@@ -40,12 +40,16 @@ public sealed class WpfAppFixture : IDisposable
         var app = new App();
         app.InitializeComponent();
 
-        // Brand accent — App.OnStartup does this, and it is not part of the XAML resources.
-        Wpf.Ui.Appearance.ApplicationAccentColorManager.Apply(
-            System.Windows.Media.Color.FromRgb(0x4C, 0xC2, 0xFF),
-            Wpf.Ui.Appearance.ApplicationTheme.Dark);
+        // Render the theme chosen by ADAVOICE_SCREENSHOT_THEME (default dark). App.ApplyTheme swaps
+        // the brand token dictionary and derives the accent from the Accent token — exactly the
+        // running-app path. WPF-UI's ApplicationThemeManager only takes effect once the dispatcher
+        // is pumping, so queue it with BeginInvoke: it runs first, before any test builds a window.
+        var theme = Environment.GetEnvironmentVariable("ADAVOICE_SCREENSHOT_THEME") == "Light"
+            ? Wpf.Ui.Appearance.ApplicationTheme.Light
+            : Wpf.Ui.Appearance.ApplicationTheme.Dark;
 
         _dispatcher = Dispatcher.CurrentDispatcher;
+        _dispatcher.BeginInvoke(new Action(() => App.ApplyTheme(theme)));
         _ready.Set();
         Dispatcher.Run();
     }

@@ -11,7 +11,7 @@
         <StackPanel x:Name="SpinnerPanel" Orientation="Horizontal" Margin="0,0,0,8">
             <ProgressBar IsIndeterminate="True" Width="16" Height="16" />
             <TextBlock Text="Checking…" Margin="8,0,0,0" VerticalAlignment="Center"
-                       Foreground="{StaticResource Text.Secondary}" />
+                       Foreground="{DynamicResource Text.Secondary}" />
         </StackPanel>
 
         <ItemsControl x:Name="ChecksList" Visibility="Collapsed" ItemsSource="{Binding Checks}">
@@ -24,7 +24,7 @@
                                 <TextBlock Margin="8,0,0,0" Text="{Binding Status, Converter={StaticResource CheckStatusToLabel}}"
                                            Foreground="{Binding Status, Converter={StaticResource CheckStatusToBrush}}" />
                             </StackPanel>
-                            <TextBlock Text="{Binding Detail}" Foreground="{StaticResource Text.Secondary}"
+                            <TextBlock Text="{Binding Detail}" Foreground="{DynamicResource Text.Secondary}"
                                        Margin="0,4,0,0" TextWrapping="Wrap" />
                             <TextBlock Margin="0,4,0,0"
                                        Visibility="{Binding Converter={StaticResource FailedCableCheckToLink}}">

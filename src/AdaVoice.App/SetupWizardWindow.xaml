@@ -10,9 +10,9 @@
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="None"
         WindowCornerPreference="Round"
-        Background="{StaticResource Surface.Window}"
-        TextElement.Foreground="{StaticResource Text.Primary}"
-        FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
+        Background="{DynamicResource Surface.Window}"
+        TextElement.Foreground="{DynamicResource Text.Primary}"
+        FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
@@ -39,10 +39,10 @@
         </Grid.RowDefinitions>
         <ui:TitleBar Grid.Row="0" Title="AdaVoice setup" ShowMinimize="False" ShowMaximize="False" CanMaximize="False" />
 
-        <StackPanel Grid.Row="1" Margin="16,8,16,16">
+        <StackPanel Grid.Row="1" Margin="{StaticResource Space.DialogContent}">
             <ContentControl Content="{Binding CurrentStep}" />
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="{StaticResource Space.ButtonRow}">
                 <ui:Button Content="Cancel" Appearance="Secondary" IsCancel="True" Margin="0,0,8,0" />
                 <ui:Button Content="Back" Appearance="Secondary" Command="{Binding BackCommand}" Margin="0,0,8,0" />
                 <ui:Button Content="Skip anyway" Appearance="Secondary" Command="{Binding SkipAnywayCommand}"

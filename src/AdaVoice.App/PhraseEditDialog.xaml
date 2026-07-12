@@ -8,9 +8,9 @@
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="None"
         WindowCornerPreference="Round"
-        Background="{StaticResource Surface.Window}"
-        TextElement.Foreground="{StaticResource Text.Primary}"
-        FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
+        Background="{DynamicResource Surface.Window}"
+        TextElement.Foreground="{DynamicResource Text.Primary}"
+        FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -18,7 +18,7 @@
         </Grid.RowDefinitions>
         <ui:TitleBar Grid.Row="0" Title="Edit phrase" ShowMinimize="False" ShowMaximize="False" CanMaximize="False" />
 
-        <StackPanel Grid.Row="1" Margin="16,8,16,16">
+        <StackPanel Grid.Row="1" Margin="{StaticResource Space.DialogContent}">
         <TextBlock Text="Title" Style="{StaticResource FieldLabelStyle}" />
         <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" />
 
@@ -46,14 +46,14 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Border Background="{StaticResource Surface.Overlay}"
-                            BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1"
+                    <Border Background="{DynamicResource Surface.Overlay}"
+                            BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1"
                             CornerRadius="{StaticResource Radius.Pill}"
                             Padding="8,3" Margin="0,0,6,6">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding}" VerticalAlignment="Center" />
                             <Button Content="✕" Margin="6,0,0,0" Padding="0" BorderThickness="0"
-                                    Background="Transparent" Foreground="{StaticResource Text.Secondary}"
+                                    Background="Transparent" Foreground="{DynamicResource Text.Secondary}"
                                     Cursor="Hand" ToolTip="Remove tag"
                                     Command="{Binding DataContext.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                     CommandParameter="{Binding}" />
@@ -87,8 +87,8 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Button Content="{Binding}" Margin="0,0,6,6" Padding="8,3" Cursor="Hand"
-                            BorderThickness="1" BorderBrush="{StaticResource Border.Strong}"
-                            Background="Transparent" Foreground="{StaticResource Text.Secondary}"
+                            BorderThickness="1" BorderBrush="{DynamicResource Border.Strong}"
+                            Background="Transparent" Foreground="{DynamicResource Text.Secondary}"
                             ToolTip="Add this existing tag"
                             Command="{Binding DataContext.AddSuggestionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                             CommandParameter="{Binding}" />
@@ -96,7 +96,7 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="{StaticResource Space.ButtonRow}">
             <ui:Button Content="Cancel" Appearance="Secondary" IsCancel="True" Margin="0,0,8,0" />
             <ui:Button x:Name="SaveButton" Content="Save" Appearance="Primary"
                        IsDefault="True" Click="Save_Click"

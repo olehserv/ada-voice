@@ -8,9 +8,9 @@
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="None"
         WindowCornerPreference="Round"
-        Background="{StaticResource Surface.Window}"
-        TextElement.Foreground="{StaticResource Text.Primary}"
-        FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
+        Background="{DynamicResource Surface.Window}"
+        TextElement.Foreground="{DynamicResource Text.Primary}"
+        FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </Window.Resources>
@@ -21,7 +21,7 @@
         </Grid.RowDefinitions>
         <ui:TitleBar Grid.Row="0" Title="Manage conversations" ShowMinimize="False" ShowMaximize="False" CanMaximize="False" />
 
-        <Grid Grid.Row="1" Margin="16,8,16,16">
+        <Grid Grid.Row="1" Margin="{StaticResource Space.DialogContent}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="180" />
                 <ColumnDefinition Width="16" />
@@ -109,7 +109,7 @@
             </Border>
 
             <ui:Button Grid.Column="2" Grid.Row="1" Content="Done" Appearance="Secondary" IsCancel="True"
-                       HorizontalAlignment="Right" Margin="0,16,0,0" />
+                       HorizontalAlignment="Right" Margin="{StaticResource Space.ButtonRow}" />
         </Grid>
     </Grid>
 </ui:FluentWindow>

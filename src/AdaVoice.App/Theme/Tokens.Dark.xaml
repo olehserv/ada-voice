@@ -1,0 +1,43 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Direction A "Studio Graphite" — DARK color tokens. Keys match Tokens.Light.xaml exactly;
+         App swaps the active file at runtime to follow the OS theme. Every text/surface pair holds
+         contrast >= 4.5:1 (verified 2026-07-11). Restraint is the point: color is a marker, not a fill. -->
+
+    <!-- Surfaces: a three-step cool-graphite ramp. Depth = ramp + subtle borders, no shadows. -->
+    <SolidColorBrush x:Key="Surface.Window" Color="#141619" />
+    <SolidColorBrush x:Key="Surface.Raised" Color="#1B1F23" />
+    <SolidColorBrush x:Key="Surface.Overlay" Color="#23282D" />
+
+    <!-- Borders: white at low alpha so they hold on every surface step. -->
+    <SolidColorBrush x:Key="Border.Subtle" Color="#14FFFFFF" />
+    <SolidColorBrush x:Key="Border.Strong" Color="#2EFFFFFF" />
+
+    <!-- Text: all three hold >= 4.5:1 on Surface.Raised. -->
+    <SolidColorBrush x:Key="Text.Primary" Color="#F2F3F5" />
+    <SolidColorBrush x:Key="Text.Secondary" Color="#A7ACB4" />
+    <SolidColorBrush x:Key="Text.Muted" Color="#8B919A" />
+
+    <!-- Status: verified against both dark surfaces. Tints are pill/banner washes. -->
+    <SolidColorBrush x:Key="Status.Live" Color="#54D262" />
+    <SolidColorBrush x:Key="Status.OffAir" Color="#F2A33C" />
+    <SolidColorBrush x:Key="Status.Degraded" Color="#FF6B6B" />
+    <SolidColorBrush x:Key="Status.Live.Tint" Color="#2354D262" />
+    <SolidColorBrush x:Key="Status.OffAir.Tint" Color="#26F2A33C" />
+    <SolidColorBrush x:Key="Status.Degraded.Tint" Color="#26FF6B6B" />
+    <SolidColorBrush x:Key="Status.Stopped" Color="#8B919A" />
+    <SolidColorBrush x:Key="Status.Stopped.Tint" Color="#1AFFFFFF" />
+
+    <!-- One accent, used sparingly: focus, playing ring, Primary buttons. -->
+    <SolidColorBrush x:Key="Accent" Color="#58B0F0" />
+
+    <!-- Interaction overlays: painted on top of a tile so hover/press read on any surface.
+         Pressed is dimmer than hover (Fluent convention). -->
+    <SolidColorBrush x:Key="Overlay.Hover" Color="#17FFFFFF" />
+    <SolidColorBrush x:Key="Overlay.Pressed" Color="#0DFFFFFF" />
+
+    <!-- Dark scrim behind tag chips so chip text stays legible over any tile. -->
+    <SolidColorBrush x:Key="Scrim.Tag" Color="#66000000" />
+
+</ResourceDictionary>

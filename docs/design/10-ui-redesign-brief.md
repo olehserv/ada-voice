@@ -5,6 +5,11 @@ Owner-approved rules for the professional UI redesign. Companion to
 [05-ui-design.md](05-ui-design.md) (screens). When this brief and 09 conflict, the
 resolution lands in 09 — that file stays the single source of truth.
 
+**Status (2026-07-11):** chosen direction = **A · Studio Graphite** (neutral tiles + category
+edge marker; light + dark following the OS). Tokens, base styles, and all screens shipped;
+see 09 for the canonical decisions. Screenshots in `docs/ui/screenshots/after` (dark) and
+`after-light` (light).
+
 ## Goal
 
 Make the app feel calm, focused, modern, premium, and enterprise-grade — suitable for
@@ -33,8 +38,10 @@ the four dialogs. The approved Conversations feature (ordered scripts,
 - Call-state (LIVE / OFF AIR / DEGRADED / STOPPED) readable at a glance from across the
   room; STOP stays the most reachable action.
 - Preserve business logic, bindings, and ViewModels; UI-only changes.
-- Keep the fixed dark theme and WPF-UI Fluent base (09 decisions).
-- All windows use consistent Fluent chrome (dark title bars everywhere).
+- Keep the WPF-UI Fluent base. **Light + dark, following the OS** (owner decision
+  2026-07-11 — this superseded the original "keep the fixed dark theme" rule).
+- All windows use consistent Fluent chrome; title bars follow the theme (dark in dark,
+  light in light).
 - Keyboard-first: ship the planned in-app keys (`/` search, arrows, `Enter`, `Esc`).
 - Empty / loading / error states are designed, not leftover.
 

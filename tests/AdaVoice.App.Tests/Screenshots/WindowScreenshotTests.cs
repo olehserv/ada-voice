@@ -95,8 +95,12 @@ public sealed class WindowScreenshotTests(WpfAppFixture app)
 
     // ---- helpers ----
 
+    // Light screenshots land in a separate folder so a dark run doesn't overwrite them.
+    private static readonly string Group =
+        Environment.GetEnvironmentVariable("ADAVOICE_SCREENSHOT_THEME") == "Light" ? "after-light" : "after";
+
     private void Save(Func<Window> build, string name) =>
-        Assert.True(File.Exists(_harness.Capture(build, name)));
+        Assert.True(File.Exists(_harness.Capture(build, name, Group)));
 
     /// <summary>Wraps a wizard step's <see cref="UserControl"/> in a bare Fluent window, wired to a
     /// fresh wizard's matching step view-model.</summary>

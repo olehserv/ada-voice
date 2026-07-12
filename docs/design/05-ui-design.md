@@ -10,8 +10,8 @@ from.
 
 ## 0. Visual System (summary — canonical in 09-design-system.md)
 
-- **Theme:** WPF-UI library (Fluent / Windows 11 style, MIT), **fixed dark theme**
-  (decision: operator preference; one palette, verified once).
+- **Theme:** WPF-UI library (Fluent / Windows 11 style, MIT), **light + dark following the
+  OS** (owner decision 2026-07-11; was fixed-dark before — see 09).
 - **Typography:** Segoe UI Variable (platform convention). Ramp (DIPs): window/section
   titles 20/16 semibold, phrase-button title 16 semibold, status bar 14 ALL-CAPS,
   metadata/duration 12. Floor: nothing below 12; status elements never below 14.
@@ -20,9 +20,9 @@ from.
   (also used for STOP), surfaces `#1F1F1F` window / `#2B2B2B` raised, text `#F0F0F0`
   primary / `#A0A0A0` secondary, accent `#4CC2FF` (interactive highlights only).
 - **Spacing:** 4 px grid (controls padded 8/12/16). **Corner radius:** 4 px everywhere.
-- **Category colors:** the category colour **fills the whole phrase tile**, with automatic
-  WCAG-contrast text (owner override 2026-07-01 — this replaced the earlier "small dot,
-  neutral tiles" rule). 09-design-system.md §Category colors is canonical.
+- **Category colors:** a slim category-colour **edge marker** on a neutral tile (Studio
+  Graphite, 2026-07-11 — replaced the full-fill rule). 09-design-system.md §Category colors
+  is canonical.
 - **Long text:** phrase titles clamp to 2 lines with ellipsis, full title in tooltip.
   Category names clamp to 1 line. All labels sized for the longest locale (Polish).
 
