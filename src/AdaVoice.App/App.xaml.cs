@@ -49,11 +49,18 @@ public partial class App : Application
 
         RegisterGlobalExceptionHandlers();
 
-        // Brand accent (design 09): without this, WPF-UI derives Primary buttons, checkboxes, and
-        // focus visuals from the OS accent color — whatever the user picked in Windows settings.
-        Wpf.Ui.Appearance.ApplicationAccentColorManager.Apply(
-            System.Windows.Media.Color.FromRgb(0x4C, 0xC2, 0xFF),
-            Wpf.Ui.Appearance.ApplicationTheme.Dark);
+        // Follow the OS light/dark theme, and keep following it while running (design 10 redesign
+        // 2026-07-11 — the app was dark-only before). Read the OS "apps" theme straight from the
+        // registry: it's unambiguous and works here, before the message loop runs. ApplyTheme swaps
+        // WPF-UI's Fluent brushes AND our brand token dictionary + accent to match. (Runtime changes
+        // are handled by SystemThemeWatcher below, which uses WPF-UI's own detection.)
+        var osTheme = OsPrefersLightTheme()
+            ? Wpf.Ui.Appearance.ApplicationTheme.Light
+            : Wpf.Ui.Appearance.ApplicationTheme.Dark;
+        ApplyTheme(osTheme);
+        // Re-sync (swap tokens + accent) whenever the theme changes, using the theme the event hands
+        // us — never re-apply the system theme here, or it would raise Changed and recurse.
+        Wpf.Ui.Appearance.ApplicationThemeManager.Changed += (theme, _) => SyncBrandLayer(theme);
 
         _host = new EngineHost(new WasapiAudioOptions(), msg => Log.Information("{Event}", msg));
 
@@ -84,6 +91,14 @@ public partial class App : Application
         window.DataContext = board;
         window.Show(); // triggers OnLoaded: wires Saved/Deleted AND registers the stop hotkey
 
+        // WPF-UI's theme swap silently no-ops when it runs before the dispatcher is pumping (as the
+        // ApplyTheme above did, inside OnStartup). Re-apply once the loop is live to guarantee the
+        // Fluent chrome matches the OS at launch; then follow OS changes. None = keep the window's own
+        // backdrop (design 09 flat surfaces); updateAccents:false = keep our brand accent.
+        Dispatcher.BeginInvoke(new Action(() => ApplyTheme(osTheme)));
+        Wpf.Ui.Appearance.SystemThemeWatcher.Watch(
+            window, Wpf.Ui.Controls.WindowBackdropType.None, updateAccents: false);
+
         // First run: window.ActiveHotkey is only valid after Show() (OnLoaded already ran).
         if (!settings.WizardCompleted)
             window.ShowSetupWizard(new SetupWizardViewModel(_host, window.ActiveHotkey));
@@ -96,6 +111,81 @@ public partial class App : Application
         _singleInstanceMutex?.ReleaseMutex();
         _singleInstanceMutex?.Dispose();
         base.OnExit(e);
+    }
+
+    /// <summary>
+    /// Reads the OS "apps use light theme" preference straight from the registry. Synchronous and
+    /// reliable before the message loop runs (unlike WPF-UI's theme apply, which no-ops pre-pump).
+    /// Missing key / any error ⇒ dark (the app's historical default).
+    /// </summary>
+    private static bool OsPrefersLightTheme()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+            return key?.GetValue("AppsUseLightTheme") is int v && v == 1;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Applies a specific theme and re-syncs the brand layer (tokens + accent). Startup derives the
+    /// theme from the OS and calls this; the screenshot tests call it to render each theme. It only
+    /// fully takes effect once the dispatcher is pumping, so startup also re-applies it via
+    /// <c>BeginInvoke</c>. Backdrop stays None — design 09's flat surfaces.
+    /// </summary>
+    public static void ApplyTheme(Wpf.Ui.Appearance.ApplicationTheme theme)
+    {
+        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(
+            theme, Wpf.Ui.Controls.WindowBackdropType.None, updateAccent: false);
+        SyncBrandLayer(theme);
+    }
+
+    /// <summary>
+    /// Applies our brand layer for <paramref name="theme"/>: swaps the light/dark token dictionary
+    /// and re-derives the WPF-UI accent from the (theme-specific) <c>Accent</c> brush. The accent
+    /// colour is therefore defined once, in XAML, and never duplicated in code. The theme is passed
+    /// in (not read back via <c>GetAppTheme</c>) so it stays correct even before the app is running.
+    /// </summary>
+    private static void SyncBrandLayer(Wpf.Ui.Appearance.ApplicationTheme theme)
+    {
+        SwapBrandTokens(theme);
+        if (Current.Resources["Accent"] is System.Windows.Media.SolidColorBrush accent)
+            Wpf.Ui.Appearance.ApplicationAccentColorManager.Apply(accent.Color, theme);
+    }
+
+    /// <summary>
+    /// Merges the token dictionary matching <paramref name="theme"/> and removes the other, so the
+    /// <c>DynamicResource</c> lookups in every view re-resolve to the right palette at runtime.
+    /// </summary>
+    private static void SwapBrandTokens(Wpf.Ui.Appearance.ApplicationTheme theme)
+    {
+        var file = theme == Wpf.Ui.Appearance.ApplicationTheme.Light ? "Tokens.Light.xaml" : "Tokens.Dark.xaml";
+        var dicts = Current.Resources.MergedDictionaries;
+        var alreadyCorrect = false;
+
+        for (var i = dicts.Count - 1; i >= 0; i--)
+        {
+            var src = dicts[i].Source?.OriginalString ?? string.Empty;
+            if (!src.Contains("Tokens.Dark") && !src.Contains("Tokens.Light"))
+                continue;
+            if (src.Contains(file))
+                alreadyCorrect = true;
+            else
+                dicts.RemoveAt(i);
+        }
+
+        if (!alreadyCorrect)
+        {
+            // Absolute pack URI (with the assembly name) so it resolves from AdaVoice.App's compiled
+            // resources even when the entry assembly is something else (e.g. the test host).
+            var uri = new Uri($"pack://application:,,,/AdaVoice.App;component/Theme/{file}", UriKind.Absolute);
+            dicts.Add(new ResourceDictionary { Source = uri });
+        }
     }
 
     /// <summary>

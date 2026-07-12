@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "dotnet-wpf-design",
+  "owner": "j0ruge",
+  "repo": "skills_commands_manager",
+  "path": "plugins/dotnet-wpf/skills/dotnet-wpf-design",
+  "branch": "main",
+  "sha": "ff77ef38f31710056e701a817a911582addaeabc",
+  "source": "manual"
+}

@@ -8,9 +8,9 @@
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="None"
         WindowCornerPreference="Round"
-        Background="{StaticResource Surface.Window}"
-        TextElement.Foreground="{StaticResource Text.Primary}"
-        FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
+        Background="{DynamicResource Surface.Window}"
+        TextElement.Foreground="{DynamicResource Text.Primary}"
+        FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -18,16 +18,16 @@
         </Grid.RowDefinitions>
         <ui:TitleBar Grid.Row="0" Title="Repair phrase" ShowMinimize="False" ShowMaximize="False" CanMaximize="False" />
 
-        <StackPanel Grid.Row="1" Margin="16,8,16,16">
+        <StackPanel Grid.Row="1" Margin="{StaticResource Space.DialogContent}">
         <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
                    FontSize="{StaticResource FontSize.SectionTitle}" TextWrapping="Wrap" />
         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-            <TextBlock Text="⚠" Foreground="{StaticResource Status.OffAir}" Margin="0,0,6,0" />
-            <TextBlock Text="This phrase's audio file is missing." Foreground="{StaticResource Text.Secondary}"
+            <TextBlock Text="⚠" Foreground="{DynamicResource Status.OffAir}" Margin="0,0,6,0" />
+            <TextBlock Text="This phrase's audio file is missing." Foreground="{DynamicResource Text.Secondary}"
                        TextWrapping="Wrap" />
         </StackPanel>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="{StaticResource Space.ButtonRow}">
             <ui:Button Content="Cancel" Appearance="Secondary" IsCancel="True" Margin="0,0,8,0" />
             <ui:Button Content="Remove" Appearance="Secondary" Margin="0,0,8,0" Click="Remove_Click" />
             <ui:Button Content="Re-record" Appearance="Primary" IsDefault="True" Click="ReRecord_Click" />

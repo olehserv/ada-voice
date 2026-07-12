@@ -8,9 +8,9 @@
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="None"
         WindowCornerPreference="Round"
-        Background="{StaticResource Surface.Window}"
-        TextElement.Foreground="{StaticResource Text.Primary}"
-        FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
+        Background="{DynamicResource Surface.Window}"
+        TextElement.Foreground="{DynamicResource Text.Primary}"
+        FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -19,7 +19,7 @@
         <ui:TitleBar Grid.Row="0" Title="{Binding Title, StringFormat='Versions — {0}'}"
                      ShowMinimize="False" ShowMaximize="False" CanMaximize="False" />
 
-        <StackPanel Grid.Row="1" Margin="16,8,16,16">
+        <StackPanel Grid.Row="1" Margin="{StaticResource Space.DialogContent}">
             <!-- A board-like tile grid: the primary recording first, then every alternate take. -->
             <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="380">
                 <ItemsControl ItemsSource="{Binding Tiles}">
@@ -30,8 +30,8 @@
                         <DataTemplate>
                             <Border Width="150" MinHeight="96" Margin="4" Padding="10"
                                     CornerRadius="{StaticResource Radius.Control}"
-                                    Background="{StaticResource Surface.Overlay}"
-                                    BorderBrush="{StaticResource Border.Subtle}" BorderThickness="1">
+                                    Background="{DynamicResource Surface.Overlay}"
+                                    BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1">
                                 <StackPanel>
                                     <!-- Read-only for the primary tile — its label is fixed ("Primary"),
                                          never persisted; a version's label renames on focus loss. -->
@@ -92,7 +92,7 @@
                        Command="{Binding RecordVersionCommand}" />
 
             <ui:Button Content="Close" Appearance="Secondary" IsCancel="True"
-                       HorizontalAlignment="Right" Margin="0,16,0,0" />
+                       HorizontalAlignment="Right" Margin="{StaticResource Space.ButtonRow}" />
         </StackPanel>
     </Grid>
 </ui:FluentWindow>

@@ -9,9 +9,9 @@
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="None"
         WindowCornerPreference="Round"
-        Background="{StaticResource Surface.Window}"
-        TextElement.Foreground="{StaticResource Text.Primary}"
-        FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
+        Background="{DynamicResource Surface.Window}"
+        TextElement.Foreground="{DynamicResource Text.Primary}"
+        FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -20,7 +20,7 @@
         <ui:TitleBar Grid.Row="0" Title="AdaVoice settings" ShowMinimize="False" ShowMaximize="False" CanMaximize="False" />
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="600">
-        <StackPanel Margin="16,8,16,16">
+        <StackPanel Margin="{StaticResource Space.DialogContent}">
 
         <!-- Levels: the group she touches most often — top of the page (design 05 §4) -->
         <Border Style="{StaticResource PanelStyle}" Margin="0,0,0,12">
@@ -28,7 +28,7 @@
                 <TextBlock Text="Levels" Style="{StaticResource SectionTitleStyle}" />
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Mic duck" VerticalAlignment="Center"
-                               Foreground="{StaticResource Text.Secondary}" MinWidth="70" />
+                               Foreground="{DynamicResource Text.Secondary}" MinWidth="70" />
                     <Slider Width="170" Margin="8,0" VerticalAlignment="Center"
                             Minimum="-40" Maximum="0" SmallChange="1"
                             IsSnapToTickEnabled="True" TickFrequency="1"
@@ -38,7 +38,7 @@
                     <TextBlock Text="{Binding Levels.DuckLabel}" Typography.NumeralAlignment="Tabular"
                                VerticalAlignment="Center" MinWidth="48" />
                 </StackPanel>
-                <Separator Margin="0,12" Background="{StaticResource Border.Subtle}" />
+                <Separator Margin="0,12" Background="{DynamicResource Border.Subtle}" />
                 <local:CalibrationStepView DataContext="{Binding Levels.Calibration}" />
             </StackPanel>
         </Border>
@@ -49,9 +49,9 @@
                 <TextBlock Text="Behavior" Style="{StaticResource SectionTitleStyle}" />
                 <CheckBox Content="Keep the board always on top" IsChecked="{Binding AlwaysOnTop}" Margin="0,0,0,8" />
                 <CheckBox Content="A new phrase stops the one currently playing" IsChecked="{Binding ReplaceOnRetrigger}" />
-                <TextBlock Text="(applies after restart)" Foreground="{StaticResource Text.Muted}"
+                <TextBlock Text="(applies after restart)" Foreground="{DynamicResource Text.Muted}"
                            FontSize="{StaticResource FontSize.Label}" Margin="28,0,0,8" />
-                <TextBlock Text="{Binding HotkeyStatus}" Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding HotkeyStatus}" Foreground="{DynamicResource Text.Secondary}" TextWrapping="Wrap" />
             </StackPanel>
         </Border>
 
@@ -62,7 +62,7 @@
 
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                     <TextBlock Text="Language" VerticalAlignment="Center"
-                               Foreground="{StaticResource Text.Secondary}" MinWidth="70" />
+                               Foreground="{DynamicResource Text.Secondary}" MinWidth="70" />
                     <ComboBox Width="160" Margin="8,0,0,0" SelectedValuePath="Tag" SelectedValue="{Binding Language}">
                         <ComboBoxItem Content="English" Tag="en" />
                         <ComboBoxItem Content="Українська" Tag="uk" />
@@ -76,7 +76,7 @@
                     <ui:Button Content="Open backup folder" Appearance="Secondary" Command="{Binding OpenBackupFolderCommand}" Margin="8,0,0,0" />
                 </StackPanel>
 
-                <TextBlock Foreground="{StaticResource Text.Muted}" FontSize="{StaticResource FontSize.Label}">
+                <TextBlock Foreground="{DynamicResource Text.Muted}" FontSize="{StaticResource FontSize.Label}">
                     <Run Text="Last backup: " />
                     <Run Text="{Binding LastBackupDate, Mode=OneWay, StringFormat='{}{0:yyyy-MM-dd}', TargetNullValue='never'}" />
                 </TextBlock>

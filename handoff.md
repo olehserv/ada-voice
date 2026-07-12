@@ -22,6 +22,19 @@ Monetization exists as a full design (no code yet).
 
 ## Latest work (2026-07-11)
 
+- **UI redesign — "Studio Graphite" + light/dark theming (working tree, pending commit).**
+  Owner disliked the old look; picked a new direction (3 shown) and asked to add light + system
+  theme. Shipped: neutral phrase tiles with a slim category **edge marker** (was full-colour
+  fill); refined cool-graphite palette; **light + dark following the OS** at runtime
+  (`ApplicationThemeManager.ApplySystemTheme` + `SystemThemeWatcher`), colour tokens split into
+  `Theme/Tokens.Dark.xaml` / `Tokens.Light.xaml` (swapped on `ApplicationThemeManager.Changed`),
+  all views moved to `DynamicResource` for theme brushes. Accent now derived from the `Accent`
+  token (one source, no code/XAML duplication). Fixed the raw-chrome Delete button (missing
+  `BasedOn`) and `PhraseButtonStyle` `BasedOn`. Contrast ≥ 4.5:1 verified in both themes; 238 App
+  tests green; screenshots (both themes) render via `ADAVOICE_SCREENSHOTS=1`
+  (`+ ADAVOICE_SCREENSHOT_THEME=Light`) into `docs/ui/screenshots/after` and `after-light`.
+  Design docs 05/09/10 updated. UI-only — no bindings/ViewModels changed.
+
 - **Security fix: path traversal via `library.json`.** A security review (security-review skill +
   Semgrep Guardian) found three confirmed issues sharing one root cause: phrase/version `FileName`
   fields were read verbatim from `library.json` and passed straight into file APIs via

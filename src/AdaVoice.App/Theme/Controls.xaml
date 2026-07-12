@@ -2,11 +2,14 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
 
+    <!-- Brand styles. Colour tokens are DynamicResource so a runtime light/dark swap re-resolves
+         them; sizes/radii are StaticResource (theme-invariant). -->
+
     <!-- Grouping panel: the raised surface every functional zone sits on (status, record bar,
-         settings groups). Border gives the depth; no shadows on flat panels (design 09). -->
+         settings groups). Border gives the depth; no shadows on flat panels. -->
     <Style x:Key="PanelStyle" TargetType="Border">
-        <Setter Property="Background" Value="{StaticResource Surface.Raised}" />
-        <Setter Property="BorderBrush" Value="{StaticResource Border.Subtle}" />
+        <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="{StaticResource Radius.Panel}" />
         <Setter Property="Padding" Value="{StaticResource Pad.Panel}" />
@@ -15,22 +18,23 @@
     <!-- Section heading inside a panel or dialog. -->
     <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="{StaticResource FontSize.SectionTitle}" />
-        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontWeight" Value="{StaticResource Weight.Strong}" />
         <Setter Property="Margin" Value="0,0,0,8" />
     </Style>
 
     <!-- Label above a form field (dialogs). -->
     <Style x:Key="FieldLabelStyle" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{StaticResource Text.Secondary}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}" />
         <Setter Property="FontSize" Value="{StaticResource FontSize.Label}" />
         <Setter Property="Margin" Value="0,0,0,4" />
     </Style>
 
     <!-- The big two-line phrase button, shared by every item on the board (no per-item inline style).
-         Chrome border is zero on purpose: WPF-UI's template paints an accent border on hover, which
-         would make a hovered tile read like a playing one. Hover feedback is the overlay wash in the
-         tile template; the playing ring lives on PhraseTileFillStyle below. -->
-    <Style x:Key="PhraseButtonStyle" TargetType="{x:Type ui:Button}">
+         BasedOn keeps WPF-UI's Fluent template; chrome border is zero on purpose so a hovered tile
+         can't imitate the playing ring. Hover feedback is the overlay wash in the tile template; the
+         playing ring lives on PhraseTileFillStyle below. -->
+    <Style x:Key="PhraseButtonStyle" TargetType="{x:Type ui:Button}"
+           BasedOn="{StaticResource {x:Type ui:Button}}">
         <Setter Property="MinWidth" Value="150" />
         <Setter Property="MinHeight" Value="96" />
         <Setter Property="Margin" Value="4" />
@@ -40,25 +44,35 @@
         <Setter Property="BorderThickness" Value="0" />
     </Style>
 
-    <!-- The tile's category-colour fill. BorderThickness is constant so the playing ring never
-         shifts layout: the brush swaps from transparent to Accent instead of a border appearing.
-         (The Conversations feature adds an IsCurrentStep trigger ABOVE the IsPlaying one — same
-         brush-swap pattern, Text.Secondary ring; IsPlaying stays last so a playing tile wins.) -->
+    <!-- Direction A tile: a NEUTRAL raised surface (no more full category fill). The category colour
+         is a thin left edge marker set per-tile in the view. BorderThickness is constant so the
+         playing ring never shifts layout — the brush swaps from transparent to Accent instead of a
+         border appearing. IsCurrentStep (Conversations) sits above IsPlaying so a playing tile wins. -->
     <Style x:Key="PhraseTileFillStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
         <Setter Property="CornerRadius" Value="{StaticResource Radius.Control}" />
         <Setter Property="Padding" Value="10" />
         <Setter Property="BorderThickness" Value="2" />
-        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}" />
         <Style.Triggers>
             <!-- Muted ring on the step the operator is expected to play next (Conversation mode) -->
             <DataTrigger Binding="{Binding IsCurrentStep}" Value="True">
-                <Setter Property="BorderBrush" Value="{StaticResource Text.Secondary}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Text.Secondary}" />
             </DataTrigger>
             <!-- Accent ring while this phrase is playing -->
             <DataTrigger Binding="{Binding IsPlaying}" Value="True">
-                <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
             </DataTrigger>
         </Style.Triggers>
+    </Style>
+
+    <!-- Thin category edge marker for a phrase tile (Direction A). The colour is set per-tile via
+         a bound Background in the view; this only fixes geometry/shape. -->
+    <Style x:Key="CategoryEdgeMarkerStyle" TargetType="Border">
+        <Setter Property="Width" Value="4" />
+        <Setter Property="CornerRadius" Value="2" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="Margin" Value="0,2,0,2" />
     </Style>
 
 </ResourceDictionary>

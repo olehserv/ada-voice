@@ -4,7 +4,7 @@
     <StackPanel>
         <TextBlock Text="Before your first client call" Style="{StaticResource SectionTitleStyle}" />
         <TextBlock Text="Make a test call and confirm everything sounds right:"
-                   Foreground="{StaticResource Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                   Foreground="{DynamicResource Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,8" />
         <ItemsControl ItemsSource="{Binding Checklist}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>

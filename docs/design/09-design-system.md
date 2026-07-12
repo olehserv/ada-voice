@@ -7,27 +7,37 @@ UI redesign 2026-07-06 ([brief](10-ui-redesign-brief.md)).
 
 ## Direction
 
-A calm, dark, native Windows utility — OBS/Voicemeeter class, not a SaaS dashboard.
-The best design here is invisible: the operator stops noticing the app exists.
-Subtraction default: if an element doesn't earn its pixels mid-call, cut it.
-One command-center exception: call state (LIVE / OFF AIR / DEGRADED / STOPPED) must
-read at a glance — it gets color, a dot, and a pill; nothing else competes with it.
+**"Studio Graphite" (owner redesign 2026-07-11).** A calm, dark-or-light, native Windows
+utility — OBS/Voicemeeter class, not a SaaS dashboard. The best design here is invisible:
+the operator stops noticing the app exists. Subtraction default: if an element doesn't earn
+its pixels mid-call, cut it. **Restraint over loudness: colour is a marker, not a fill.**
+Phrase tiles are neutral surfaces with a slim category **edge marker**, not full category
+fills — so text is always legible and nothing shouts. One command-center exception: call
+state (LIVE / OFF AIR / DEGRADED / STOPPED) reads at a glance — colour, a dot, and a pill;
+the one accent is spent on the *playing* tile's ring.
 
 ## Theme
 
 - **WPF-UI** library (Fluent / Windows 11 style, MIT) — no hand-rolled chrome.
-- **Fixed dark theme** (operator preference; one palette, verified once). No light mode,
-  no system-following in v1.
-- **Every window is a `FluentWindow`** (dark title bar) — Board, Settings, wizard, and
-  all dialogs share one chrome.
-- **Brand accent is applied in code** (`ApplicationAccentColorManager.Apply` in
-  `App.xaml.cs`): without it, WPF-UI colors Primary buttons/checkboxes/focus from the
-  OS accent — whatever the user picked in Windows.
+- **Light + dark, following the OS** (owner decision 2026-07-11 — this **replaced** the
+  earlier fixed-dark-only stance). `App.OnStartup` calls `ApplicationThemeManager.ApplySystemTheme`
+  then `SystemThemeWatcher.Watch(window)` to follow OS changes live. Colour tokens live in
+  `Theme/Tokens.Dark.xaml` / `Tokens.Light.xaml` (identical keys); `App` swaps the active one
+  on `ApplicationThemeManager.Changed`. Every text/surface pair holds ≥ 4.5:1 in **both** themes.
+- **Views bind theme brushes with `DynamicResource`** so a runtime swap re-resolves them;
+  invariant tokens (sizes, radii, spacing) stay `StaticResource`.
+- **Every window is a `FluentWindow`** — chrome follows the theme (dark title bars in dark,
+  light in light); Board, Settings, wizard, and all dialogs share one chrome.
+- **Brand accent is derived from the `Accent` token, not hard-coded.** On each theme change
+  `App` reads the theme's `Accent` brush and feeds it to `ApplicationAccentColorManager.Apply`
+  — one source of truth in XAML (fixes the old code/XAML accent duplication).
 
 ## Tokens
 
-Canonical implementation: `src/AdaVoice.App/Theme/Tokens.xaml`. No hex literals in view
-XAML — every color, radius, and font size comes from a token.
+Canonical implementation: `src/AdaVoice.App/Theme/` — `Tokens.xaml` (theme-invariant: sizes,
+weights, spacing, radii) plus `Tokens.Dark.xaml` / `Tokens.Light.xaml` (colour brushes, same
+keys). No hex literals in view XAML — every colour, radius, and font size comes from a token.
+The table below shows the **dark** values; the light file mirrors every key (verified ≥ 4.5:1).
 
 | Token | Value | Use |
 |---|---|---|
@@ -74,12 +84,14 @@ Floor: nothing below 12; status elements never below 14.
 
 ## Interaction states
 
-- **Phrase tiles**: hover = `Overlay.Hover` wash (painted over the category fill, so it
-  works on any color); pressed = `Overlay.Pressed` (dimmer); **playing** = 2 px `Accent`
-  ring on the tile's own fill border (`PhraseTileFillStyle`) — constant border thickness,
-  so the ring never shifts layout. The button chrome border stays 0 so WPF-UI's hover
-  border can't imitate the playing ring. The Conversations current-step ring reuses the
-  same brush-swap slot with `Text.Secondary`, placed above `IsPlaying` so playing wins.
+- **Phrase tiles** (Studio Graphite): a neutral `Surface.Raised` tile with a `Border.Subtle`
+  outline and a slim category-colour **edge marker** down the left (not a full fill). Title/
+  duration use theme text brushes, so no auto-contrast is needed. hover = `Overlay.Hover`
+  wash; pressed = `Overlay.Pressed` (dimmer); **playing** = the tile's 2 px border swaps to
+  `Accent` (`PhraseTileFillStyle`) — constant thickness, so the ring never shifts layout. The
+  button chrome border stays 0 so WPF-UI's hover border can't imitate the playing ring. The
+  Conversations current-step ring reuses the same brush-swap slot with `Text.Secondary`,
+  placed above `IsPlaying` so playing wins.
 - **Buttons**: WPF-UI appearances — one `Primary` per screen (Start when stopped, Save
   when a take is pending); quiet window actions are `Transparent` icon buttons with
   tooltips and `AutomationProperties.Name`.
@@ -96,12 +108,14 @@ Floor: nothing below 12; status elements never below 14.
 
 ## Rules
 
-- Category colors **fill the whole phrase button** (product-owner decision, 2026-07-01).
-  Every text mark on a filled button uses one auto-contrast brush (black or white,
-  WCAG-picked from the fill) so nothing goes illegible. The playing indicator is an
-  Accent **ring** (not a background tint) so it reads over any fill. Colors come from a
-  curated palette (`AdaVoice.Core.Domain.ColorPalette`), chosen via a colour dropdown —
-  never a typed hex.
+- Category colour is a **slim edge marker** down the left of the (neutral) phrase tile
+  (Studio Graphite, 2026-07-11 — this **replaced** the earlier "colour fills the whole
+  button" rule, whose saturated fills read as loud and forced an auto-contrast text brush).
+  Text now uses theme brushes and is always legible. The playing indicator is an Accent
+  **ring** on the tile border. Colours come from a curated palette
+  (`AdaVoice.Core.Domain.ColorPalette`), chosen via a colour dropdown — never a typed hex.
+  (`ContrastText` / `ColorContrast.PrefersDarkText` are still used for the colour-swatch
+  dropdowns and remain available if a future surface needs on-colour text.)
 - Tags render as rounded chips on the phrase tile: the tag's **colour lives on the chip
   border** (its identity); chip **text is `Text.Primary`** on the fixed dark scrim
   (changed 2026-07-06 — colored text failed contrast for dark tag colours). Each tag's

@@ -3,6 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <StackPanel>
         <TextBlock Text="Stop hotkey" Style="{StaticResource SectionTitleStyle}" />
-        <TextBlock Text="{Binding StatusLabel}" TextWrapping="Wrap" Foreground="{StaticResource Text.Secondary}" />
+        <TextBlock Text="{Binding StatusLabel}" TextWrapping="Wrap" Foreground="{DynamicResource Text.Secondary}" />
     </StackPanel>
 </UserControl>

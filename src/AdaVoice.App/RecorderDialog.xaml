@@ -8,9 +8,9 @@
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="None"
         WindowCornerPreference="Round"
-        Background="{StaticResource Surface.Window}"
-        TextElement.Foreground="{StaticResource Text.Primary}"
-        FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
+        Background="{DynamicResource Surface.Window}"
+        TextElement.Foreground="{DynamicResource Text.Primary}"
+        FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
     <!-- Fixed height on purpose: the content swaps between states of different sizes
          (idle / recording / processing / save form), and SizeToContent both mis-measures under
          FluentWindow's custom chrome and would make the window jump on every state change. -->
@@ -36,13 +36,13 @@
             <!-- Recording -->
             <StackPanel Orientation="Horizontal"
                         Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}">
-                <Ellipse Width="8" Height="8" Fill="{StaticResource Status.Degraded}" VerticalAlignment="Center" />
+                <Ellipse Width="8" Height="8" Fill="{DynamicResource Status.Degraded}" VerticalAlignment="Center" />
                 <TextBlock Text="Recording… speak now" FontWeight="SemiBold" Margin="6,0,0,0" VerticalAlignment="Center" />
                 <ui:Button Content="Stop" Appearance="Primary" Command="{Binding StopRecordingCommand}" Margin="16,0,0,0" />
             </StackPanel>
 
             <!-- Bridges the gap between Stop and the save form appearing -->
-            <TextBlock Text="Processing…" FontWeight="SemiBold" Foreground="{StaticResource Text.Secondary}"
+            <TextBlock Text="Processing…" FontWeight="SemiBold" Foreground="{DynamicResource Text.Secondary}"
                        Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}}" />
 
             <!-- A take is waiting to be saved -->
@@ -56,7 +56,7 @@
                     <TextBox Grid.Column="0" Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" />
                     <TextBlock Grid.Column="1" Text="{Binding PendingTakeDurationLabel}"
                                Typography.NumeralAlignment="Tabular" Margin="8,0,0,0"
-                               VerticalAlignment="Center" Foreground="{StaticResource Text.Secondary}" />
+                               VerticalAlignment="Center" Foreground="{DynamicResource Text.Secondary}" />
                 </Grid>
                 <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                     <ui:Button Content="Preview" Appearance="Secondary" Command="{Binding PreviewTakeCommand}" />
@@ -76,7 +76,7 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="While recording, the call cannot hear you (OFF AIR)."
-                       Foreground="{StaticResource Text.Muted}" FontSize="{StaticResource FontSize.Label}"
+                       Foreground="{DynamicResource Text.Muted}" FontSize="{StaticResource FontSize.Label}"
                        TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />
             <ui:Button Grid.Column="1" Content="Close" Appearance="Secondary" IsCancel="True"
                        VerticalAlignment="Bottom" />
