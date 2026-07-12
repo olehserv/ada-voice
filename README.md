@@ -73,6 +73,13 @@ The planning docs form a ladder, each with one job:
 
 Start with the [design docs README](docs/design/README.md) for the full picture.
 
+## UI screenshots
+
+Every WPF window and setup-wizard step can be rendered to a PNG for visual review, in both
+themes, without running the app by hand. See
+[tests/AdaVoice.App.Tests/Screenshots/README.md](tests/AdaVoice.App.Tests/Screenshots/README.md)
+for how to run them and where the images land.
+
 ## Ethics & privacy
 
 - AdaVoice plays **pre-recorded phrases of the real operator, who is present and driving the

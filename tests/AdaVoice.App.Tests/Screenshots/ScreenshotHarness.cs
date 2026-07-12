@@ -25,6 +25,11 @@ public sealed class ScreenshotHarness(WpfAppFixture app)
 
         app.Dispatcher.Invoke(() =>
         {
+            // Closing the previous window resets WPF-UI's ApplicationThemeManager back to the OS
+            // theme as a side effect, so re-apply the requested theme before every window, not just
+            // once at fixture startup (see WpfAppFixture.Theme).
+            App.ApplyTheme(app.Theme);
+
             window = build();
             // Keep it on-screen and unobstructed — the capture reads real screen pixels.
             window.WindowStartupLocation = WindowStartupLocation.CenterScreen;

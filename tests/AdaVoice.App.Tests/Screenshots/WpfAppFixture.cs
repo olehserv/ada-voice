@@ -24,6 +24,10 @@ public sealed class WpfAppFixture : IDisposable
 
     public WpfAppFixture()
     {
+        Theme = Environment.GetEnvironmentVariable("ADAVOICE_SCREENSHOT_THEME") == "Light"
+            ? Wpf.Ui.Appearance.ApplicationTheme.Light
+            : Wpf.Ui.Appearance.ApplicationTheme.Dark;
+
         _uiThread = new Thread(Pump) { IsBackground = true, Name = "WpfScreenshotUI" };
         _uiThread.SetApartmentState(ApartmentState.STA);
         _uiThread.Start();
@@ -33,6 +37,14 @@ public sealed class WpfAppFixture : IDisposable
     /// <summary>The dispatcher of the UI thread. Marshal all window work here.</summary>
     public Dispatcher Dispatcher => _dispatcher!;
 
+    /// <summary>
+    /// The theme chosen by <c>ADAVOICE_SCREENSHOT_THEME</c> (default dark). Closing a WPF-UI
+    /// <c>FluentWindow</c> resets <c>ApplicationThemeManager</c> back to the OS theme as a side
+    /// effect, so <see cref="ScreenshotHarness"/> re-applies this theme before building every
+    /// window rather than relying on a single apply at startup.
+    /// </summary>
+    public Wpf.Ui.Appearance.ApplicationTheme Theme { get; }
+
     private void Pump()
     {
         // new App() + InitializeComponent() loads App.xaml's resources without running the app.
@@ -40,16 +52,7 @@ public sealed class WpfAppFixture : IDisposable
         var app = new App();
         app.InitializeComponent();
 
-        // Render the theme chosen by ADAVOICE_SCREENSHOT_THEME (default dark). App.ApplyTheme swaps
-        // the brand token dictionary and derives the accent from the Accent token — exactly the
-        // running-app path. WPF-UI's ApplicationThemeManager only takes effect once the dispatcher
-        // is pumping, so queue it with BeginInvoke: it runs first, before any test builds a window.
-        var theme = Environment.GetEnvironmentVariable("ADAVOICE_SCREENSHOT_THEME") == "Light"
-            ? Wpf.Ui.Appearance.ApplicationTheme.Light
-            : Wpf.Ui.Appearance.ApplicationTheme.Dark;
-
         _dispatcher = Dispatcher.CurrentDispatcher;
-        _dispatcher.BeginInvoke(new Action(() => App.ApplyTheme(theme)));
         _ready.Set();
         Dispatcher.Run();
     }
