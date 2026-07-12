@@ -10,7 +10,7 @@ back up. It answers one question: *where are we right now?*
 - Details of past work live in git history and in the dated docs under `docs/reviews/`.
   This file stays short on purpose.
 
-_Last updated: 2026-07-11._
+_Last updated: 2026-07-12._
 
 ## Status in one line
 
@@ -19,6 +19,20 @@ setup wizard, Settings window, stop hotkey, backups, export/import, **Conversati
 phrase scripts with a step-by-step highlight), **phrase versions** (alternate takes, randomized
 during a Conversation step); 446 tests green (97 Core + 97 Audio + 8 Wasapi + 6 Host + 238 App).
 Monetization exists as a full design (no code yet).
+
+## Latest work (2026-07-12)
+
+- **UX modernization workstream started** — audit
+  ([ux-layout-style-audit.md](docs/design/audits/ux-layout-style-audit.md)) confirmed most of
+  the owner's known-issue list was already fixed by the 2026-07-11 redesign, and found the real
+  remaining gaps: `SettingsWindow`'s "Done" hidden below scroll (B1), `MessageBox` breaking the
+  Fluent look everywhere else (E2), destructive buttons not using `Danger` (D1). Plan:
+  [ux-structural-fix-plan.md](docs/design/plans/ux-structural-fix-plan.md). New rulebook:
+  [wpf-ux-design-rules.md](docs/design/wpf-ux-design-rules.md). **Pass 2 (B1) shipped** —
+  `SettingsWindow`'s Done button moved to a fixed footer row; 238/238 App tests green. Built via
+  subagent-driven-development (implementer + reviewer + one fix round for a stray full-file
+  XAML reformat the implementer's `xstyler` run introduced). Remaining passes (button colors,
+  MainWindow resize check, `MessageBox`→`ContentDialog`) await approval, one window at a time.
 
 ## Latest work (2026-07-11)
 
