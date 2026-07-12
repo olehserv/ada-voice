@@ -27,6 +27,19 @@ public sealed class WindowScreenshotTests(WpfAppFixture app)
     public void MainWindow_board() =>
         Save(() => new MainWindow { DataContext = NewBoard() }, "main-board");
 
+    /// <summary>Structural-fix-plan Pass 3 (audit C1): the default 420x640 screenshot never proves
+    /// the search/filter row and phrase WrapPanel hold up at a typical desktop width. Same board
+    /// view-model, just a wider window and more phrases so the WrapPanel actually re-flows.</summary>
+    [ScreenshotFact]
+    public void MainWindow_board_wide()
+    {
+        Save(() =>
+        {
+            var window = new MainWindow { DataContext = NewWideBoard(), Width = 1366, Height = 780 };
+            return window;
+        }, "main-board-wide");
+    }
+
     [ScreenshotFact]
     public void SettingsWindow() =>
         Save(() => new SettingsWindow { DataContext = NewSettings() }, "settings");
@@ -120,6 +133,24 @@ public sealed class WindowScreenshotTests(WpfAppFixture app)
     private static BoardViewModel NewBoard()
     {
         var host = SampleHost();
+        var settingsHost = new FakeSettingsHost();
+        return new BoardViewModel(host, host, host, host, settingsHost,
+            new StatusViewModel(host), new SettingsViewModel(settingsHost));
+    }
+
+    private static BoardViewModel NewWideBoard()
+    {
+        var host = SampleHost();
+        host.Phrases =
+        [
+            .. host.Phrases,
+            new PhraseEntry { Id = "p-5", Title = "Booking a follow-up call", CategoryId = "c-greet", Tags = ["opening"], DurationMs = 4800 },
+            new PhraseEntry { Id = "p-6", Title = "Explaining the refund policy", CategoryId = Category.DefaultId, DurationMs = 6100 },
+            new PhraseEntry { Id = "p-7", Title = "Objection: need to think about it", CategoryId = Category.DefaultId, Tags = ["friendly"], DurationMs = 3900 },
+            new PhraseEntry { Id = "p-8", Title = "Escalating to a manager", CategoryId = "c-close", DurationMs = 2900 },
+            new PhraseEntry { Id = "p-9", Title = "Confirming the appointment time", CategoryId = "c-greet", DurationMs = 3300 },
+            new PhraseEntry { Id = "p-10", Title = "Wrapping up the call", CategoryId = "c-close", DurationMs = 2400 },
+        ];
         var settingsHost = new FakeSettingsHost();
         return new BoardViewModel(host, host, host, host, settingsHost,
             new StatusViewModel(host), new SettingsViewModel(settingsHost));
