@@ -87,7 +87,7 @@
             </Grid>
         </Border>
 
-        <ui:Button Content="Done" Appearance="Secondary" IsCancel="True"
+        <ui:Button Content="Done" Appearance="Success" IsCancel="True"
                    HorizontalAlignment="Right" Margin="{StaticResource Space.ButtonRow}" />
         </StackPanel>
     </Grid>
