@@ -207,3 +207,188 @@ Realistic expectations first: **a determined attacker can crack any desktop clie
 - [ ] Audit log written for every path in section 7; spot-check via `GET /api/admin/audit-logs`.
 - [ ] `/healthz` liveness and readiness wired into hosting monitors.
 - [ ] One full backup-restore drill completed before the first paying tenant.
+
+---
+
+## 14. Implementation pitfalls checklist
+
+This section is different from the threat model (section 1). The threat model says what an
+attacker can do. This list says what **we** are likely to get wrong while writing the code.
+Each item: the pitfall, why it happens, how to avoid it, and the roadmap phase where it bites.
+Grouped by area; the most expensive mistakes come first inside each group.
+
+### Auth and JWT (Phase 2)
+
+1. **Default clock skew silently extends token lifetime.**
+   Why: `TokenValidationParameters.ClockSkew` defaults to 5 minutes, so a "15-minute" access
+   token really lives 20 minutes.
+   Avoid: set `ClockSkew` explicitly (1 minute is enough server-side) and assert the real
+   lifetime in an integration test. Phase 2.
+2. **Accepting whatever `alg` the token header claims.**
+   Why: libraries validate with "the key you gave me" and some accept algorithm downgrades.
+   Avoid: set `ValidAlgorithms = ["ES256"]` on the server. In the client validator, hardcode
+   ES256 and reject `none` or any other header value before touching the payload. Phase 2 / 6.
+3. **Refresh rotation race logs out honest users.**
+   Why: the client fires two refreshes at once (startup refresh + a 401-triggered refresh).
+   The second call presents an already-rotated token and trips the family-revocation tripwire.
+   Avoid: client — one single-flight gate (a `SemaphoreSlim`) around refresh in
+   `LicenseClient`, so only one refresh is ever in flight. Server — do the rotation in one
+   transaction with a row lock (`SELECT ... FOR UPDATE` on the token row), so two concurrent
+   uses of the same token cannot both succeed. Phase 2 and 6.
+4. **User enumeration through different answers.**
+   Why: "wrong password" and "no such user" naturally take different code paths, with
+   different messages and different response times (hashing vs no hashing).
+   Avoid: one generic message for both; when the email is unknown, still hash a dummy
+   password so timing looks the same. Phase 2.
+5. **Lockout counter updated read-modify-write.**
+   Why: `failed_login_count++` in C# after a read lets parallel attempts skip the lockout.
+   Avoid: one conditional `UPDATE ... SET failed_login_count = failed_login_count + 1`
+   (or `ExecuteUpdate`) so the database does the counting. Phase 2.
+6. **Tokens and passwords leak into logs.**
+   Why: request logging middleware or Serilog destructuring (`{@Request}`) captures bodies;
+   login and refresh bodies contain passwords and refresh tokens.
+   Avoid: never log request bodies on `/api/auth/*`; never destructure auth DTOs; redact the
+   `Authorization` header in any HTTP logging handler (server and `LicenseClient`). Phase 2 / 6.
+
+### License tickets and signing keys (Phase 5)
+
+7. **Wrong ECDSA signature format in the client validator.**
+   Why: JOSE (JWS) uses the raw `R||S` concatenation (`IeeeP1363FixedFieldConcatenation` in
+   .NET), while much example code produces or expects DER. A mismatch either rejects every
+   valid ticket — or tempts you to write a lenient parser that accepts both.
+   Avoid: use `ECDsa.VerifyData(..., DSASignatureFormat.IeeeP1363FixedFieldConcatenation)`
+   exactly; round-trip test: server-signed ticket must verify in the client validator. Phase 5 / 6.
+8. **Failing open on an unknown `kid`.**
+   Why: "we could not find the key" feels like an infrastructure error, and error paths tend
+   to default to letting the user through.
+   Avoid: unknown `kid` → one JWKS refresh attempt → then treat as *no ticket* (fail closed).
+   The design already says this; write the test that proves it. Phase 6.
+9. **Missing master key falls back to a dev key.**
+   Why: developers add a fallback so the app starts locally without env vars, and the
+   fallback ships.
+   Avoid: no fallback. If the `signing_keys` master-key env var is missing or wrong, the API
+   must refuse to start with a clear error. Local dev sets the var via `docker-compose`/user
+   secrets. Phase 5.
+10. **A debug bypass in the validator ships to production.**
+    Why: `#if DEBUG return valid` (or a config flag) is very convenient during Phase 6 UI work.
+    Avoid: no bypass inside `LicenseTicketValidator` — ever. For UI work, use a locally
+    generated test key pair and real signed tickets (the test project already needs that
+    key-generation helper anyway). Phase 6.
+11. **Ticket issue is not one transaction.**
+    Why: sign → insert `license_tickets` → audit → return are four steps; a crash in the
+    middle leaves a valid signed ticket the server does not know about (revocation misses it).
+    Avoid: insert the `license_tickets` row and the audit row in one transaction, commit,
+    then return the JWS. Phase 5.
+
+### Client storage and DPAPI (Phase 6)
+
+12. **Plaintext hits the disk before protection.**
+    Why: the temp-then-rename pattern invites "write temp file, then protect".
+    Avoid: `ProtectedData.Protect` the bytes **in memory**, then atomically write the already
+    protected bytes. Plaintext never touches the disk. Phase 6.
+13. **One unhandled `CryptographicException` path crashes startup.**
+    Why: DPAPI unprotect fails on corrupt files, restored images, or a different Windows
+    user — and it is easy to wrap three of the four read sites and forget the fourth.
+    Avoid: put the catch inside `SecureStore.Read` itself: failure returns "no data" and
+    quarantines the file. Callers then follow the per-file recovery rules (re-login,
+    re-issue, re-activate). Phase 6.
+14. **The access token gets persisted "by accident".**
+    Why: binding a token to a serialized settings object, or logging it while debugging.
+    Avoid: the access token lives in one private field in `LicenseClient` and appears in no
+    DTO that is ever serialized. Phase 6.
+15. **A staging TLS shortcut ships.**
+    Why: staging has a self-signed cert, someone adds
+    `ServerCertificateCustomValidationCallback = ... => true` "temporarily".
+    Avoid: never add the callback, even behind a flag. Give staging a real certificate
+    (Let's Encrypt is free). Grep for the callback name in CI if needed. Phase 6.
+
+### Database and multi-tenancy (Phases 1, 3)
+
+16. **Global query filters do not cover writes or raw SQL.**
+    Why: EF Core filters apply to LINQ *queries* only. Inserts, `Attach`/`Update` by id, and
+    `FromSqlRaw` all skip them.
+    Avoid: `tenant_id` is set from the JWT claim in one shared place (interceptor or base
+    service), never from a request body; `FromSqlRaw`/`IgnoreQueryFilters` are forbidden
+    without review (grep for them in CI); load-then-modify instead of blind `Update`. Phase 1 / 3.
+17. **Background jobs meet tenant filters that expect a logged-in user.**
+    Why: the filter reads the tenant from a request-scoped provider; workers have no request,
+    so the filter silently matches nothing — or everything.
+    Avoid: decide the worker story in Phase 1: jobs iterate tenants explicitly and set the
+    tenant context per batch, or use `IgnoreQueryFilters()` deliberately with a comment and
+    an audit row. A test proves a job cannot read across tenants by accident. Phase 8.
+18. **String interpolation into raw SQL.**
+    Why: `FromSqlRaw($"... {name}")` compiles and works — and is SQL injection.
+    Avoid: `FromSqlInterpolated` (parameterizes automatically) on the rare reviewed raw-SQL
+    spots; never `FromSqlRaw` with interpolation. Phase 1+.
+19. **The seeded super_admin is the weakest door.**
+    Why: seed passwords end up as `admin123` in a compose file, or get logged at startup.
+    Avoid: password comes from an env var with no default; the seeder never logs it; first
+    login forces a change (the design already requires this — implement it, do not defer). Phase 1.
+
+### API layer (Phases 2–7)
+
+20. **problem+json leaks internals.**
+    Why: putting `ex.Message` into `detail` is the quickest way to debug — and it leaks
+    connection strings, table names, and stack fragments.
+    Avoid: one global exception handler: generic `detail` + `correlationId` to the caller,
+    full exception to Serilog only. Test: a forced 500 contains no exception text. Phase 2.
+21. **Idempotency check-then-insert race.**
+    Why: "SELECT key; if missing, do work; INSERT key" lets two concurrent retries both pass
+    the SELECT — double activation, double payment.
+    Avoid: INSERT the `idempotency_keys` row **first**, inside the same transaction as the
+    side effect, relying on the `(key, endpoint)` unique constraint; on unique violation,
+    read and replay the stored response (retry briefly if the first request is still running). Phase 4 / 7.
+22. **Per-IP rate limiting behind a reverse proxy.**
+    Why: behind nginx/Cloudflare every request has the proxy's IP — so one bucket for all
+    users (self-DoS), or, if you read `X-Forwarded-For` naively, attackers spoof unlimited
+    fresh IPs.
+    Avoid: configure `ForwardedHeadersMiddleware` with `KnownProxies`/`KnownNetworks` for the
+    real deployment topology; only then partition by client IP. Verify on staging, not in
+    production. Phase 2 / 10.
+23. **404 vs 403 leaks cross-tenant existence.**
+    Why: "entity exists but is not yours" naturally returns 403, which confirms existence.
+    Avoid: the design already says `not_found` for other tenants' entities — implement it as
+    one shared lookup helper (`GetOwnedOrNotFound`) so no endpoint hand-rolls the check. Phase 3.
+
+### Admin panel (Phase 9)
+
+24. **State changes in GET handlers.**
+    Why: a "Revoke" link (`<a href=...>`) calls `OnGet` — no antiforgery token protects GET,
+    so any web page the admin visits can trigger it (CSRF).
+    Avoid: every mutation is a `<form method="post">` with an `OnPost*` handler; Razor Pages
+    antiforgery stays at its default (on); never call `IgnoreAntiforgeryToken`. Phase 9.
+25. **The admin cookie also authenticates `/api/admin/...`.**
+    Why: with cookie + JWT schemes both registered, the default policy may accept either —
+    then a CSRF page can call the JSON API with the admin's cookie.
+    Avoid: bind schemes explicitly: `/admin` pages → cookie scheme; all `/api/...` →
+    JWT bearer scheme only. Set the cookie `Secure`, `HttpOnly`, `SameSite=Lax` or stricter.
+    Test: an `/api/admin/...` call with only a cookie gets 401. Phase 9.
+26. **A new admin page forgets `[Authorize]`.**
+    Why: per-page attributes rely on memory.
+    Avoid: one folder convention — `AuthorizeFolder("/admin", "SuperAdminOnly")` — so pages
+    are protected by location, not by discipline. A smoke test hits every page anonymously
+    and expects a redirect. Phase 9.
+
+### Billing and workers (Phases 7, 8, 12)
+
+27. **Mark-paid is not atomic.**
+    Why: payment row, invoice status, subscription extension, and audit row are four writes;
+    a crash between them corrupts billing truth (money received, service not extended).
+    Avoid: one transaction for all four; the idempotency key row commits with it. Phase 7.
+28. **Overlapping job runs double-process.**
+    Why: a slow hourly run overlaps the next tick; both move the same subscription.
+    Avoid: a Postgres advisory lock per job (`pg_try_advisory_lock`), taken at run start;
+    plus state+time-based selection so a re-run is a no-op (the design already requires
+    idempotent jobs — the lock covers the concurrent case). Phase 8.
+29. **Webhook signature compared with `==`.**
+    Why: string comparison short-circuits, which leaks timing; and it is tempting to parse
+    the payload first to find the invoice, then verify.
+    Avoid: verify the provider signature **before** deserializing anything, using
+    `CryptographicOperations.FixedTimeEquals`; only then read business data. Phase 12.
+
+### How to use this list
+
+- Turn each item that applies to a phase into a test or a code-review point when that phase
+  starts. Most items above name their test.
+- At the end of each phase, walk the group for that phase the same way section 13 is walked
+  before launch.
