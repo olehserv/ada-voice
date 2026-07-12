@@ -30,9 +30,14 @@ Monetization exists as a full design (no code yet).
   [ux-structural-fix-plan.md](docs/design/plans/ux-structural-fix-plan.md). New rulebook:
   [wpf-ux-design-rules.md](docs/design/wpf-ux-design-rules.md). **Pass 2 (B1) shipped** —
   `SettingsWindow`'s Done button moved to a fixed footer row; 238/238 App tests green. Built via
-  subagent-driven-development (implementer + reviewer + one fix round for a stray full-file
-  XAML reformat the implementer's `xstyler` run introduced). Remaining passes (button colors,
-  MainWindow resize check, `MessageBox`→`ContentDialog`) await approval, one window at a time.
+  subagent-driven-development: one fix round for a stray full-file XAML reformat the
+  implementer's `xstyler` run introduced, and a second fix round for a margin regression
+  (Done ended up flush against the window edges after losing its parent's ambient margin) that
+  the automated reviewer missed but a screenshot caught. **Pass 4 (D1/D2) shipped** — Danger
+  appearance on 4 destructive buttons (category/conversation Delete, phrase Remove, version ✕)
+  across 3 dialogs, `IsDefault` added to Recorder's Save; clean on first review, visually
+  confirmed. Remaining passes (MainWindow resize check, `MessageBox`→`ContentDialog`) await
+  approval, one window at a time.
 
 ## Latest work (2026-07-11)
 
