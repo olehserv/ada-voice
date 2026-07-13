@@ -1,3 +1,4 @@
+using AdaVoice.Server.Domain.Abstractions;
 using AdaVoice.Server.Domain.Enums;
 
 namespace AdaVoice.Server.Domain.Entities;
@@ -5,7 +6,7 @@ namespace AdaVoice.Server.Domain.Entities;
 /// <summary>One desktop install of a user. Id is the ticket's <c>deviceActivationId</c>.
 /// Unique per (tenant_id, device_id); re-activation updates the row.
 /// See docs/monetize/database-design.md §2 "device_activations".</summary>
-public class DeviceActivation
+public class DeviceActivation : IHasTimestamps, IHasTenant
 {
     public Guid Id { get; set; }
     public Guid TenantId { get; set; }

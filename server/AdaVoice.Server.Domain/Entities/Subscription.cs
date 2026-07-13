@@ -1,3 +1,4 @@
+using AdaVoice.Server.Domain.Abstractions;
 using AdaVoice.Server.Domain.Enums;
 
 namespace AdaVoice.Server.Domain.Entities;
@@ -5,7 +6,7 @@ namespace AdaVoice.Server.Domain.Entities;
 /// <summary>Links a tenant to a plan for one billing period. One active subscription
 /// per tenant (enforced by a partial unique index in Task 2).
 /// See docs/monetize/database-design.md §2 "subscriptions".</summary>
-public class Subscription
+public class Subscription : IHasTimestamps, IHasTenant
 {
     public Guid Id { get; set; }
     public Guid TenantId { get; set; }

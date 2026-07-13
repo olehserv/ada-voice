@@ -1,10 +1,11 @@
+using AdaVoice.Server.Domain.Abstractions;
 using AdaVoice.Server.Domain.Enums;
 
 namespace AdaVoice.Server.Domain.Entities;
 
 /// <summary>A customer company. Owns users, subscriptions, devices, invoices, and usage.
 /// See docs/monetize/database-design.md §2 "tenants".</summary>
-public class Tenant
+public class Tenant : IHasTimestamps
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;

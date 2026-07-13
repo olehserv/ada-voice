@@ -1,10 +1,11 @@
+using AdaVoice.Server.Domain.Abstractions;
 using AdaVoice.Server.Domain.Enums;
 
 namespace AdaVoice.Server.Domain.Entities;
 
 /// <summary>A JWS signing key for license tickets. Standalone table, no FKs.
 /// See docs/monetize/database-design.md §2 "signing_keys".</summary>
-public class SigningKey
+public class SigningKey : IHasTimestamps
 {
     public Guid Id { get; set; }
 

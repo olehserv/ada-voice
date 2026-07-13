@@ -1,9 +1,10 @@
+using AdaVoice.Server.Domain.Abstractions;
 using AdaVoice.Server.Domain.Enums;
 
 namespace AdaVoice.Server.Domain.Entities;
 
 /// <summary>Bills a subscription period. See docs/monetize/database-design.md §2 "invoices".</summary>
-public class Invoice
+public class Invoice : IHasTimestamps, IHasTenant
 {
     public Guid Id { get; set; }
     public Guid TenantId { get; set; }

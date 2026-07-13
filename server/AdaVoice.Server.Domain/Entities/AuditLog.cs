@@ -1,10 +1,12 @@
+using AdaVoice.Server.Domain.Abstractions;
 using AdaVoice.Server.Domain.Enums;
 
 namespace AdaVoice.Server.Domain.Entities;
 
 /// <summary>Append-only audit record; no UPDATE/DELETE from app code. No UpdatedAt —
-/// rows never change. See docs/monetize/database-design.md §2 "audit_logs".</summary>
-public class AuditLog
+/// rows never change. Implements only <see cref="IHasCreatedAt"/> (not IHasTenant): its
+/// tenant is nullable for system rows. See docs/monetize/database-design.md §2 "audit_logs".</summary>
+public class AuditLog : IHasCreatedAt
 {
     public Guid Id { get; set; }
 

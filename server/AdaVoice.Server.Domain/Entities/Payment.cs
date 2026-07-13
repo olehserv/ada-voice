@@ -1,9 +1,10 @@
+using AdaVoice.Server.Domain.Abstractions;
 using AdaVoice.Server.Domain.Enums;
 
 namespace AdaVoice.Server.Domain.Entities;
 
 /// <summary>Settles an invoice. See docs/monetize/database-design.md §2 "payments".</summary>
-public class Payment
+public class Payment : IHasTimestamps
 {
     public Guid Id { get; set; }
     public Guid InvoiceId { get; set; }

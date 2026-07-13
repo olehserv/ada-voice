@@ -1,8 +1,10 @@
+using AdaVoice.Server.Domain.Abstractions;
+
 namespace AdaVoice.Server.Domain.Entities;
 
 /// <summary>Supports refresh-token rotation for a user's login session.
 /// See docs/monetize/database-design.md §2 "refresh_tokens".</summary>
-public class RefreshToken
+public class RefreshToken : IHasTimestamps
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }

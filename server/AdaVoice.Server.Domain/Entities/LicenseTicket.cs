@@ -1,10 +1,11 @@
+using AdaVoice.Server.Domain.Abstractions;
 using AdaVoice.Server.Domain.Enums;
 
 namespace AdaVoice.Server.Domain.Entities;
 
 /// <summary>One issued JWS ticket for a device activation. Primary key is <see cref="Jti"/>
 /// (the ticket's jti claim), not Id. See docs/monetize/database-design.md §2 "license_tickets".</summary>
-public class LicenseTicket
+public class LicenseTicket : IHasTimestamps
 {
     public Guid Jti { get; set; }
     public Guid DeviceActivationId { get; set; }

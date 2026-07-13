@@ -1,8 +1,10 @@
+using AdaVoice.Server.Domain.Abstractions;
+
 namespace AdaVoice.Server.Domain.Entities;
 
 /// <summary>Append-only usage history for a device activation.
 /// See docs/monetize/database-design.md §2 "usage_events".</summary>
-public class UsageEvent
+public class UsageEvent : IHasTimestamps, IHasTenant
 {
     public Guid Id { get; set; }
     public Guid TenantId { get; set; }

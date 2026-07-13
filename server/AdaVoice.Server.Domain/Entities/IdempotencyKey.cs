@@ -1,8 +1,10 @@
+using AdaVoice.Server.Domain.Abstractions;
+
 namespace AdaVoice.Server.Domain.Entities;
 
 /// <summary>Supports safe request retries. Standalone table, no FKs. No UpdatedAt.
 /// See docs/monetize/database-design.md §2 "idempotency_keys".</summary>
-public class IdempotencyKey
+public class IdempotencyKey : IHasCreatedAt
 {
     public Guid Id { get; set; }
 

@@ -25,6 +25,14 @@
     <!-- WPF-UI: Fluent (Windows 11) theme + controls for the Board (design 09) -->
     <PackageVersion Include="WPF-UI" Version="4.3.0" />
 
+    <!-- Server: EF Core 10 + PostgreSQL (Npgsql). Persistence lives in Infrastructure. -->
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageVersion Include="EFCore.NamingConventions" Version="10.0.1" />
+    <!-- PasswordHasher for the Task-4 seeder; referenced now so Infrastructure is ready. -->
+    <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="10.0.9" />
+    <!-- Design-time only (dotnet ef); added to the Api with PrivateAssets=all. -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9" />
+
     <!-- Test stack -->
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

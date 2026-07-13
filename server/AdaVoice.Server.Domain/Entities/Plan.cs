@@ -1,8 +1,10 @@
+using AdaVoice.Server.Domain.Abstractions;
+
 namespace AdaVoice.Server.Domain.Entities;
 
 /// <summary>A global price/limit template that subscriptions link a tenant to.
 /// See docs/monetize/database-design.md §2 "plans".</summary>
-public class Plan
+public class Plan : IHasTimestamps
 {
     public Guid Id { get; set; }
     public string Code { get; set; } = string.Empty;

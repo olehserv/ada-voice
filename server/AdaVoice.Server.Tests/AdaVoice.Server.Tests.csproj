@@ -14,6 +14,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AdaVoice.Server.Domain\AdaVoice.Server.Domain.csproj" />
+    <!-- Infrastructure brings Npgsql/EF Core transitively for the DB-less model tests. -->
+    <ProjectReference Include="..\AdaVoice.Server.Infrastructure\AdaVoice.Server.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

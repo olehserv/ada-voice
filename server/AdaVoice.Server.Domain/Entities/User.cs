@@ -1,10 +1,11 @@
+using AdaVoice.Server.Domain.Abstractions;
 using AdaVoice.Server.Domain.Enums;
 
 namespace AdaVoice.Server.Domain.Entities;
 
 /// <summary>A user belonging to one tenant. Super admins live in a system tenant.
 /// See docs/monetize/database-design.md §2 "users".</summary>
-public class User
+public class User : IHasTimestamps, IHasTenant
 {
     public Guid Id { get; set; }
     public Guid TenantId { get; set; }
