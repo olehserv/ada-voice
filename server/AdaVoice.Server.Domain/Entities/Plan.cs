@@ -14,7 +14,7 @@ public class Plan : IHasTimestamps
     public int MaxPhrases { get; set; }
 
     /// <summary>Raw JSON feature codes, e.g. ["phrase_library","hotkeys"].</summary>
-    public string Features { get; set; } = string.Empty;
+    public string Features { get; set; } = "[]";
 
     public int TrialGraceDays { get; set; }
     public int PaidGraceDays { get; set; }

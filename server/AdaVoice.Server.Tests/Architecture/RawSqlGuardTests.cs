@@ -14,7 +14,10 @@ namespace AdaVoice.Server.Tests.Architecture;
 // AdaVoice.Server.Tests project is excluded from the scan.
 public class RawSqlGuardTests
 {
-    private static readonly string[] ForbiddenSubstrings = { "FromSqlRaw(", ".IgnoreQueryFilters(" };
+    private static readonly string[] ForbiddenSubstrings =
+    {
+        "FromSqlRaw(", ".IgnoreQueryFilters(", "ExecuteSqlRaw(", "ExecuteSqlRawAsync(", "SqlQueryRaw(",
+    };
     private const string Marker = "tenant-scan-ok:";
     private const int MarkerWindowLines = 6;
     private const string ExcludedTestsProjectFolder = "AdaVoice.Server.Tests";
