@@ -10,12 +10,15 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
+    <!-- WebApplicationFactory<Program> for in-process Api tests. -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AdaVoice.Server.Domain\AdaVoice.Server.Domain.csproj" />
     <!-- Infrastructure brings Npgsql/EF Core transitively for the DB-less model tests. -->
     <ProjectReference Include="..\AdaVoice.Server.Infrastructure\AdaVoice.Server.Infrastructure.csproj" />
+    <ProjectReference Include="..\AdaVoice.Server.Api\AdaVoice.Server.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>
