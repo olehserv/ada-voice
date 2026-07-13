@@ -79,7 +79,7 @@ Concrete sub-questions to bring to the lawyer:
 |---|---|---|---|---|
 | SEC-01 | External security review of auth + licensing before pilot: pen-test, or at least an independent expert review | Single developer, no second pair of eyes. Auth (JWT ES256, refresh rotation), license tickets (JWS), DPAPI storage, and webhook signature checks are exactly the code where a quiet mistake is expensive. | Owner (budget) + external reviewer | Phase 10 (security hardening; gate before the Phase 11 pilot). Scope minimum: `/api/auth/*`, `/api/license/*`, `/api/devices/*`, ticket validation in `AdaVoice.Licensing`. |
 | SEC-02 | Design gap: `idempotency_keys` is unique on `(key, endpoint)` only, with no tenant/user scope | The stored response is replayed to whoever presents the same key. A malicious client that guesses or reuses another tenant's key on the same endpoint would receive that tenant's stored response — a cross-tenant data leak. Fix: scope the unique key to the caller, e.g. unique `(user_id, key, endpoint)`, and update `api-design.md` section 4 + `database-design.md`. | Dev (design fix, no external decider) | Phase 4 (first idempotent endpoint). |
-| SEC-03 | Design contradiction: lockout response reveals the account exists | `api-design.md` (login notes) says lockout returns `403` with a `lockedUntil` extension, but `security-design.md` section 8 says lockout must look identical to a wrong password to prevent user enumeration. Both cannot hold. Recommendation: keep the generic message for the anonymous login endpoint; show `lockedUntil` only in the admin panel. Update whichever doc loses. | Dev (design fix) | Phase 2 (login/lockout implementation). |
+| SEC-03 | Design contradiction: lockout response reveals the account exists | `api-design.md` (login notes) says lockout returns `403` with a `lockedUntil` extension, but `security-design.md` section 8 says lockout must look identical to a wrong password to prevent user enumeration. Both cannot hold. Recommendation: keep the generic message for the anonymous login endpoint; show `lockedUntil` only in the admin panel. Update whichever doc loses. | Dev (design fix) | ~~Phase 2 (login/lockout implementation)~~ **Resolved 2026-07-13 — see §9.** |
 
 Suggested review checklist (minimum scope):
 
@@ -134,5 +134,6 @@ Move rows here as decisions land, newest first, in this form:
 
 | Date | ID | Decision (one line) |
 |---|---|---|
+| 2026-07-13 | SEC-03 | Lockout is invisible on the public login endpoint: a locked account returns the **same generic response as a wrong password** (no `lockedUntil`), for user-enumeration defence. `lockedUntil` is shown only in the admin panel. `security-design.md` §8 wins; `api-design.md` login notes updated. Owner: Oleh. Unblocks Phase 2. |
 | 2026-07-12 | OQ-02 | Phase 0 gate: domain / API base URL **deferred** with OQ-01. Client keeps the base URL replaceable. Owner: Oleh. Needed by Phase 6 (staging URL), final by Phase 11. |
 | 2026-07-12 | OQ-01 | Phase 0 gate: hosting location/provider **deferred**. MVP Phases 1–10 run on local Docker Postgres 16 (`docker-compose.yml`). Owner: Oleh. Revisit at Phase 11 (production deploy). |

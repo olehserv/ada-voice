@@ -64,7 +64,9 @@ Response `200`:
 }
 ```
 
-Notes: `deviceId` is optional (admin panel logs in without it); when present the refresh token is bound to the device activation. After 10 failed logins the account locks for 15 minutes (`403 forbidden` with `lockedUntil` extension) and the lockout is audit-logged.
+Notes: `deviceId` is optional (admin panel logs in without it); when present the refresh token is bound to the device activation. After 10 failed logins the account locks for 15 minutes, and the lockout is audit-logged.
+
+**Lockout is invisible on the public login endpoint (SEC-03, resolved 2026-07-13).** A locked account returns the *same* generic authentication-failed response as a wrong password — the response never says "locked" and never carries a `lockedUntil` field. This prevents user enumeration (an attacker must not be able to tell a real, locked account from a non-existent one); see [security-design.md §8](security-design.md#8-rate-limiting-and-lockout). The `lockedUntil` timestamp is shown only in the authenticated admin panel (a trusted screen), never on the anonymous endpoint.
 
 `POST /api/auth/refresh` — request:
 

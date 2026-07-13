@@ -94,7 +94,9 @@ EF Core schema, multi-tenant query filters, initial migration, and idempotent se
   #16/#18/#19 covered by tests + a source-scan guard; #17 (worker tenant context) recorded as a
   decision, test lands Phase 8. Plan:
   [2026-07-13-monetize-phase-1.md](docs/superpowers/plans/2026-07-13-monetize-phase-1.md).
-  Next: Phase 2 (Auth) — blocked by SEC-03 (lockout enumeration), which must be resolved first.
+  Next: Phase 2 (Auth), now unblocked — SEC-03 (lockout enumeration) resolved 2026-07-13:
+  the public login endpoint returns the same generic response as a wrong password (no
+  `lockedUntil`); `lockedUntil` shows only in the admin panel (see open-questions §9).
   Deferred to Phase 2: the interceptor stamps tenant_id on inserts only; write-path (Attach/
   load-then-modify) tenant enforcement must be added before any write endpoint ships.
 
@@ -314,12 +316,13 @@ confirm the step highlight follows correctly, delete a phrase that's in an activ
 4. **Localization retrofit (UA/PL/EN)** — last, after slice 3's strings exist. All UI strings
    so far are English-only; a `.resx` retrofit is known debt.
 
-Separately, **monetization**: Phases 0 and 1 are done. Phase 2 (Auth) is next and is **blocked by
-SEC-03** (lockout enumeration) — resolve that open question before coding Phase 2. OQ-12/OC-06
-(device vs per-seat limits) must be answered before Phase 4 (device activation).
+Separately, **monetization**: Phases 0 and 1 are done. Phase 2 (Auth) is next and is **unblocked**
+— SEC-03 (lockout enumeration) was resolved 2026-07-13 (generic login response; `lockedUntil`
+in the admin panel only). OQ-12/OC-06 (device vs per-seat limits) must be answered before Phase 4
+(device activation).
 
 **Monetization** — next step is Phase 2 (Auth) of the
-[monetize roadmap](docs/monetize/implementation-roadmap.md), after resolving SEC-03.
+[monetize roadmap](docs/monetize/implementation-roadmap.md).
 
 ## Open follow-ups (named so they're not lost)
 
