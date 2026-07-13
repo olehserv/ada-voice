@@ -30,5 +30,40 @@ jobs:
       - name: Build
         run: dotnet build AdaVoice.slnx --no-restore --configuration Release
 
+      # Integration-tagged tests need a live PostgreSQL and run in the server-tests job
+      # below (Linux). The Windows runner has no Postgres, so exclude them here.
       - name: Test
-        run: dotnet test AdaVoice.slnx --no-build --configuration Release --verbosity normal
+        run: dotnet test AdaVoice.slnx --no-build --configuration Release --verbosity normal --filter "Category!=Integration"
+
+  # The monetization server (net10.0, no Windows deps) is cross-platform. Its integration
+  # tests exercise the EF Core schema, tenant query filters, and seeder against a real
+  # PostgreSQL 16 — the same engine used in production and in local docker-compose.
+  server-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: adavoice
+          POSTGRES_USER: adavoice
+          # Dev/CI throwaway credential — matches docker-compose.yml. Not a secret.
+          POSTGRES_PASSWORD: adavoice_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U adavoice"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test server (integration, against PostgreSQL 16)
+        env:
+          ADAVOICE_DB_CONNECTION: "Host=localhost;Port=5432;Database=adavoice;Username=adavoice;Password=adavoice_dev"
+        run: dotnet test server/AdaVoice.Server.Tests/AdaVoice.Server.Tests.csproj --configuration Release
