@@ -18,8 +18,9 @@ _Last updated: 2026-07-12._
 setup wizard, Settings window, stop hotkey, backups, export/import, **Conversations** (ordered
 phrase scripts with a step-by-step highlight), **phrase versions** (alternate takes, randomized
 during a Conversation step); 465 tests passed + 16 skipped across 6 projects (104 Core + 98 Audio +
-8 Wasapi + 8 Host + 241 App + 6 Server). Monetization: Phase 0 (server scaffold) shipped, no
-domain code yet.
+8 Wasapi + 8 Host + 241 App + 26 Server DB-less) plus 9 server integration tests against
+PostgreSQL 16. Monetization: Phase 1 (domain model + database) shipped — the full 13-table
+EF Core schema, multi-tenant query filters, initial migration, and idempotent seeder.
 
 ## Latest work (2026-07-12)
 
@@ -79,7 +80,23 @@ domain code yet.
   `docker-compose.yml` (loopback-bound). Hosting/API-URL (OQ-01/OQ-02) deferred to Phase 11,
   owner Oleh, 2026-07-12 — see [open-questions §9](docs/monetize/open-questions.md#9-resolved).
   Plan: [2026-07-12-monetize-phase-0.md](docs/superpowers/plans/2026-07-12-monetize-phase-0.md).
-  Next: Phase 1 (domain model + database).
+- **Monetization Phase 1 (domain model + database) shipped (2026-07-13).** 13 EF Core entities
+  in `AdaVoice.Server.Domain` (persistence-ignorant POCOs + 10 status enums) and the persistence
+  layer in `AdaVoice.Server.Infrastructure`: `AdaVoiceDbContext`, per-entity configs (snake_case,
+  UUID v7 keys, `timestamptz` audit columns, `text`+CHECK statuses via value converters, FK
+  constraints, citext-based case-insensitive email uniqueness, all §3 indexes), `ITenantProvider`
+  global query filters on the 5 tenant-owned tables, a `SaveChanges` interceptor that stamps
+  timestamps and tenant_id in one shared place (§14 #16), the `InitialCreate` migration, and an
+  idempotent seeder (system tenant + default plan + super_admin, password from env var, never
+  logged — §14 #19). Tests: real-PostgreSQL-16 integration (schema, tenant isolation, seeder) run
+  in a new CI ubuntu job; DB-less model/guard/enum tests run on Windows. 4 packages added (EF Core
+  10 line). `Program.cs` stays inert (no startup migrate/seed wiring this phase). §14 pitfalls
+  #16/#18/#19 covered by tests + a source-scan guard; #17 (worker tenant context) recorded as a
+  decision, test lands Phase 8. Plan:
+  [2026-07-13-monetize-phase-1.md](docs/superpowers/plans/2026-07-13-monetize-phase-1.md).
+  Next: Phase 2 (Auth) — blocked by SEC-03 (lockout enumeration), which must be resolved first.
+  Deferred to Phase 2: the interceptor stamps tenant_id on inserts only; write-path (Attach/
+  load-then-modify) tenant enforcement must be added before any write endpoint ships.
 
 ## Latest work (2026-07-11)
 
@@ -297,12 +314,12 @@ confirm the step highlight follows correctly, delete a phrase that's in an activ
 4. **Localization retrofit (UA/PL/EN)** — last, after slice 3's strings exist. All UI strings
    so far are English-only; a `.resx` retrofit is known debt.
 
-Separately, **monetization**: Phase 0 (repo scaffold) is done. Phase 1 (domain model + database)
-is next and is **not** blocked. OQ-12/OC-06 (device vs per-seat limits) must be answered before
-Phase 4 (device activation), not before Phase 0/1.
+Separately, **monetization**: Phases 0 and 1 are done. Phase 2 (Auth) is next and is **blocked by
+SEC-03** (lockout enumeration) — resolve that open question before coding Phase 2. OQ-12/OC-06
+(device vs per-seat limits) must be answered before Phase 4 (device activation).
 
-**Monetization** — next step is Phase 1 of the
-[monetize roadmap](docs/monetize/implementation-roadmap.md) (domain model + database).
+**Monetization** — next step is Phase 2 (Auth) of the
+[monetize roadmap](docs/monetize/implementation-roadmap.md), after resolving SEC-03.
 
 ## Open follow-ups (named so they're not lost)
 
