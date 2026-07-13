@@ -14,5 +14,13 @@ internal sealed class UsageEventConfiguration : IEntityTypeConfiguration<UsageEv
 
         // Usage summaries per period.
         builder.HasIndex(x => new { x.TenantId, x.OccurredAt });
+
+        // FKs → tenants, users, device_activations (all required). No-navigation; conservative Restrict.
+        builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<User>().WithMany().HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<DeviceActivation>().WithMany().HasForeignKey(x => x.DeviceActivationId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

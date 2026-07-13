@@ -42,6 +42,10 @@ public sealed class AdaVoiceDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // citext gives case-insensitive text columns (users.email), so the unique index
+        // on (tenant_id, email) enforces §3's unique (tenant_id, lower(email)) with no raw SQL.
+        modelBuilder.HasPostgresExtension("citext");
+
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AdaVoiceDbContext).Assembly);
         ApplyTenantQueryFilters(modelBuilder);
     }

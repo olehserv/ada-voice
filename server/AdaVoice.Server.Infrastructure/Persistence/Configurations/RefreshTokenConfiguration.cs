@@ -13,5 +13,19 @@ internal sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refre
         // Hot lookup on every refresh; family index supports family revocation.
         builder.HasIndex(x => x.TokenHash).IsUnique();
         builder.HasIndex(x => x.FamilyId);
+
+        // FK → users (required). No-navigation overload; conservative Restrict.
+        builder.HasOne<User>().WithMany().HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // FK → device_activations, nullable (admin-panel logins have no device).
+        builder.HasOne<DeviceActivation>().WithMany().HasForeignKey(x => x.DeviceActivationId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Self-referential FK → refresh_tokens, nullable (rotation link). Restrict.
+        builder.HasOne<RefreshToken>().WithMany().HasForeignKey(x => x.ReplacedById)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

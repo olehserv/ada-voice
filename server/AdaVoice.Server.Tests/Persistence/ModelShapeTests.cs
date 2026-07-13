@@ -46,4 +46,21 @@ public class ModelShapeTests
         var mapped = ctx.Model.GetEntityTypes().Count();
         Assert.Equal(13, mapped);
     }
+
+    // Fix 1 proof: the no-navigation FK relationships were wired. DB-less: inspects the model only.
+    [Fact]
+    public void User_has_a_foreign_key_to_Tenant()
+    {
+        using var ctx = TestContext.Create();
+        var fks = ctx.Model.FindEntityType(typeof(User))!.GetForeignKeys();
+        Assert.Contains(fks, fk => fk.PrincipalEntityType.ClrType == typeof(Tenant));
+    }
+
+    [Fact]
+    public void RefreshToken_has_a_self_referential_foreign_key()
+    {
+        using var ctx = TestContext.Create();
+        var fks = ctx.Model.FindEntityType(typeof(RefreshToken))!.GetForeignKeys();
+        Assert.Contains(fks, fk => fk.PrincipalEntityType.ClrType == typeof(RefreshToken));
+    }
 }

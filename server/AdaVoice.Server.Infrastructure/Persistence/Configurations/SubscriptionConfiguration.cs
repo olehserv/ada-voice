@@ -19,5 +19,11 @@ internal sealed class SubscriptionConfiguration : IEntityTypeConfiguration<Subsc
         builder.HasIndex(x => x.TenantId)
             .IsUnique()
             .HasFilter("status NOT IN ('cancelled', 'expired')");
+
+        // FKs → tenants, plans (both required). No-navigation overload; conservative Restrict.
+        builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Plan>().WithMany().HasForeignKey(x => x.PlanId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

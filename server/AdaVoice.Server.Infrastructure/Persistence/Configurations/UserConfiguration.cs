@@ -19,9 +19,14 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
             t.HasCheckConstraint("ck_users_status", "status IN ('active', 'disabled')");
         });
 
-        // DEVIATION (see task report): §3 asks for unique (tenant_id, lower(email)), but EF/Npgsql
-        // cannot express a lower() expression index in the model. We enforce uniqueness on
-        // (tenant_id, email) — case-SENSITIVE for now. Revisit if case-insensitive login matters.
+        // Email is citext (see AdaVoiceDbContext.OnModelCreating), so this unique index on
+        // (tenant_id, email) compares case-insensitively — it enforces §3's
+        // unique (tenant_id, lower(email)) without a raw lower() expression index.
+        builder.Property(x => x.Email).HasColumnType("citext");
         builder.HasIndex(x => new { x.TenantId, x.Email }).IsUnique();
+
+        // FK → tenants (required). No-navigation overload keeps the POCO persistence-ignorant.
+        builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

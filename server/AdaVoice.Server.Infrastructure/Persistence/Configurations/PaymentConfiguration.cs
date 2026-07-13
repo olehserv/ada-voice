@@ -21,5 +21,14 @@ internal sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.HasIndex(x => new { x.Provider, x.ProviderTxId })
             .IsUnique()
             .HasFilter("provider_tx_id IS NOT NULL");
+
+        // FK → invoices (required). No-navigation overload; conservative Restrict.
+        builder.HasOne<Invoice>().WithMany().HasForeignKey(x => x.InvoiceId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // FK → users, nullable: marked_by_user_id is set only for manual "mark paid".
+        builder.HasOne<User>().WithMany().HasForeignKey(x => x.MarkedByUserId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

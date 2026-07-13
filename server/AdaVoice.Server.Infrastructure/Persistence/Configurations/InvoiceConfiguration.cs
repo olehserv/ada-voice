@@ -20,5 +20,11 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
 
         // Overdue/reminder jobs scan issued invoices past due.
         builder.HasIndex(x => new { x.Status, x.DueAt });
+
+        // FKs → tenants, subscriptions (both required). No-navigation overload; conservative Restrict.
+        builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Subscription>().WithMany().HasForeignKey(x => x.SubscriptionId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

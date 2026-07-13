@@ -19,5 +19,9 @@ internal sealed class LicenseTicketConfiguration : IEntityTypeConfiguration<Lice
         // TicketCleanupJob range scan; revocation checks by activation + status.
         builder.HasIndex(x => x.ExpiresAt);
         builder.HasIndex(x => new { x.DeviceActivationId, x.Status });
+
+        // FK → device_activations (required). No-navigation overload; conservative Restrict.
+        builder.HasOne<DeviceActivation>().WithMany().HasForeignKey(x => x.DeviceActivationId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

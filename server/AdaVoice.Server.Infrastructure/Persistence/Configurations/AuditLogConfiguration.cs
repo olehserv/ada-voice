@@ -19,5 +19,14 @@ internal sealed class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         // Admin audit screens filter by tenant + date. No global query filter here
         // (tenant is nullable for system rows; scoping is done explicitly at query sites).
         builder.HasIndex(x => new { x.TenantId, x.CreatedAt });
+
+        // FKs → tenants, users; both nullable (system-wide actions / system jobs have no actor).
+        // No-navigation overload; conservative Restrict.
+        builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<User>().WithMany().HasForeignKey(x => x.ActorUserId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -19,5 +19,11 @@ internal sealed class DeviceActivationConfiguration : IEntityTypeConfiguration<D
 
         // Device-limit check counts active devices per tenant.
         builder.HasIndex(x => new { x.TenantId, x.Status });
+
+        // FKs → tenants, users (both required). No-navigation overload; conservative Restrict.
+        builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<User>().WithMany().HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
