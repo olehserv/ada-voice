@@ -14,3 +14,9 @@ public sealed record TokenResponse(
 
 /// <summary>Body for refresh and logout: the opaque refresh token.</summary>
 public sealed record RefreshRequest(string RefreshToken);
+
+/// <summary>Body for change-password.</summary>
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+
+/// <summary>The current user, from GET /api/auth/me.</summary>
+public sealed record MeResponse(Guid UserId, string Email, string Role, Guid TenantId, string? DisplayName);

@@ -26,6 +26,8 @@ public static class AuthEndpoints
         group.MapPost("/login", LoginAsync).AllowAnonymous();
         group.MapPost("/refresh", RefreshAsync).AllowAnonymous();
         group.MapPost("/logout", LogoutAsync).RequireAuthorization();
+        group.MapGet("/me", MeAsync).RequireAuthorization();
+        group.MapPost("/change-password", ChangePasswordAsync).RequireAuthorization();
     }
 
     private static async Task<IResult> LoginAsync(
@@ -155,6 +157,71 @@ public static class AuthEndpoints
         var tenantId = ParseGuidClaim(principal, "tenant_id");
         await audit.WriteAsync(
             "auth.logout", "user", userId, tenantId, userId, ActorType.User, ip, null, ct);
+
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> MeAsync(
+        ClaimsPrincipal principal,
+        IUserAuthenticationService users,
+        ICorrelationContext correlation,
+        CancellationToken ct)
+    {
+        var userId = ParseGuidClaim(principal, "sub");
+        if (userId is null)
+        {
+            return AuthProblems.Unauthorized(correlation);
+        }
+
+        var user = await users.FindByIdAsync(userId.Value, ct);
+        if (user is null)
+        {
+            // Token is valid but the user is gone/other-tenant — no longer a valid principal.
+            return AuthProblems.Unauthorized(correlation);
+        }
+
+        return Results.Ok(new MeResponse(
+            user.Id, user.Email, RoleClaimValue.For(user.Role), user.TenantId, user.DisplayName));
+    }
+
+    private static async Task<IResult> ChangePasswordAsync(
+        ChangePasswordRequest request,
+        HttpContext http,
+        ClaimsPrincipal principal,
+        IUserAuthenticationService users,
+        IRefreshTokenService refreshTokens,
+        IPasswordHasher<User> hasher,
+        IAuditWriter audit,
+        ICorrelationContext correlation,
+        CancellationToken ct)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var ip = http.Connection.RemoteIpAddress?.ToString();
+
+        var userId = ParseGuidClaim(principal, "sub");
+        if (userId is null)
+        {
+            return AuthProblems.Unauthorized(correlation);
+        }
+
+        var user = await users.FindByIdAsync(userId.Value, ct);
+        if (user is null)
+        {
+            return AuthProblems.Unauthorized(correlation);
+        }
+
+        var verification = hasher.VerifyHashedPassword(user, user.PasswordHash, request.CurrentPassword);
+        if (verification == PasswordVerificationResult.Failed)
+        {
+            return AuthProblems.InvalidCredentials(correlation);
+        }
+
+        var newHash = hasher.HashPassword(user, request.NewPassword);
+        await users.SetPasswordHashAsync(user.Id, newHash, now, ct);
+        // Force re-login everywhere: every existing refresh token for this user is revoked.
+        await refreshTokens.RevokeAllForUserAsync(user.Id, now, ct);
+        await audit.WriteAsync(
+            "auth.password_changed", "user", user.Id, user.TenantId, user.Id, ActorType.User, ip, null, ct);
 
         return Results.NoContent();
     }

@@ -28,4 +28,12 @@ public interface IUserAuthenticationService
 
     /// <summary>True when the user is currently within a lockout window.</summary>
     bool IsLocked(User user, DateTimeOffset now);
+
+    /// <summary>Loads the user by id within the CURRENT tenant (respects the query filter) —
+    /// for authenticated endpoints (/me, change-password) where the JWT supplies the tenant, so
+    /// a caller can only ever reach their own tenant's row.</summary>
+    Task<User?> FindByIdAsync(Guid userId, CancellationToken ct);
+
+    /// <summary>Sets a new password hash for the user (within the current tenant).</summary>
+    Task SetPasswordHashAsync(Guid userId, string passwordHash, DateTimeOffset now, CancellationToken ct);
 }

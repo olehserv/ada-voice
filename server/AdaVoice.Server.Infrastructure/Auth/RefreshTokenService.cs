@@ -122,6 +122,12 @@ public sealed class RefreshTokenService : IRefreshTokenService
         await RevokeFamilyAsync(row.FamilyId, now, ct);
     }
 
+    public Task RevokeAllForUserAsync(Guid userId, DateTimeOffset now, CancellationToken ct) =>
+        _db.RefreshTokens
+            .Where(r => r.UserId == userId && r.RevokedAt == null)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(r => r.RevokedAt, now).SetProperty(r => r.UpdatedAt, now), ct);
+
     private Task RevokeFamilyAsync(Guid familyId, DateTimeOffset now, CancellationToken ct) =>
         _db.RefreshTokens
             .Where(r => r.FamilyId == familyId && r.RevokedAt == null)

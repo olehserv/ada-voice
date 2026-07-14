@@ -46,4 +46,8 @@ public interface IRefreshTokenService
     /// <summary>Revokes the whole family the presented token belongs to (logout). No-op if the
     /// token is unknown.</summary>
     Task RevokeFamilyByRawAsync(string rawToken, DateTimeOffset now, CancellationToken ct);
+
+    /// <summary>Revokes every active refresh token for a user (password change → force
+    /// re-login everywhere).</summary>
+    Task RevokeAllForUserAsync(Guid userId, DateTimeOffset now, CancellationToken ct);
 }

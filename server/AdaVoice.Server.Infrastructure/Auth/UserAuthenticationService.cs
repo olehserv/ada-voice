@@ -94,4 +94,14 @@ public sealed class UserAuthenticationService : IUserAuthenticationService
 
     public bool IsLocked(User user, DateTimeOffset now) =>
         user.LockedUntil is { } lockedUntil && lockedUntil > now;
+
+    public Task<User?> FindByIdAsync(Guid userId, CancellationToken ct) =>
+        // Filtered (no bypass): authenticated caller's tenant claim scopes this to their own row.
+        _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
+
+    public Task SetPasswordHashAsync(Guid userId, string passwordHash, DateTimeOffset now, CancellationToken ct) =>
+        _db.Users
+            .Where(u => u.Id == userId)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(u => u.PasswordHash, passwordHash).SetProperty(u => u.UpdatedAt, now), ct);
 }

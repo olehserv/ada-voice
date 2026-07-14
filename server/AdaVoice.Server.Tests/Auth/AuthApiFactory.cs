@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 
 namespace AdaVoice.Server.Tests.Auth;
 
@@ -38,10 +40,41 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
     /// <summary>The public half of the shared signing key, for validating issued access tokens.</summary>
     public ECDsaSecurityKey PublicSigningKey => new(SharedSigningKey) { KeyId = Kid };
 
+    /// <summary>Mints an access token with an explicit expiry, signed with the shared key, so a
+    /// test can present a token that is already expired (AC3) without waiting.</summary>
+    public string CreateAccessToken(Guid userId, Guid tenantId, string role, DateTime expiresUtc)
+    {
+        var descriptor = new SecurityTokenDescriptor
+        {
+            Issuer = "adavoice-auth",
+            Audience = "adavoice-api",
+            IssuedAt = expiresUtc.AddMinutes(-15),
+            NotBefore = expiresUtc.AddMinutes(-15),
+            Expires = expiresUtc,
+            SigningCredentials = new SigningCredentials(
+                new ECDsaSecurityKey(SharedSigningKey) { KeyId = Kid }, SecurityAlgorithms.EcdsaSha256),
+            Claims = new Dictionary<string, object>
+            {
+                ["sub"] = userId.ToString(),
+                ["tenant_id"] = tenantId.ToString(),
+                ["role"] = role,
+                ["jti"] = Guid.NewGuid().ToString(),
+            },
+        };
+        return new JsonWebTokenHandler().CreateToken(descriptor);
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Per-host (not process-global) settings, so parallel classes each use their own DB.
-        builder.UseSetting("ADAVOICE_DB_CONNECTION", _connectionString);
+        // Cap this host's Npgsql pool so several parallel test hosts together stay well under
+        // PostgreSQL's max_connections (100) — an uncapped pool per host exhausts it.
+        var connection = new NpgsqlConnectionStringBuilder(_connectionString)
+        {
+            MaxPoolSize = 15,
+        }.ConnectionString;
+
+        builder.UseSetting("ADAVOICE_DB_CONNECTION", connection);
         builder.UseSetting("RateLimit:AuthPermitPerMinute", _authPermitPerMinute.ToString());
     }
 }

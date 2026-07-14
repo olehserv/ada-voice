@@ -14,7 +14,8 @@ namespace AdaVoice.Server.Tests.Auth;
 /// <summary>Refresh-token rotation, reuse detection (AC1 + §14 #3), and logout family
 /// revocation.</summary>
 [Trait("Category", "Integration")]
-public sealed class RefreshTokenTests : IClassFixture<PostgresFixture>
+[Collection(ServerIntegrationCollection.Name)]
+public sealed class RefreshTokenTests
 {
     private const string Password = "CorrectHorseBatteryStaple1!";
     private readonly PostgresFixture _fixture;

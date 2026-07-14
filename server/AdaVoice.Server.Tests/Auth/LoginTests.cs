@@ -17,7 +17,8 @@ namespace AdaVoice.Server.Tests.Auth;
 /// hash, last_login stamped), wrong password (generic 401 + counter), and unknown email
 /// returning a byte-identical response to a wrong password (§14 #4 user enumeration).</summary>
 [Trait("Category", "Integration")]
-public sealed class LoginTests : IClassFixture<PostgresFixture>
+[Collection(ServerIntegrationCollection.Name)]
+public sealed class LoginTests
 {
     private const string Password = "CorrectHorseBatteryStaple1!";
     private readonly PostgresFixture _fixture;
