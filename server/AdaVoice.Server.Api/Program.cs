@@ -5,9 +5,11 @@
 // startup.
 using AdaVoice.Server.Api.Auth;
 using AdaVoice.Server.Api.Infrastructure;
+using AdaVoice.Server.Domain.Entities;
 using AdaVoice.Server.Infrastructure.Auth;
 using AdaVoice.Server.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -28,10 +30,20 @@ var connectionString = builder.Configuration["ADAVOICE_DB_CONNECTION"]
 builder.Services.AddDbContext<AdaVoiceDbContext>(options =>
     options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
 
-// Request-scoped tenant context. Real tenant resolution (from the authenticated principal)
-// lands with the auth middleware in a later task; for now this keeps the DbContext's
-// constructor dependency satisfiable without opening the tenant question early.
-builder.Services.AddScoped<ITenantProvider, AmbientTenantProvider>();
+// Request-scoped tenant context, read from the authenticated principal's tenant_id claim
+// (the single trusted source — security-design.md §3). Null on anonymous endpoints
+// (login/refresh), which is why the login flow looks users up with a marked filter bypass.
+builder.Services.AddScoped<ITenantProvider, HttpContextTenantProvider>();
+
+// Auth application services (orchestration + persistence; no ASP.NET/JOSE types).
+builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+builder.Services.AddScoped<IAuditWriter, AuditWriter>();
+builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
+
+var authPolicy = builder.Configuration.GetSection("Auth").Get<AuthPolicyOptions>()
+    ?? new AuthPolicyOptions();
+builder.Services.AddSingleton(authPolicy);
 
 builder.Services.AddScoped<CorrelationContext>();
 builder.Services.AddScoped<ICorrelationContext>(sp => sp.GetRequiredService<CorrelationContext>());
@@ -76,7 +88,9 @@ app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Rate limiting and endpoints are added in Tasks 3-6.
+app.MapAuthEndpoints();
+
+// Rate limiting arrives in Task 6.
 
 app.Run();
 

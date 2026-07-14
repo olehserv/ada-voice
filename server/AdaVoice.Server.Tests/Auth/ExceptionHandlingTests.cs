@@ -1,6 +1,8 @@
 using System.Text.Json;
 using AdaVoice.Server.Api.Infrastructure;
+using AdaVoice.Server.Infrastructure.Auth;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AdaVoice.Server.Tests.Auth;
@@ -13,8 +15,12 @@ public class ExceptionHandlingTests
         var ctx = new DefaultHttpContext();
         var body = new MemoryStream();
         ctx.Response.Body = body;
+        // The handler resolves the request-scoped correlation context from RequestServices.
         var correlation = new CorrelationContext { CorrelationId = "corr-123" };
-        var handler = new GlobalExceptionHandler(NullLogger<GlobalExceptionHandler>.Instance, correlation);
+        var services = new ServiceCollection();
+        services.AddSingleton<ICorrelationContext>(correlation);
+        ctx.RequestServices = services.BuildServiceProvider();
+        var handler = new GlobalExceptionHandler(NullLogger<GlobalExceptionHandler>.Instance);
 
         var secret = "SUPER-SECRET-STACK-marker";
         var handled = await handler.TryHandleAsync(ctx, new InvalidOperationException(secret), CancellationToken.None);

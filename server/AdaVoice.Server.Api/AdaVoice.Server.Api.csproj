@@ -19,6 +19,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AdaVoice.Server.Infrastructure\AdaVoice.Server.Infrastructure.csproj" />
+    <!-- Direct Domain reference: the auth endpoints name Domain types (User, ActorType, UserRole)
+         directly, so Api compiles against Domain, not only transitively via Infrastructure.
+         Api -> Domain is an allowed layer-skip (the dependency-direction guard permits it). -->
+    <ProjectReference Include="..\AdaVoice.Server.Domain\AdaVoice.Server.Domain.csproj" />
   </ItemGroup>
 
 </Project>

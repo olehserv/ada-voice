@@ -1,6 +1,5 @@
 using AdaVoice.Server.Infrastructure.Auth;
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Http;
 
 namespace AdaVoice.Server.Api.Infrastructure;
 
@@ -8,22 +7,23 @@ namespace AdaVoice.Server.Api.Infrastructure;
 /// but writes only a generic <c>application/problem+json</c> body to the client — no
 /// exception message, type, or stack trace ever crosses the response boundary. The
 /// correlation id lets support match a client-reported error to the server log entry that
-/// has the real detail.</summary>
+/// has the real detail.
+///
+/// <see cref="IExceptionHandler"/> is a singleton, so the request-scoped
+/// <see cref="ICorrelationContext"/> is resolved from the request's service provider at
+/// handling time rather than captured in the constructor (which would be a captive
+/// dependency and fails DI scope validation).</summary>
 public sealed class GlobalExceptionHandler : IExceptionHandler
 {
     private readonly ILogger<GlobalExceptionHandler> _logger;
-    private readonly ICorrelationContext _correlationContext;
 
-    public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger, ICorrelationContext correlationContext)
-    {
-        _logger = logger;
-        _correlationContext = correlationContext;
-    }
+    public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) => _logger = logger;
 
     public async ValueTask<bool> TryHandleAsync(
         HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
-        var correlationId = _correlationContext.CorrelationId;
+        var correlationId = httpContext.RequestServices
+            .GetRequiredService<ICorrelationContext>().CorrelationId;
 
         _logger.LogError(
             exception, "Unhandled exception. CorrelationId={CorrelationId}", correlationId);
