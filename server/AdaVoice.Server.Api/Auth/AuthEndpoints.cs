@@ -11,9 +11,13 @@ namespace AdaVoice.Server.Api.Auth;
 public static class AuthEndpoints
 {
     // A fixed dummy hash to verify against when no user matches, so unknown-email and
-    // wrong-password logins take the same code path and similar time (§14 #4). Computed once.
-    private static readonly string DummyPasswordHash =
-        new PasswordHasher<User>().HashPassword(new User(), "unused-dummy-password");
+    // wrong-password logins take the same code path and similar time (§14 #4). Derived from the
+    // injected hasher (cached once) so it always matches the configured work factor — a fresh
+    // PasswordHasher<User> could diverge if PasswordHasherOptions are ever customised.
+    private static string? _dummyPasswordHash;
+
+    private static string DummyPasswordHash(IPasswordHasher<User> hasher) =>
+        _dummyPasswordHash ??= hasher.HashPassword(new User(), "unused-dummy-password");
 
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
@@ -40,7 +44,7 @@ public static class AuthEndpoints
         // Always verify a password (a dummy hash when there is no user) so the unknown-email and
         // wrong-password paths cost the same and reveal nothing (§14 #4).
         var verification = hasher.VerifyHashedPassword(
-            user ?? new User(), user?.PasswordHash ?? DummyPasswordHash, request.Password);
+            user ?? new User(), user?.PasswordHash ?? DummyPasswordHash(hasher), request.Password);
         var passwordOk = verification != PasswordVerificationResult.Failed;
 
         if (user is null || !passwordOk)

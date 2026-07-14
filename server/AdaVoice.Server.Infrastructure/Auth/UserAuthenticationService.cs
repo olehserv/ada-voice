@@ -40,18 +40,29 @@ public sealed class UserAuthenticationService : IUserAuthenticationService
         await _db.Users
             .IgnoreQueryFilters()
             .Where(u => u.Id == userId)
-            .ExecuteUpdateAsync(s => s.SetProperty(u => u.FailedLoginCount, u => u.FailedLoginCount + 1), ct);
+            .ExecuteUpdateAsync(
+                s => s
+                    .SetProperty(u => u.FailedLoginCount, u => u.FailedLoginCount + 1)
+                    .SetProperty(u => u.UpdatedAt, now),
+                ct);
 
-        // tenant-scan-ok: same anonymous-login reason. Lock atomically once the threshold is
-        // crossed and the account is not already inside a live lockout window (LockedUntil in
-        // the future); the LockedUntil < now clause lets a lockout re-arm after it expires.
+        // Lock atomically once the threshold is crossed and the account is not already inside a
+        // live lockout window (LockedUntil in the future); the LockedUntil < now clause lets a
+        // lockout re-arm after it expires. The counter is reset to 0 as the lock is set, so §8's
+        // "15 min after 10 failed logins" means a fresh 10-attempt budget per window rather than
+        // a single failure re-locking a user who waited out the previous window.
+        // tenant-scan-ok: same anonymous-login reason as the increment above.
         var lockedNow = await _db.Users
             .IgnoreQueryFilters()
             .Where(u => u.Id == userId
                 && u.FailedLoginCount >= _policy.MaxFailedLogins
                 && (u.LockedUntil == null || u.LockedUntil < now))
             .ExecuteUpdateAsync(
-                s => s.SetProperty(u => u.LockedUntil, now.AddMinutes(_policy.LockoutMinutes)), ct);
+                s => s
+                    .SetProperty(u => u.LockedUntil, now.AddMinutes(_policy.LockoutMinutes))
+                    .SetProperty(u => u.FailedLoginCount, 0)
+                    .SetProperty(u => u.UpdatedAt, now),
+                ct);
 
         return lockedNow > 0;
     }
@@ -67,7 +78,8 @@ public sealed class UserAuthenticationService : IUserAuthenticationService
                 s => s
                     .SetProperty(u => u.FailedLoginCount, 0)
                     .SetProperty(u => u.LockedUntil, (DateTimeOffset?)null)
-                    .SetProperty(u => u.LastLoginAt, now),
+                    .SetProperty(u => u.LastLoginAt, now)
+                    .SetProperty(u => u.UpdatedAt, now),
                 ct);
     }
 
