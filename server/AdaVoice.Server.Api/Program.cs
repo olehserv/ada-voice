@@ -64,6 +64,9 @@ builder.Services.AddSingleton<IAccessTokenIssuer, AccessTokenIssuer>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // Keep the original JWT claim names ("sub", "tenant_id", "role") instead of the legacy
+        // SOAP-era remapping, so HttpContextTenantProvider and the endpoints read them directly.
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidIssuer = jwtOptions.Issuer,

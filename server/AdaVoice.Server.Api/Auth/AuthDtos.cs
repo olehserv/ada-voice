@@ -11,3 +11,6 @@ public sealed record TokenResponse(
     DateTimeOffset AccessTokenExpiresAt,
     string RefreshToken,
     DateTimeOffset RefreshTokenExpiresAt);
+
+/// <summary>Body for refresh and logout: the opaque refresh token.</summary>
+public sealed record RefreshRequest(string RefreshToken);

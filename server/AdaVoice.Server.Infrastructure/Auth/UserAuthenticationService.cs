@@ -32,6 +32,15 @@ public sealed class UserAuthenticationService : IUserAuthenticationService
         return matches.Count == 1 ? matches[0] : null;
     }
 
+    public async Task<User?> FindActiveUserByIdAsync(Guid userId, CancellationToken ct)
+    {
+        // tenant-scan-ok: the refresh endpoint is anonymous (no tenant claim), so the users
+        // filter would hide the row; load by primary key across tenants to mint the new token.
+        return await _db.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == userId && u.Status == UserStatus.Active, ct);
+    }
+
     public async Task<bool> RegisterFailedAttemptAsync(Guid userId, DateTimeOffset now, CancellationToken ct)
     {
         // tenant-scan-ok: anonymous login path; the atomic counter update must reach the real

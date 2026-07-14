@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AdaVoice.Server.Domain.Entities;
 using AdaVoice.Server.Domain.Enums;
 using AdaVoice.Server.Infrastructure.Auth;
@@ -23,6 +24,8 @@ public static class AuthEndpoints
     {
         var group = app.MapGroup("/api/auth");
         group.MapPost("/login", LoginAsync).AllowAnonymous();
+        group.MapPost("/refresh", RefreshAsync).AllowAnonymous();
+        group.MapPost("/logout", LogoutAsync).RequireAuthorization();
     }
 
     private static async Task<IResult> LoginAsync(
@@ -89,4 +92,73 @@ public static class AuthEndpoints
         return Results.Ok(new TokenResponse(
             accessToken, accessTokenExpiresAt, refresh.RawToken, refresh.ExpiresAt));
     }
+
+    private static async Task<IResult> RefreshAsync(
+        RefreshRequest request,
+        HttpContext http,
+        IRefreshTokenService refreshTokens,
+        IUserAuthenticationService users,
+        IAccessTokenIssuer accessTokens,
+        IAuditWriter audit,
+        ICorrelationContext correlation,
+        CancellationToken ct)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var ip = http.Connection.RemoteIpAddress?.ToString();
+
+        var outcome = await refreshTokens.RotateAsync(request.RefreshToken, now, ct);
+
+        switch (outcome.Status)
+        {
+            case RotationStatus.Rotated:
+                var user = await users.FindActiveUserByIdAsync(outcome.UserId, ct);
+                if (user is null)
+                {
+                    // The token was valid but its user is gone/disabled — treat as invalid.
+                    return AuthProblems.InvalidRefreshToken(correlation);
+                }
+
+                var (accessToken, accessTokenExpiresAt) =
+                    accessTokens.Issue(user.Id, user.TenantId, RoleClaimValue.For(user.Role));
+                await audit.WriteAsync(
+                    "auth.token_refreshed", "user", user.Id, user.TenantId, user.Id,
+                    ActorType.User, ip, null, ct);
+                return Results.Ok(new TokenResponse(
+                    accessToken, accessTokenExpiresAt, outcome.NewRawToken!, outcome.NewExpiresAt));
+
+            case RotationStatus.Reuse:
+                // Token-theft tripwire: the family was revoked. Audit and fail generically.
+                await audit.WriteAsync(
+                    "auth.refresh_reuse_detected", "user", outcome.UserId, null, outcome.UserId,
+                    ActorType.User, ip, null, ct);
+                return AuthProblems.InvalidRefreshToken(correlation);
+
+            default: // NotFound, Expired
+                return AuthProblems.InvalidRefreshToken(correlation);
+        }
+    }
+
+    private static async Task<IResult> LogoutAsync(
+        RefreshRequest request,
+        HttpContext http,
+        ClaimsPrincipal principal,
+        IRefreshTokenService refreshTokens,
+        IAuditWriter audit,
+        CancellationToken ct)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var ip = http.Connection.RemoteIpAddress?.ToString();
+
+        await refreshTokens.RevokeFamilyByRawAsync(request.RefreshToken, now, ct);
+
+        var userId = ParseGuidClaim(principal, "sub");
+        var tenantId = ParseGuidClaim(principal, "tenant_id");
+        await audit.WriteAsync(
+            "auth.logout", "user", userId, tenantId, userId, ActorType.User, ip, null, ct);
+
+        return Results.NoContent();
+    }
+
+    private static Guid? ParseGuidClaim(ClaimsPrincipal principal, string claimType) =>
+        Guid.TryParse(principal.FindFirst(claimType)?.Value, out var value) ? value : null;
 }

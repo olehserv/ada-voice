@@ -12,6 +12,11 @@ public interface IUserAuthenticationService
     /// enumeration). Email matches case-insensitively (citext).</summary>
     Task<User?> FindActiveUserByEmailAsync(string email, CancellationToken ct);
 
+    /// <summary>Finds the active user with this id, or null. Used by the anonymous refresh
+    /// endpoint (which has a user id from the rotated token but no tenant claim) to read the
+    /// tenant and role for the new access token — so it also bypasses the tenant filter.</summary>
+    Task<User?> FindActiveUserByIdAsync(Guid userId, CancellationToken ct);
+
     /// <summary>Atomically increments the failed-login counter and, if the threshold is
     /// crossed and the account is not already locked, sets <c>locked_until</c>. Returns true
     /// only when this call freshly locked the account (so the caller can audit it once).</summary>
