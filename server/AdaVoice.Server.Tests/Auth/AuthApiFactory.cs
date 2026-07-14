@@ -1,6 +1,8 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
@@ -36,6 +38,9 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
         _connectionString = connectionString;
         _authPermitPerMinute = authPermitPerMinute;
     }
+
+    /// <summary>Every formatted log message the host emitted, for asserting no secret is logged.</summary>
+    public ConcurrentQueue<string> LogMessages { get; } = new();
 
     /// <summary>The public half of the shared signing key, for validating issued access tokens.</summary>
     public ECDsaSecurityKey PublicSigningKey => new(SharedSigningKey) { KeyId = Kid };
@@ -76,5 +81,7 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
 
         builder.UseSetting("ADAVOICE_DB_CONNECTION", connection);
         builder.UseSetting("RateLimit:AuthPermitPerMinute", _authPermitPerMinute.ToString());
+
+        builder.ConfigureLogging(logging => logging.AddProvider(new CapturingLoggerProvider(LogMessages)));
     }
 }

@@ -83,10 +83,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddAuthRateLimiter(
+    builder.Configuration.GetValue("RateLimit:AuthPermitPerMinute", 10));
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseMiddleware<CorrelationIdMiddleware>();
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -97,6 +102,5 @@ app.MapAuthEndpoints();
 
 app.Run();
 
-public partial class Program
-{
-}
+// WebApplicationFactory<Program> binds to this implicit Program type (ASP.NET Core 10 exposes it
+// for integration tests without an explicit `public partial class Program`).

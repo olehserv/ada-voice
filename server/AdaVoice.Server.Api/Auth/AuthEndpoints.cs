@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AdaVoice.Server.Api.Infrastructure;
 using AdaVoice.Server.Domain.Entities;
 using AdaVoice.Server.Domain.Enums;
 using AdaVoice.Server.Infrastructure.Auth;
@@ -22,7 +23,7 @@ public static class AuthEndpoints
 
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/auth");
+        var group = app.MapGroup("/api/auth").RequireRateLimiting(AuthRateLimit.PolicyName);
         group.MapPost("/login", LoginAsync).AllowAnonymous();
         group.MapPost("/refresh", RefreshAsync).AllowAnonymous();
         group.MapPost("/logout", LogoutAsync).RequireAuthorization();
