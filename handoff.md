@@ -10,17 +10,19 @@ back up. It answers one question: *where are we right now?*
 - Details of past work live in git history and in the dated docs under `docs/reviews/`.
   This file stays short on purpose.
 
-_Last updated: 2026-07-12._
+_Last updated: 2026-07-14._
 
 ## Status in one line
 
 **The app is built and verified on the target machine** — engine, recorder, library, Board UI,
 setup wizard, Settings window, stop hotkey, backups, export/import, **Conversations** (ordered
 phrase scripts with a step-by-step highlight), **phrase versions** (alternate takes, randomized
-during a Conversation step); 465 tests passed + 16 skipped across 6 projects (104 Core + 98 Audio +
-8 Wasapi + 8 Host + 241 App + 26 Server DB-less) plus 9 server integration tests against
-PostgreSQL 16. Monetization: Phase 1 (domain model + database) shipped — the full 13-table
-EF Core schema, multi-tenant query filters, initial migration, and idempotent seeder.
+during a Conversation step); 489 tests passed + 16 skipped across 6 projects (104 Core + 98 Audio +
+8 Wasapi + 8 Host + 241 App + 30 Server DB-less) plus 28 server integration tests against
+PostgreSQL 16. Monetization: Phases 0–2 shipped — the full 13-table EF Core schema, multi-tenant
+query filters and idempotent seeder (Phase 1), and the **auth API** (Phase 2): ES256-JWT
+login/refresh/logout/change-password/me, rotating refresh tokens with family-revocation reuse
+detection, account lockout, per-IP rate limiting, RFC 7807 errors, and audit logging.
 
 ## Latest work (2026-07-12)
 
@@ -99,6 +101,24 @@ EF Core schema, multi-tenant query filters, initial migration, and idempotent se
   `lockedUntil`); `lockedUntil` shows only in the admin panel (see open-questions §9).
   Deferred to Phase 2: the interceptor stamps tenant_id on inserts only; write-path (Attach/
   load-then-modify) tenant enforcement must be added before any write endpoint ships.
+- **Monetization Phase 2 (Auth) shipped (2026-07-14).** The `AdaVoice.Server.Api` scaffold became
+  a real ASP.NET Core minimal-API host, on the existing Phase-1 schema (**no migration**). Endpoints:
+  `POST /api/auth/login` (email+password → ES256 JWT + opaque refresh token), `POST /api/auth/refresh`
+  (rotation, single-use), `POST /api/auth/logout`, `POST /api/auth/change-password`, `GET /api/auth/me`.
+  Auth orchestration + persistence live in `Infrastructure/Auth` (no ASP.NET types); JWT issuance/
+  validation and endpoints live in `Api` (JwtBearer). Highlights: access-token key from an env var
+  (`ADAVOICE_JWT_SIGNING_KEY`/`_KID`) — NOT the Phase-5 `signing_keys` table; login resolves the user
+  by a filter-bypassed global email lookup (owner-approved MVP; generic failure on 0-or-many);
+  refresh rotation uses `SELECT … FOR UPDATE` and revokes the whole family on reuse; lockout counter
+  is atomic (`ExecuteUpdate`) and re-arms per window; a request-scoped `HttpContextTenantProvider`
+  feeds the Phase-1 query filters from the JWT `tenant_id` claim. §14 pitfalls #1/#2/#3/#4/#5/#6/#20/#22
+  each have a test. 3 packages added (JwtBearer + Mvc.Testing + an explicit EF Core pin for version
+  hygiene). Integration tests use `WebApplicationFactory` against real PG16, serialized in one xUnit
+  collection with a capped Npgsql pool. Plan:
+  [2026-07-13-monetize-phase-2.md](docs/superpowers/plans/2026-07-13-monetize-phase-2.md).
+  Deferred (later phases): device-binding of refresh tokens (Phase 4), JWKS + `signing_keys` (Phase 5),
+  `tenant_suspended` login gating (Phase 3), Serilog sink + `ForwardedHeaders`/`KnownProxies` +
+  `/healthz` (Phase 10), Argon2id (Later).
 
 ## Latest work (2026-07-11)
 
@@ -316,12 +336,14 @@ confirm the step highlight follows correctly, delete a phrase that's in an activ
 4. **Localization retrofit (UA/PL/EN)** — last, after slice 3's strings exist. All UI strings
    so far are English-only; a `.resx` retrofit is known debt.
 
-Separately, **monetization**: Phases 0 and 1 are done. Phase 2 (Auth) is next and is **unblocked**
-— SEC-03 (lockout enumeration) was resolved 2026-07-13 (generic login response; `lockedUntil`
-in the admin panel only). OQ-12/OC-06 (device vs per-seat limits) must be answered before Phase 4
-(device activation).
+Separately, **monetization**: Phases 0, 1, and 2 are done. Phase 3 (tenant/user/subscription core)
+is next. OQ-12/OC-06 (device vs per-seat limits) must be answered before Phase 4 (device activation).
+Two write-path notes carried into Phase 3: (1) the tenant interceptor stamps `tenant_id` on inserts
+only — load-then-modify / `Attach` write-path tenant enforcement must land before any tenant-scoped
+write endpoint; (2) a suspended tenant's users must be blocked at login (`tenant_suspended`), which
+needs the subscription/tenant state Phase 3 introduces.
 
-**Monetization** — next step is Phase 2 (Auth) of the
+**Monetization** — next step is Phase 3 (tenant/user/subscription core) of the
 [monetize roadmap](docs/monetize/implementation-roadmap.md).
 
 ## Open follow-ups (named so they're not lost)
