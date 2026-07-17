@@ -22,7 +22,12 @@
         <ui:TitleBar Grid.Row="0" Title="{Binding Title, StringFormat='Versions — {0}'}"
                      ShowMinimize="False" ShowMaximize="False" CanMaximize="False" />
 
-        <StackPanel Grid.Row="1" Margin="{StaticResource Space.DialogContent}">
+        <Grid Grid.Row="1">
+        <!-- Toasts pop in the bottom-right of the window — mirrors MainWindow's RootSnackbar. -->
+        <ui:SnackbarPresenter x:Name="RootSnackbar" Panel.ZIndex="1"
+                              HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                              MaxWidth="360" />
+        <StackPanel Margin="{StaticResource Space.DialogContent}">
             <!-- A board-like tile grid: the primary recording first, then every alternate take. -->
             <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="380">
                 <ItemsControl ItemsSource="{Binding Tiles}">
@@ -39,7 +44,7 @@
                                     <!-- Read-only for the primary tile — its label is fixed ("Primary"),
                                          never persisted; a version's label renames on focus loss. -->
                                     <TextBox Text="{Binding Label, UpdateSourceTrigger=LostFocus}"
-                                             IsReadOnly="{Binding IsPrimary}"
+                                             IsReadOnly="{Binding IsPrimary}" IsEnabled="{Binding IsWritable}"
                                              FontWeight="SemiBold" BorderThickness="0" Padding="0"
                                              Background="Transparent" />
                                     <TextBlock Text="{Binding DurationLabel}" Typography.NumeralAlignment="Tabular"
@@ -102,5 +107,6 @@
             <ui:Button Content="Close" Appearance="Secondary" IsCancel="True"
                        HorizontalAlignment="Right" Margin="{StaticResource Space.ButtonRow}" />
         </StackPanel>
+        </Grid>
     </Grid>
 </ui:FluentWindow>

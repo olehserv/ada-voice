@@ -45,12 +45,20 @@ public partial class CategoriesViewModel : ObservableObject
         NewName = "";
     }
 
-    /// <summary>Persist a row's edited name/colour.</summary>
+    /// <summary>Persist a row's edited name/colour. A blank name is refused (like the library layer
+    /// itself requires) — revert the field to the persisted name instead of leaving it blank on screen
+    /// while storage still has the old value (review finding 8).</summary>
     [RelayCommand]
     private void Save(CategoryRowViewModel? row)
     {
-        if (row is null || string.IsNullOrWhiteSpace(row.Name))
+        if (row is null)
             return;
+
+        if (string.IsNullOrWhiteSpace(row.Name))
+        {
+            row.Name = _library.Categories.FirstOrDefault(c => c.Id == row.Id)?.Name ?? row.Name;
+            return;
+        }
 
         _library.UpdateCategory(row.Id, row.Name, row.Color);
     }

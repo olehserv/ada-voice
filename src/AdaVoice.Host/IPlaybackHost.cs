@@ -28,8 +28,10 @@ public interface IPlaybackHost
     void StopPhrase();
     /// <summary>Play a phrase to the call. When <paramref name="version"/> is given, that take's audio
     /// and gain are used instead of the entry's own — the phrase id used for <see cref="PlayingPhraseChanged"/>
-    /// is always the entry's, regardless of which take played.</summary>
-    void PlayEntry(PhraseEntry entry, PhraseVersion? version = null);
+    /// is always the entry's, regardless of which take played. Returns an error message if nothing was
+    /// played (engine not Live, or the audio file is missing), or null on success — so a caller can
+    /// show the drop instead of it passing silently.</summary>
+    string? PlayEntry(PhraseEntry entry, PhraseVersion? version = null);
     void EnterOffAir();
     void ExitOffAir();
 

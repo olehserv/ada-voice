@@ -145,12 +145,17 @@ public sealed class PhraseLibraryService
         var fileName = $"{id}.wav";
         writeAudio(fileName);
 
+        // Fall back to Uncategorized for an unknown category id, the same way DeleteCategory does when
+        // a category is removed — every phrase always has a real home. Mirrors the guard SetPhraseCategory
+        // already has; without it, a stale or hand-typed id landed here verbatim (review finding 3).
+        var resolvedCategoryId = _library.Categories.Any(c => c.Id == categoryId) ? categoryId : Category.DefaultId;
+
         var now = DateTime.UtcNow;
         var entry = new PhraseEntry
         {
             Id = id,
             Title = title,
-            CategoryId = categoryId,
+            CategoryId = resolvedCategoryId,
             Tags = [],
             FileName = fileName,
             DurationMs = durationMs,

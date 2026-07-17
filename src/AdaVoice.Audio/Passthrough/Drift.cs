@@ -11,9 +11,9 @@ public enum DriftKind
 }
 
 /// <summary>
-/// Raised when the mic path drops audio (overrun) or inserts silence (underrun). The future
-/// AudioEngine subscribes and logs these, so a recurring cadence is visible and not silently
-/// shipped around (design 06 §1).
+/// Raised when the mic path drops audio (overrun) or inserts silence (underrun). The AudioEngine
+/// subscribes and logs these, so a recurring cadence is visible and not silently shipped around
+/// (design 06 §1).
 /// </summary>
 /// <remarks>
 /// An overrun is raised on the capture thread; an underrun is raised on the render (read)

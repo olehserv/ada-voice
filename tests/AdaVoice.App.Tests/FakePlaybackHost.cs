@@ -27,6 +27,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     public IReadOnlyList<TagInfo> Tags { get; set; } = [];
     public IReadOnlyList<string> BrokenPhraseIds { get; set; } = [];
     public IReadOnlyList<string> BrokenVersionIds { get; set; } = [];
+    public bool IsWritable { get; set; } = true;
     public string? LibraryWarning { get; set; }
     public List<PhraseEntry> Deleted { get; } = [];
     public IReadOnlyList<Conversation> Conversations { get; set; } = [];
@@ -37,6 +38,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     public List<string> Calls { get; } = [];
     public PhraseEntry? PlayedEntry { get; private set; }
     public PhraseVersion? PlayedVersion { get; private set; }
+    public string? PlayEntryResult { get; set; }
 
     // Recording knobs/results the tests configure or inspect.
     public bool CanRecord { get; set; } = true;
@@ -50,6 +52,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     public string? PreviewEntryResult { get; set; }
     public PhraseVersion? PreviewedVersion { get; private set; }
     public string? PreviewVersionResult { get; set; }
+    public bool PreviewThrows { get; set; }
     /// <summary>Run from inside PreviewEntry/PreviewVersion — lets a test observe view-model state
     /// while the (fake) preview is "in flight".</summary>
     public Action? OnPreviewing { get; set; }
@@ -86,11 +89,12 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     public void EnterOffAir() => Calls.Add("EnterOffAir");
     public void ExitOffAir() => Calls.Add("ExitOffAir");
 
-    public void PlayEntry(PhraseEntry entry, PhraseVersion? version = null)
+    public string? PlayEntry(PhraseEntry entry, PhraseVersion? version = null)
     {
         Calls.Add("PlayEntry");
         PlayedEntry = entry;
         PlayedVersion = version;
+        return PlayEntryResult;
     }
 
     public string? PreviewEntry(PhraseEntry entry)
@@ -98,6 +102,8 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
         Calls.Add("PreviewEntry");
         PreviewedEntry = entry;
         OnPreviewing?.Invoke();
+        if (PreviewThrows)
+            throw new InvalidOperationException("preview device unavailable (simulated)");
         return PreviewEntryResult;
     }
 
@@ -106,6 +112,8 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
         Calls.Add("PreviewVersion");
         PreviewedVersion = version;
         OnPreviewing?.Invoke();
+        if (PreviewThrows)
+            throw new InvalidOperationException("preview device unavailable (simulated)");
         return PreviewVersionResult;
     }
 

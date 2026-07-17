@@ -1,4 +1,6 @@
+using System.Windows;
 using AdaVoice.App.ViewModels;
+using Wpf.Ui.Controls;
 
 namespace AdaVoice.App;
 
@@ -16,5 +18,22 @@ public partial class PhraseVersionsDialog : Wpf.Ui.Controls.FluentWindow
     {
         InitializeComponent();
         Closed += (_, _) => ((PhraseVersionsViewModel)DataContext).StopPreview();
+        // DataContext is set by the caller after the constructor runs (object-initializer syntax),
+        // so subscribe once it's actually there — mirrors MainWindow.OnLoaded.
+        Loaded += (_, _) =>
+        {
+            if (DataContext is PhraseVersionsViewModel versions)
+                versions.Notified += OnNotified;
+        };
     }
+
+    /// <summary>A preview failure (missing file, bad device) as a toast — this window previously had
+    /// no toast channel and swallowed the failure entirely (review finding 4).</summary>
+    private void OnNotified(object? sender, BoardNotification notification) =>
+        new Snackbar(RootSnackbar)
+        {
+            Content = notification.Message,
+            Appearance = notification.Severity == NoticeSeverity.Error ? ControlAppearance.Danger : ControlAppearance.Caution,
+            Timeout = TimeSpan.FromSeconds(notification.Severity == NoticeSeverity.Error ? 6 : 4),
+        }.Show();
 }

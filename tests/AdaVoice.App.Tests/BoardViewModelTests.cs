@@ -275,6 +275,79 @@ public class BoardViewModelTests
         Assert.Null(host.PlayedVersion);
     }
 
+    /// <summary>Review finding 1: a random pick must never land on a version whose audio file is
+    /// missing — that would play silence into a live call. <c>FixedRandom(1)</c> always returns index
+    /// 1, whatever the pool: with the broken version excluded, the pool is [primary, pv-2] and index 1
+    /// is the healthy version. Before the fix, the unfiltered pool was [primary, pv-1, pv-2] and index
+    /// 1 was the broken one — this test fails on that code.</summary>
+    [Fact]
+    public void Random_version_pick_never_plays_a_broken_version()
+    {
+        var broken = new PhraseVersion { Id = "pv-1", FileName = "p-1-pv-1.wav" };
+        var healthy = new PhraseVersion { Id = "pv-2", FileName = "p-1-pv-2.wav" };
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav", Versions = [broken, healthy] }],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1"], UseRandomVersion = true }],
+            BrokenVersionIds = ["pv-1"],
+        };
+        var board = NewBoard(host, rng: new FixedRandom(1));
+        board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+
+        board.PlayCommand.Execute(board.Phrases[0]);
+
+        Assert.Same(healthy, host.PlayedVersion);
+    }
+
+    [Fact]
+    public void Random_version_pick_falls_back_to_the_primary_when_the_only_version_is_broken()
+    {
+        var broken = new PhraseVersion { Id = "pv-1", FileName = "p-1-pv-1.wav" };
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav", Versions = [broken] }],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1"], UseRandomVersion = true }],
+            BrokenVersionIds = ["pv-1"],
+        };
+        var board = NewBoard(host, rng: new FixedRandom(0));
+        board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+
+        board.PlayCommand.Execute(board.Phrases[0]);
+
+        Assert.Null(host.PlayedVersion);
+    }
+
+    /// <summary>Review finding 1: if the host reports playback didn't actually happen (e.g. the file
+    /// went missing after the board loaded), the board must show it — and must not move the
+    /// conversation's step pointer as if the phrase had played.</summary>
+    [Fact]
+    public void A_play_error_from_the_host_shows_a_toast_and_does_not_advance_the_conversation_step()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            Phrases = [
+                new PhraseEntry { Id = "p-1", FileName = "p-1.wav" },
+                new PhraseEntry { Id = "p-2", FileName = "p-2.wav" },
+            ],
+            Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1", "p-2"] }],
+            PlayEntryResult = "missing audio file: p-1.wav",
+        };
+        var board = NewBoard(host);
+        board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
+        BoardNotification? seen = null;
+        board.Notified += (_, n) => seen = n;
+
+        board.PlayCommand.Execute(board.Phrases.Single(p => p.Entry.Id == "p-1"));
+
+        Assert.NotNull(seen);
+        Assert.Equal(NoticeSeverity.Error, seen.Severity);
+        Assert.Contains("missing audio file", seen.Message);
+        Assert.True(board.Phrases.Single(p => p.Entry.Id == "p-1").IsCurrentStep); // pointer did not move
+    }
+
     [Fact]
     public void Play_when_not_live_shows_a_notice_and_does_not_play()
     {
@@ -985,6 +1058,38 @@ public class BoardViewModelTests
 
         Assert.Contains(host.Phrases, p => p.Title == "Unrelated"); // a new phrase, not a version
         Assert.Null(host.SavedVersionPhraseId); // SaveTakeAsVersion was never called
+    }
+
+    /// <summary>Review finding 7: if the phrase a version was stashed for is gone by the time Save
+    /// runs (e.g. deleted from another view while the Recorder stayed open), the host reports no
+    /// update — Save must show that, not claim "New version saved" and discard the take.</summary>
+    [Fact]
+    public void Saving_a_version_for_a_phrase_that_no_longer_exists_shows_an_error_and_keeps_the_pending_take()
+    {
+        var host = new FakePlaybackHost
+        {
+            State = EngineState.Live,
+            CanRecord = true,
+            NextStopResult = Take(),
+            Phrases = [new PhraseEntry { Id = "p-1", Title = "Greeting" }],
+        };
+        var board = NewBoard(host, showVersionsDialog: versions =>
+            versions.RecordVersionCommand.ExecuteAsync(null).GetAwaiter().GetResult());
+        BoardNotification? seen = null;
+        board.Notified += (_, n) => seen = n;
+
+#pragma warning disable xUnit1031
+        board.ShowVersionsCommand.Execute(board.Phrases[0]);
+        board.StopRecordingCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+#pragma warning restore xUnit1031
+        host.Phrases = []; // the phrase was deleted elsewhere while the Recorder stayed open
+        board.NewTitle = "Take A";
+
+        board.SaveTakeCommand.Execute(null);
+
+        Assert.NotNull(seen);
+        Assert.Equal(NoticeSeverity.Error, seen.Severity);
+        Assert.NotNull(board.PendingTake); // the take was kept, not silently discarded
     }
 
     [Fact]

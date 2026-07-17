@@ -1,8 +1,11 @@
 using System.Diagnostics;
 using AdaVoice.Audio.Abstractions;
 using AdaVoice.Audio.Engine;
+using AdaVoice.Audio.Recording;
 using AdaVoice.Audio.Tests.Engine.Fakes;
 using AdaVoice.Audio.Wasapi;
+using AdaVoice.Core.Domain;
+using AdaVoice.Core.Storage;
 
 namespace AdaVoice.Host.Tests;
 
@@ -110,6 +113,77 @@ public class EngineHostTests : IDisposable
 
         await WaitFor(() => host.State == EngineState.Live);
         Assert.Contains(EngineState.OffAir, seen); // the call feed was paused during capture
+    }
+
+    // ---- PlayEntry version-vs-primary selection (review finding 1 / 6) ------------------------
+
+    /// <summary>Review finding 6: the version-vs-primary file selection in <c>PlayEntry</c> had zero
+    /// coverage — a swapped `??` would send the wrong take (or the wrong loudness) into a live call,
+    /// invisibly. Both files are left missing so this is provable without a real WAV: the returned
+    /// message names whichever file was actually chosen.</summary>
+    [Fact]
+    public async Task PlayEntry_uses_the_version_file_not_the_primary()
+    {
+        using var host = NewHost();
+        host.Start();
+        await WaitFor(() => host.State == EngineState.Live);
+        var entry = new PhraseEntry { Id = "p-1", FileName = "primary.wav", GainDb = -3 };
+        var version = new PhraseVersion { Id = "pv-1", FileName = "version.wav", GainDb = -6 };
+
+        var error = host.PlayEntry(entry, version);
+
+        Assert.Contains("version.wav", error);
+        Assert.DoesNotContain("primary.wav", error ?? "");
+    }
+
+    [Fact]
+    public async Task PlayEntry_falls_back_to_the_primary_when_version_is_null()
+    {
+        using var host = NewHost();
+        host.Start();
+        await WaitFor(() => host.State == EngineState.Live);
+        var entry = new PhraseEntry { Id = "p-1", FileName = "primary.wav" };
+
+        var error = host.PlayEntry(entry, version: null);
+
+        Assert.Contains("primary.wav", error);
+    }
+
+    // ---- Version WAV lifecycle (review finding 6) ----------------------------------------------
+
+    /// <summary>Review finding 6: the version WAV write (SaveTakeAsVersion) and orphan-move
+    /// (DeletePhraseVersion) wiring in EngineHost had no test on a real data root — a wrong
+    /// AudioPath join or move target would lose or orphan an irreplaceable take invisibly.</summary>
+    [Fact]
+    public void SaveTakeAsVersion_writes_the_version_wav_then_DeletePhraseVersion_orphans_it()
+    {
+        using var host = NewHost();
+        var take = new RecordingResult(new float[10], GainDb: -3, DurationMs: 500, PeakDbfs: -6);
+        var entry = host.SaveTake(take, "Greeting");
+
+        var updated = host.SaveTakeAsVersion(take, entry.Id, "Alt take");
+
+        Assert.NotNull(updated);
+        var version = Assert.Single(updated!.Versions);
+        var versionPath = AdaVoicePaths.AudioPath(_root, version.FileName);
+        Assert.True(File.Exists(versionPath));
+
+        host.DeletePhraseVersion(entry.Id, version.Id);
+
+        Assert.False(File.Exists(versionPath)); // never destroyed — renamed, not deleted
+        Assert.True(File.Exists(AdaVoicePaths.AudioPath(_root, "deleted-" + version.FileName)));
+    }
+
+    [Fact]
+    public void PlayEntry_refuses_and_returns_a_reason_when_the_engine_is_not_live()
+    {
+        using var host = NewHost(); // never started — still Stopped
+        var entry = new PhraseEntry { Id = "p-1", FileName = "primary.wav" };
+
+        var error = host.PlayEntry(entry);
+
+        Assert.NotNull(error);
+        Assert.Contains("not Live", error);
     }
 
     [Fact]

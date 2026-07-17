@@ -23,8 +23,8 @@ namespace AdaVoice.Host;
 /// <summary>
 /// Composition root for the audio engine. It builds the real WASAPI device factory, the device
 /// monitor, and the system clock, wires them into an <see cref="AudioEngine"/>, and runs the
-/// engine's single control loop on a dedicated thread. The future WPF app reuses this class; only
-/// the console <c>Program</c> around it is throwaway. Logging is a plain callback, so this class
+/// engine's single control loop on a dedicated thread. The WPF app reuses this class; the console
+/// <c>Program</c> around it is a thin dev harness. Logging is a plain callback, so this class
 /// depends on no logging library.
 /// </summary>
 public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISettingsHost, ILibraryHost, ISetupHost
@@ -196,6 +196,11 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     public IReadOnlyList<string> BrokenPhraseIds => _library.BrokenPhraseIds;
     public IReadOnlyList<string> BrokenVersionIds => _library.BrokenVersionIds;
 
+    /// <summary>False while a mutator would refuse (see <see cref="PhraseLibraryService.IsWritable"/>)
+    /// — dialogs gate edit controls on this so a refused edit is visible as "disabled", not a bound
+    /// setter's exception swallowed by WPF's binding engine (review finding 9).</summary>
+    public bool IsWritable => _library.IsWritable;
+
     /// <summary>Maps the load status to operator text. Mirrors the log warnings in the constructor,
     /// but reaches the board — an operator never reads the log.</summary>
     public string? LibraryWarning => _library.LoadStatus switch
@@ -276,17 +281,19 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
 
     /// <summary>Load a catalogued phrase from disk, apply its loudness-match gain, and play it toward
     /// the call (the cable). The engine routes Play to the cable only when Live, so this is a no-op
-    /// otherwise. A missing audio file is logged and skipped, never thrown. When <paramref name="version"/>
-    /// is given, that take's file and gain are used instead of the entry's own — the phrase id used
-    /// downstream (for <see cref="PlayingPhraseChanged"/>) is always the entry's, regardless of which
-    /// take played.</summary>
-    public void PlayEntry(PhraseEntry entry, PhraseVersion? version = null)
+    /// otherwise. When <paramref name="version"/> is given, that take's file and gain are used instead
+    /// of the entry's own — the phrase id used downstream (for <see cref="PlayingPhraseChanged"/>) is
+    /// always the entry's, regardless of which take played. Returns an error message if nothing was
+    /// played (not Live, or the audio file is missing), or null on success — mirrors
+    /// <see cref="PreviewEntry"/> so a caller can surface the drop instead of silence.</summary>
+    public string? PlayEntry(PhraseEntry entry, PhraseVersion? version = null)
     {
         if (State != EngineState.Live)
         {
             // The engine routes Play to the cable only when Live; surface the drop instead of silence.
-            _log($"cannot play {entry.Id}: engine is {State}, not Live — press Start (and be ON AIR)");
-            return;
+            var message = $"engine is {State}, not Live — press Start (and be ON AIR)";
+            _log($"cannot play {entry.Id}: {message}");
+            return message;
         }
 
         var fileName = version?.FileName ?? entry.FileName;
@@ -294,8 +301,9 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
         var path = AdaVoicePaths.AudioPath(_dataRoot, fileName);
         if (!File.Exists(path))
         {
-            _log($"cannot play {entry.Id}: missing audio file {fileName}");
-            return;
+            var message = $"missing audio file: {fileName}";
+            _log($"cannot play {entry.Id}: {message}");
+            return message;
         }
 
         var samples = WavFile.Load(path);
@@ -304,6 +312,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
             samples[i] *= gain;
 
         Play(new Phrase(entry.Id, samples));
+        return null;
     }
 
     /// <summary>
@@ -396,15 +405,16 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
                 File.Move(src, AdaVoicePaths.AudioPath(_dataRoot, orphan), overwrite: true);
         });
 
-    /// <summary>Export the library (metadata + active phrase WAVs) to a zip. Returns the path written.
-    /// Version recordings are not included (v1 limitation) — logged when any are dropped, so this
-    /// never loses takes without a trace.</summary>
-    public string ExportLibrary(string destinationZipPath)
+    /// <summary>Export the library (metadata + active phrase WAVs) to a zip. Version recordings are
+    /// not included (v1 limitation) — logged when any are dropped, and the count is returned so a
+    /// caller can tell the operator (review finding 2: this used to be logged only, with no on-screen
+    /// trace of the drop).</summary>
+    public int ExportLibrary(string destinationZipPath)
     {
         var droppedVersions = _archive.Export(destinationZipPath);
         if (droppedVersions > 0)
             _log($"export: dropped {droppedVersions} version recording(s) — not included in exports (v1 limitation)");
-        return destinationZipPath;
+        return droppedVersions;
     }
 
     /// <summary>Import a library archive (merge or replace), then refresh the in-session library so the
@@ -504,8 +514,9 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     public void SetLanguage(string code) => _settings = _settings with { Language = code };
 
     /// <summary>Export the library to a zip — thin delegation to the already-existing
-    /// <see cref="ExportLibrary"/> (used today by the console host).</summary>
-    public void Export(string destinationZipPath) => ExportLibrary(destinationZipPath);
+    /// <see cref="ExportLibrary"/> (used today by the console host). Returns the number of version
+    /// recordings that were not included (0 if none).</summary>
+    public int Export(string destinationZipPath) => ExportLibrary(destinationZipPath);
 
     /// <summary>Import a library archive — thin delegation to the already-existing
     /// <see cref="ImportLibrary"/> (used today by the console host), which already reloads the

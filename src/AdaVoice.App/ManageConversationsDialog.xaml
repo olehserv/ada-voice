@@ -67,7 +67,8 @@
                     </Grid>
 
                     <CheckBox Content="Play a random version of each phrase"
-                              IsChecked="{Binding UseRandomVersion}" Margin="0,0,0,8" />
+                              IsChecked="{Binding UseRandomVersion}" IsEnabled="{Binding IsWritable}"
+                              Margin="0,0,0,8" />
 
                     <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="320">
                         <ItemsControl ItemsSource="{Binding Members}">

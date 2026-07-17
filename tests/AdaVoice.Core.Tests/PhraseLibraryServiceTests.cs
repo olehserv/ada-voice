@@ -38,6 +38,31 @@ public class PhraseLibraryServiceTests : IDisposable
         Assert.Empty(new PhraseLibraryService(new JsonPhraseRepository(_root)).Phrases);
     }
 
+    /// <summary>Review finding 3: <c>Add</c> used to store an unknown category id verbatim, while
+    /// <c>SetPhraseCategory</c> already guarded the same thing — a create/edit asymmetry. Every phrase
+    /// should always have a real home, the same invariant <c>DeleteCategory</c> enforces when a
+    /// category is removed.</summary>
+    [Fact]
+    public void Add_with_an_unknown_category_falls_back_to_uncategorized()
+    {
+        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+
+        var entry = service.Add("Take one", "c-does-not-exist", 100, 0, _ => { });
+
+        Assert.Equal(Category.DefaultId, entry.CategoryId);
+    }
+
+    [Fact]
+    public void Add_with_a_known_category_keeps_it()
+    {
+        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var category = service.AddCategory("Greetings", "#123456");
+
+        var entry = service.Add("Take one", category.Id, 100, 0, _ => { });
+
+        Assert.Equal(category.Id, entry.CategoryId);
+    }
+
     [Fact]
     public void Each_added_phrase_gets_a_distinct_id_and_increasing_sort_order()
     {

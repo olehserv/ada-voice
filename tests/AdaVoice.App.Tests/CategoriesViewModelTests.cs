@@ -55,6 +55,24 @@ public class CategoriesViewModelTests
         Assert.Contains(host.Categories, c => c.Name == "New");
     }
 
+    /// <summary>Review finding 8: blanking the name used to be silently ignored, leaving the field
+    /// blank on screen while storage still had the old name — revert it instead.</summary>
+    [Fact]
+    public void Saving_a_blank_name_reverts_the_field_to_the_persisted_name()
+    {
+        var host = HostWithDefault();
+        var vm = new CategoriesViewModel(host);
+        vm.NewName = "Greetings";
+        vm.AddCommand.Execute(null);
+        var row = vm.Rows.First(r => r.Name == "Greetings");
+
+        row.Name = "   ";
+        vm.SaveCommand.Execute(row);
+
+        Assert.Equal("Greetings", row.Name);
+        Assert.Contains(host.Categories, c => c.Name == "Greetings"); // storage unchanged
+    }
+
     [Fact]
     public void The_add_row_defaults_to_a_palette_colour()
     {

@@ -70,8 +70,8 @@ public sealed class MicPassthrough : IMicDuck, IDisposable
     {
         // Drift policy (design 06 §1), overrun side: if the mic gets ahead of the output
         // and the backlog passes the limit, drop the oldest audio and count it. This is a
-        // small skip in the live voice. The full policy (underrun and logging) lands with
-        // the engine in a later slice.
+        // small skip in the live voice. The underrun side lives in UnderrunWatch below;
+        // AudioEngine subscribes to Drift and logs both kinds.
         if (_buffer.BufferedDuration.TotalMilliseconds > MaxBacklogMs)
         {
             Interlocked.Increment(ref _overruns);

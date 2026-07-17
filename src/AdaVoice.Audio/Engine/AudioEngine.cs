@@ -67,7 +67,12 @@ public sealed class AudioEngine : IDisposable
     /// <summary>The current state. Updated on the control thread; safe to read for display.</summary>
     public EngineState State { get; private set; } = EngineState.Stopped;
 
-    /// <summary>Raised on the control thread for every state change, drift event, and rebuild.</summary>
+    /// <summary>Raised for every state change, drift event, rebuild, and playing-phrase change.
+    /// <see cref="EngineEvent.StateChanged"/>/<see cref="EngineEvent.DriftLogged"/>/
+    /// <see cref="EngineEvent.RebuildResult"/> fire on the control thread. <see cref="EngineEvent.PhraseChanged"/>
+    /// is the one exception — it can fire on the audio render thread (under the mixer lock) on a
+    /// natural phrase end, so a subscriber that does I/O or blocking work must marshal it itself
+    /// (as <c>EngineHost</c> does; review finding 5 — this doc used to omit the exception).</summary>
     public event EventHandler<EngineEvent>? Events;
 
     // Public API: each call only enqueues a command and returns.

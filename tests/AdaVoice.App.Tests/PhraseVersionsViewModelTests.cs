@@ -209,6 +209,44 @@ public class PhraseVersionsViewModelTests
         Assert.DoesNotContain("PreviewVersion", host.Calls); // never started — one preview at a time
     }
 
+    /// <summary>Review finding 4: a returned preview error used to be discarded silently. Now it must
+    /// reach the view's toast channel.</summary>
+    [Fact]
+    public async Task Play_surfaces_a_returned_preview_error_as_a_notice()
+    {
+        var entry = new PhraseEntry { Id = "p-1", Title = "T", FileName = "p-1.wav" };
+        var host = HostWith(entry);
+        host.PreviewEntryResult = "missing audio file: p-1.wav";
+        var vm = new PhraseVersionsViewModel(host, host, entry);
+        BoardNotification? seen = null;
+        vm.Notified += (_, n) => seen = n;
+
+        await vm.PlayCommand.ExecuteAsync(vm.Tiles[0]);
+
+        Assert.NotNull(seen);
+        Assert.Equal(NoticeSeverity.Error, seen.Severity);
+        Assert.Equal("missing audio file: p-1.wav", seen.Message);
+    }
+
+    /// <summary>Review finding 4: an exception from the preview call (corrupt WAV, no output device)
+    /// used to be swallowed entirely by an empty catch block.</summary>
+    [Fact]
+    public async Task Play_surfaces_a_thrown_preview_exception_as_a_notice()
+    {
+        var entry = new PhraseEntry { Id = "p-1", Title = "T", FileName = "p-1.wav" };
+        var host = HostWith(entry);
+        host.PreviewThrows = true;
+        var vm = new PhraseVersionsViewModel(host, host, entry);
+        BoardNotification? seen = null;
+        vm.Notified += (_, n) => seen = n;
+
+        await vm.PlayCommand.ExecuteAsync(vm.Tiles[0]);
+
+        Assert.NotNull(seen);
+        Assert.Equal(NoticeSeverity.Error, seen.Severity);
+        Assert.False(vm.Tiles[0].IsPlaying); // the finally still clears it after the exception
+    }
+
     [Fact]
     public void Stop_preview_delegates_to_the_host()
     {
@@ -232,6 +270,27 @@ public class PhraseVersionsViewModelTests
 
         Assert.Equal("Something else", vm.Tiles[0].Label); // local edit still shows (read-only in the real UI)
         Assert.Empty(host.Phrases[0].Versions); // nothing was fabricated on the phrase
+    }
+
+    /// <summary>Review finding 9: a version tile's label textbox writes straight through on a binding —
+    /// it must gate on IsWritable rather than let a refused edit throw inside the binding engine. The
+    /// primary tile is always writable (its label isn't persisted at all).</summary>
+    [Fact]
+    public void A_version_tile_is_not_writable_when_the_library_refuses_writes()
+    {
+        var entry = new PhraseEntry
+        {
+            Id = "p-1",
+            Title = "T",
+            Versions = [new PhraseVersion { Id = "pv-1", Label = "Old" }],
+        };
+        var host = HostWith(entry);
+        host.IsWritable = false;
+
+        var vm = new PhraseVersionsViewModel(host, host, entry);
+
+        Assert.True(vm.Tiles[0].IsWritable); // primary — always writable, label isn't persisted
+        Assert.False(vm.Tiles[1].IsWritable); // version — gated
     }
 
     [Fact]

@@ -48,6 +48,10 @@ public partial class PhraseVersionsViewModel : ObservableObject
     /// Edit/Delete) — <see cref="PhraseVersionRowViewModel.IsPrimary"/> drives that in the view.</summary>
     public ObservableCollection<PhraseVersionRowViewModel> Tiles { get; }
 
+    /// <summary>Raised when a preview fails; the view shows it as a toast. Reuses
+    /// <see cref="BoardViewModel"/>'s notification type rather than inventing a second one.</summary>
+    public event EventHandler<BoardNotification>? Notified;
+
     /// <summary>"Add version" records without closing this window — it awaits the injected
     /// <c>recordVersion</c> callback (<c>BoardViewModel.RecordVersionForPhrase</c>), which drives the
     /// same recorder used by the board's own Record button, then refreshes the tile grid from
@@ -75,8 +79,8 @@ public partial class PhraseVersionsViewModel : ObservableObject
     /// <see cref="PhraseVersionRowViewModel.IsPlaying"/> turns the tile's ▶ into a ■ for the duration.
     /// <c>AllowConcurrentExecutions</c> is required: without it, <c>[RelayCommand]</c>'s default
     /// disables the button for the whole first call, so the ■ could never be clicked to stop it.
-    /// This window has no toast channel, so a failure is swallowed for v1 rather than adding new UI
-    /// plumbing for one rare case.</summary>
+    /// A returned error (missing file, wrong monitor device) or a thrown exception both surface via
+    /// <see cref="Notified"/> instead of failing silently (review finding 4).</summary>
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task Play(PhraseVersionRowViewModel? row)
     {
@@ -95,14 +99,16 @@ public partial class PhraseVersionsViewModel : ObservableObject
         row.IsPlaying = true;
         try
         {
-            if (row.Version is { } version)
-                await Task.Run(() => _playback.PreviewVersion(version));
-            else
-                await Task.Run(() => _playback.PreviewEntry(row.PrimaryEntry!));
+            var error = row.Version is { } version
+                ? await Task.Run(() => _playback.PreviewVersion(version))
+                : await Task.Run(() => _playback.PreviewEntry(row.PrimaryEntry!));
+            if (error is not null)
+                Notified?.Invoke(this, new BoardNotification(error, NoticeSeverity.Error));
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // Swallowed — see the class doc.
+            Notified?.Invoke(this, new BoardNotification(
+                "Could not play the preview — check the playback device and try again.", NoticeSeverity.Error));
         }
         finally
         {
@@ -166,6 +172,12 @@ public partial class PhraseVersionRowViewModel : ObservableObject
     public PhraseVersion? Version { get; private set; }
 
     public bool IsPrimary => PrimaryEntry is not null;
+
+    /// <summary>False while the library refuses writes (a transiently locked file) — the label textbox
+    /// binds its <c>IsEnabled</c> to this for a version tile, so a refused rename shows as "disabled"
+    /// instead of throwing inside the binding engine, where WPF would swallow it silently (review
+    /// finding 9). Always true for the primary tile, whose label is read-only anyway.</summary>
+    public bool IsWritable => _library?.IsWritable ?? true;
 
     /// <summary>The tile's length, matching the board tile's own duration label.</summary>
     public string DurationLabel => $"{(Version?.DurationMs ?? PrimaryEntry!.DurationMs) / 1000.0:0.0} s";

@@ -68,6 +68,33 @@ public class BackupSettingsViewModelTests
         Assert.Null(host.ExportedPath);
     }
 
+    /// <summary>Review finding 2: export silently drops version recordings (v1 limitation) — the
+    /// operator must be told when it happens, not just have it logged.</summary>
+    [Fact]
+    public void Export_with_dropped_versions_shows_an_info_notice()
+    {
+        var host = new FakeSettingsHost { NextExportDroppedVersions = 2 };
+        var infos = new List<string>();
+        var vm = NewVm(host, pickExportPath: () => @"C:\exports\out.zip", infos: infos);
+
+        vm.ExportCommand.Execute(null);
+
+        Assert.Single(infos);
+        Assert.Contains("2", infos[0]);
+    }
+
+    [Fact]
+    public void Export_with_no_dropped_versions_shows_no_notice()
+    {
+        var host = new FakeSettingsHost { NextExportDroppedVersions = 0 };
+        var infos = new List<string>();
+        var vm = NewVm(host, pickExportPath: () => @"C:\exports\out.zip", infos: infos);
+
+        vm.ExportCommand.Execute(null);
+
+        Assert.Empty(infos);
+    }
+
     [Fact]
     public void Export_failure_is_surfaced_without_throwing()
     {
@@ -144,7 +171,7 @@ public class BackupSettingsViewModelTests
     // would silently keep running the non-throwing base implementation.
     private sealed class ThrowingExportSettingsHost : FakeSettingsHost
     {
-        public override void Export(string destinationZipPath) => throw new IOException("disk full");
+        public override int Export(string destinationZipPath) => throw new IOException("disk full");
     }
 
     // Same reasoning as ThrowingExportSettingsHost, for the Import path: LibraryArchiveService.Import

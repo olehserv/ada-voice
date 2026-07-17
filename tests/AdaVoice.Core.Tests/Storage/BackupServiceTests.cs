@@ -117,12 +117,54 @@ public class BackupServiceTests : IDisposable
         Assert.Equal("p-x", Assert.Single(result.Library.Phrases).Id);
     }
 
+    /// <summary>Review finding 6: backups zip the whole <c>audio\</c> folder (versions included), while
+    /// export deliberately strips versions (v1 limitation) — a load-bearing asymmetry with no test
+    /// guarding it before this. If a future "unify with export" refactor drops versions from backups
+    /// too, this test catches it.</summary>
+    [Fact]
+    public void Backup_and_recovery_round_trips_a_phrase_with_versions()
+    {
+        SeedLibraryWithVersion("p-1", "pv-1");
+        WriteAudio("p-1.wav");
+        WriteAudio("p-1-pv-1.wav");
+        var backup = new BackupService(_root);
+
+        var path = backup.EnsureDailyBackup(new DateOnly(2026, 6, 1));
+
+        // The backup zip itself keeps the version's WAV, unlike export (which strips versions).
+        using (var zip = ZipFile.OpenRead(path!))
+            Assert.NotNull(zip.GetEntry("audio/p-1-pv-1.wav"));
+
+        File.WriteAllText(AdaVoicePaths.LibraryFile(_root), "{ broken");
+        var result = new JsonPhraseRepository(_root, backup.TryReadLatestLibrary).Load();
+
+        Assert.Equal(LibraryLoadStatus.RecoveredFromBackup, result.Status);
+        var phrase = Assert.Single(result.Library.Phrases);
+        var version = Assert.Single(phrase.Versions);
+        Assert.Equal("pv-1", version.Id);
+        Assert.True(File.Exists(AdaVoicePaths.AudioPath(_root, version.FileName))); // the take itself survived too
+    }
+
     private void SeedLibrary(string phraseId)
     {
         var repo = new JsonPhraseRepository(_root);
         var library = repo.Load().Library;
         library.Phrases.Clear();
         library.Phrases.Add(new PhraseEntry { Id = phraseId, FileName = phraseId + ".wav" });
+        repo.Save(library);
+    }
+
+    private void SeedLibraryWithVersion(string phraseId, string versionId)
+    {
+        var repo = new JsonPhraseRepository(_root);
+        var library = repo.Load().Library;
+        library.Phrases.Clear();
+        library.Phrases.Add(new PhraseEntry
+        {
+            Id = phraseId,
+            FileName = phraseId + ".wav",
+            Versions = [new PhraseVersion { Id = versionId, FileName = $"{phraseId}-{versionId}.wav" }],
+        });
         repo.Save(library);
     }
 

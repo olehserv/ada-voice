@@ -130,8 +130,8 @@ static void PlayLastToCall(EngineHost host)
         return;
     }
 
-    host.PlayEntry(last);
-    Console.WriteLine($"Playing {last.Id} to the call (must be Live — press S first).");
+    var error = host.PlayEntry(last);
+    Console.WriteLine(error is null ? $"Playing {last.Id} to the call." : $"Play refused: {error}");
 }
 
 // Delete the most recently catalogued phrase. The WAV is orphaned (renamed), never destroyed.
@@ -156,8 +156,10 @@ static void Export(EngineHost host)
     var path = Path.Combine(AdaVoicePaths.DefaultRoot, $"export-{DateTime.Now:yyyyMMdd-HHmmss}.zip");
     try
     {
-        host.ExportLibrary(path);
-        Console.WriteLine($"Exported to {path}");
+        var dropped = host.ExportLibrary(path);
+        Console.WriteLine(dropped > 0
+            ? $"Exported to {path} ({dropped} version recording(s) not included)."
+            : $"Exported to {path}");
     }
     catch (Exception ex)
     {

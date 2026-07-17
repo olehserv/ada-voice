@@ -57,7 +57,12 @@ internal class FakeSettingsHost : ISettingsHost
     public void SetLanguage(string code) => Language = code;
 
     public string? ExportedPath { get; private set; }
-    public virtual void Export(string destinationZipPath) => ExportedPath = destinationZipPath;
+    public int NextExportDroppedVersions { get; set; }
+    public virtual int Export(string destinationZipPath)
+    {
+        ExportedPath = destinationZipPath;
+        return NextExportDroppedVersions;
+    }
 
     public (string Path, ImportMode Mode)? ImportedWith { get; private set; }
     public ImportResult NextImportResult { get; set; } = new(true, 1, 0);

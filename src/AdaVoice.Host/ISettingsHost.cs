@@ -60,8 +60,9 @@ public interface ISettingsHost
     /// call <see cref="SaveSettings"/> to persist.</summary>
     void SetLanguage(string code);
 
-    /// <summary>Export the library (metadata + active phrase WAVs) to a zip.</summary>
-    void Export(string destinationZipPath);
+    /// <summary>Export the library (metadata + active phrase WAVs) to a zip. Returns the number of
+    /// version recordings that were not included (v1 limitation) — 0 if the export was complete.</summary>
+    int Export(string destinationZipPath);
 
     /// <summary>Import a library archive (merge or replace). The in-session library refreshes on
     /// success — the Board's on-screen list does not (see the design spec's "Import refresh"

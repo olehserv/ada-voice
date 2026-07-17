@@ -57,8 +57,11 @@ public partial class SetupWizardViewModel : ObservableObject
     /// <summary>True when Next is blocked — "Skip anyway" is the only way forward.</summary>
     public bool ShowSkip => !CanAdvance;
 
-    /// <summary>True once the wizard reached Finish on the last step — the caller (App composition
-    /// root) uses this to persist "wizard completed". False on Back/Cancel/window-close.</summary>
+    /// <summary>True once the wizard reached Finish on the last step; false on Back/Cancel/window-close.
+    /// Not currently read by any caller — completion is actually persisted through
+    /// <see cref="Finished"/> (<c>MainWindow.ShowSetupWizard</c> calls <c>MarkWizardCompleted()</c> when
+    /// the window's <c>DialogResult</c> comes back true). Kept for a caller that wants the flag without
+    /// subscribing to the event.</summary>
     public bool Completed { get; private set; }
 
     /// <summary>Raised when Finish is reached from the last step (via Next or SkipAnyway). The

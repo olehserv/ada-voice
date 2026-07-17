@@ -31,6 +31,12 @@ public interface ILibraryHost
     /// tile, without marking the whole phrase broken (security scan 2026-07-12 finding 5).</summary>
     IReadOnlyList<string> BrokenVersionIds { get; }
 
+    /// <summary>False while the library is in a transiently-locked state and every mutation is
+    /// refused (design 04 §3). Edit controls that write straight through on a binding — the random-
+    /// version checkbox, a version label — should gate on this instead of letting a refused edit throw
+    /// inside the binding engine, where WPF swallows it silently (review finding 9).</summary>
+    bool IsWritable { get; }
+
     /// <summary>Operator-readable warning about how the library loaded (locked file, corrupt file,
     /// restored backup), or null when the load was clean. The board shows it at startup so an empty
     /// board is never mistaken for an empty library (design 04 §3).</summary>

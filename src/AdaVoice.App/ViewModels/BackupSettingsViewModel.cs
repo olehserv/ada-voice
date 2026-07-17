@@ -53,7 +53,12 @@ public partial class BackupSettingsViewModel : ObservableObject
 
         try
         {
-            _settings.Export(path);
+            var droppedVersions = _settings.Export(path);
+            // Export never includes version recordings (v1 limitation) — say so when it happened, so
+            // the operator doesn't assume the export was complete (review finding 2).
+            if (droppedVersions > 0)
+                _showInfo($"Exported. {droppedVersions} alternate take(s) were not included — " +
+                    "phrase versions aren't included in exports yet.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

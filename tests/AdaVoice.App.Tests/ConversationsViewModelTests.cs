@@ -61,6 +61,38 @@ public class ConversationsViewModelTests
         Assert.Contains(host.Conversations, c => c.Name == "New");
     }
 
+    /// <summary>Review finding 8: blanking the name used to be silently ignored, leaving the field
+    /// blank on screen while storage still had the old name — revert it instead.</summary>
+    [Fact]
+    public void Renaming_to_blank_reverts_the_field_to_the_persisted_name()
+    {
+        var host = HostWithPhrases();
+        var vm = new ConversationsViewModel(host) { NewName = "Cold call" };
+        vm.AddCommand.Execute(null);
+        var row = vm.Rows.Single();
+
+        row.Name = "   ";
+        vm.RenameCommand.Execute(row);
+
+        Assert.Equal("Cold call", row.Name);
+        Assert.Contains(host.Conversations, c => c.Name == "Cold call"); // storage unchanged
+    }
+
+    /// <summary>Review finding 9: a bound checkbox that writes straight through would otherwise throw
+    /// inside the binding engine (swallowed silently by WPF) when the library refuses writes — the
+    /// row exposes IsWritable so the view can disable the control instead.</summary>
+    [Fact]
+    public void Row_is_not_writable_when_the_library_refuses_writes()
+    {
+        var host = HostWithPhrases();
+        host.Conversations = [new Conversation { Id = "v-1", Name = "Cold call" }];
+        host.IsWritable = false;
+
+        var vm = new ConversationsViewModel(host);
+
+        Assert.False(vm.Rows.Single().IsWritable);
+    }
+
     [Fact]
     public void Delete_removes_the_row_and_persists()
     {

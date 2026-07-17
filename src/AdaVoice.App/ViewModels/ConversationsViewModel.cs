@@ -50,12 +50,20 @@ public partial class ConversationsViewModel : ObservableObject
         NewName = "";
     }
 
-    /// <summary>Persist a row's edited name.</summary>
+    /// <summary>Persist a row's edited name. A blank name is refused (like the library layer itself
+    /// requires) — revert the field to the persisted name instead of leaving it blank on screen while
+    /// storage still has the old value (review finding 8).</summary>
     [RelayCommand]
     private void Rename(ConversationRowViewModel? row)
     {
-        if (row is null || string.IsNullOrWhiteSpace(row.Name))
+        if (row is null)
             return;
+
+        if (string.IsNullOrWhiteSpace(row.Name))
+        {
+            row.Name = _library.Conversations.FirstOrDefault(c => c.Id == row.Id)?.Name ?? row.Name;
+            return;
+        }
 
         _library.RenameConversation(row.Id, row.Name);
     }
@@ -106,6 +114,11 @@ public partial class ConversationRowViewModel : ObservableObject
     /// <summary>Persist the random-version flag immediately, like every other edit in this row — no
     /// separate Save step.</summary>
     partial void OnUseRandomVersionChanged(bool value) => _library.SetConversationUseRandomVersion(Id, value);
+
+    /// <summary>False while the library refuses writes (a transiently locked file) — the checkbox
+    /// binds its <c>IsEnabled</c> to this, so a refused edit shows as "disabled" instead of throwing
+    /// inside the binding engine, where WPF would swallow it silently (review finding 9).</summary>
+    public bool IsWritable => _library.IsWritable;
 
     /// <summary>The conversation's phrases, in call order.</summary>
     public ObservableCollection<ConversationPhraseRowViewModel> Members { get; }

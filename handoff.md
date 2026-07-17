@@ -10,19 +10,43 @@ back up. It answers one question: *where are we right now?*
 - Details of past work live in git history and in the dated docs under `docs/reviews/`.
   This file stays short on purpose.
 
-_Last updated: 2026-07-14._
+_Last updated: 2026-07-17._
 
 ## Status in one line
 
 **The app is built and verified on the target machine** — engine, recorder, library, Board UI,
 setup wizard, Settings window, stop hotkey, backups, export/import, **Conversations** (ordered
 phrase scripts with a step-by-step highlight), **phrase versions** (alternate takes, randomized
-during a Conversation step); 489 tests passed + 16 skipped across 6 projects (104 Core + 98 Audio +
-8 Wasapi + 8 Host + 241 App + 30 Server DB-less) plus 28 server integration tests against
+during a Conversation step); 508 tests passed + 16 skipped across 6 projects (107 Core + 98 Audio +
+8 Wasapi + 12 Host + 253 App + 30 Server DB-less) plus 28 server integration tests against
 PostgreSQL 16. Monetization: Phases 0–2 shipped — the full 13-table EF Core schema, multi-tenant
 query filters and idempotent seeder (Phase 1), and the **auth API** (Phase 2): ES256-JWT
 login/refresh/logout/change-password/me, rotating refresh tokens with family-revocation reuse
 detection, account lockout, per-IP rate limiting, RFC 7807 errors, and audit logging.
+
+## Latest work (2026-07-17)
+
+- **First `pr-review-toolkit` run + all 10 findings fixed.** Six specialized agents (code-reviewer,
+  silent-failure-hunter, type-design-analyzer, code-simplifier, pr-test-analyzer, comment-analyzer)
+  reviewed the desktop app in parallel, told to exclude anything the 2026-07-04/07-12 reviews had
+  already fixed and focus on code added since (Conversations, phrase versions, UX passes). Full
+  report: [reviews/2026-07-17-full-codebase-review.md](docs/reviews/2026-07-17-full-codebase-review.md).
+  Top finding, independently surfaced by 3 of the 6 agents: a conversation's "random version"
+  playback could pick a version whose WAV was missing and silently play nothing into a live call
+  while still advancing the script step — `BoardViewModel.PickVersion` now excludes broken
+  versions from the pool, and `IPlaybackHost.PlayEntry` returns an error string (mirroring
+  `PreviewEntry`) instead of `void`, so a drop is never silent. Other fixes: export now tells the
+  operator when version recordings were dropped; `PhraseLibraryService.Add` falls back to
+  Uncategorized for an unknown category id (closing a create/edit asymmetry); the Versions window
+  gained a toast channel so a preview failure is no longer swallowed; `AudioEngine.Events`' doc
+  comment now states that `PhraseChanged` can fire on the render thread (it omitted that before); a
+  false "New version saved" on a since-deleted phrase is now an error; blank rename/save reverts
+  the field instead of leaving it diverged from storage; the random-version checkbox and version
+  label textbox gate on a new `ILibraryHost.IsWritable` seam member instead of a refused edit being
+  swallowed by WPF's binding engine; a cluster of stale "future feature" comments (wizard, WASAPI
+  seam) were reworded to match shipped behavior; added tests for the version-vs-primary playback
+  selection and the backup-keeps/export-strips version-WAV asymmetry. 508 tests green (was 489) +
+  16 skipped; server/ untouched (28 integration tests need a live PostgreSQL, not run here).
 
 ## Latest work (2026-07-12)
 

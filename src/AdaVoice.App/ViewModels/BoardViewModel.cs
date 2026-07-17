@@ -564,14 +564,17 @@ public partial class BoardViewModel : ObservableObject
     // ---- Playback -------------------------------------------------------------------------------
 
     /// <summary>Pick uniformly at random from the phrase's primary recording (null) plus all of its
-    /// versions. Null means "play the primary" — <see cref="IPlaybackHost.PlayEntry"/> already treats
-    /// a null version that way, so no separate primary case is needed here.</summary>
+    /// *playable* versions. Null means "play the primary" — <see cref="IPlaybackHost.PlayEntry"/>
+    /// already treats a null version that way, so no separate primary case is needed here. A version
+    /// whose WAV is missing (<see cref="ILibraryHost.BrokenVersionIds"/>) is excluded from the pool —
+    /// otherwise a random pick could land on it and play silence into the call.</summary>
     private PhraseVersion? PickVersion(PhraseEntry entry)
     {
-        if (entry.Versions.Count == 0)
+        var playable = entry.Versions.Where(v => !_library.BrokenVersionIds.Contains(v.Id)).ToArray();
+        if (playable.Length == 0)
             return null;
 
-        var candidates = new PhraseVersion?[] { null }.Concat(entry.Versions).ToArray();
+        var candidates = new PhraseVersion?[] { null }.Concat(playable).ToArray();
         return candidates[_rng.Next(candidates.Length)];
     }
 
@@ -614,7 +617,15 @@ public partial class BoardViewModel : ObservableObject
         Notice = null;
         var version = IsConversationActive && _activeConversationUseRandomVersion
             ? PickVersion(item.Entry) : null;
-        _playback.PlayEntry(item.Entry, version);
+        var error = _playback.PlayEntry(item.Entry, version);
+        if (error is not null)
+        {
+            // Surface the drop instead of letting it pass as if it played — e.g. the file went missing
+            // after the board loaded. Do not advance the conversation step: nothing was actually heard.
+            Notify($"Could not play \"{item.Title}\": {error}", NoticeSeverity.Error);
+            return;
+        }
+
         if (IsConversationActive)
             AdvanceStepFor(item.Entry.Id);
     }
@@ -973,9 +984,17 @@ public partial class BoardViewModel : ObservableObject
             return;
         }
 
+        if (updated is not { } entry)
+        {
+            // The phrase this take was for is gone (e.g. deleted from another view while the Recorder
+            // was open). Nothing was written — keep PendingTake and the stash so the operator doesn't
+            // lose the take, and say so instead of a false "saved" (review finding 7).
+            Notify("Could not save the version — the phrase no longer exists.", NoticeSeverity.Error);
+            return;
+        }
+
         PendingTake = null;
-        if (updated is { } entry)
-            Phrases.FirstOrDefault(p => p.Entry.Id == entry.Id)?.Update(entry);
+        Phrases.FirstOrDefault(p => p.Entry.Id == entry.Id)?.Update(entry);
         Notice = null;
         Saved?.Invoke(this, "New version saved");
     }

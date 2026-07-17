@@ -4,7 +4,7 @@ namespace AdaVoice.Audio.Wasapi;
 
 /// <summary>
 /// Helpers to find audio devices by role or by name. Device enumeration lives here in the
-/// WASAPI layer, not in the core. Used by the runner now, and by the setup wizard later.
+/// WASAPI layer, not in the core. Used by the host and by the setup wizard's environment checks.
 /// </summary>
 public static class WasapiDevices
 {
