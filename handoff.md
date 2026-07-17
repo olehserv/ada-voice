@@ -199,8 +199,9 @@ detection, account lockout, per-IP rate limiting, RFC 7807 errors, and audit log
   everything, works awesome". Script kept for re-runs:
   [operator-pilot.md](docs/plans/operator-pilot.md).
 - ✅ **Phase 0 spike gate — PASSED** (2026-06-15): Architecture A (VB-CABLE + in-app mixer)
-  confirmed against a real Zoho call. Results: [spike/PHASE0-RESULTS.md](spike/PHASE0-RESULTS.md)
-  (file exists; exact measured latency/AGC numbers were never filled in — still TBD there).
+  confirmed against a real Zoho call. Results were recorded in `spike/PHASE0-RESULTS.md`; the
+  spike folder was removed in the 2026-07-17 cleanup (see git history). The exact measured
+  latency/AGC numbers were never captured in writing — the gate passed by observation.
 - ✅ **Design phase** (2026-06-10): 9 design docs, eng + design reviews cleared,
   24 canonical decisions locked.
 - ✅ **Conversations smoke test — PASSED (user).** Full end-to-end pass: create a conversation
@@ -239,8 +240,6 @@ needs the subscription/tenant state Phase 3 introduces.
   tapping the engine's capture. Watch for it on hardware.
 - **Cold-start auto-retry into Degraded:** a failed `Start` currently stays Stopped with the
   error surfaced.
-- **Fill in `spike/PHASE0-RESULTS.md` measured numbers** (latency, AGC notes) if they are
-  ever re-measured; the gate itself passed.
 - ✅ **Screenshot harness `after-light/` dark-theme bug — fixed (2026-07-12, commit `adda0a7`).**
   Root cause: closing a WPF-UI `FluentWindow` resets `ApplicationThemeManager` back to the OS
   theme as a side effect, so the fixture's one-time theme apply at startup only held for the

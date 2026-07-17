@@ -65,11 +65,32 @@ stop-hotkey or monitor-phrase-level setting yet; those land with their consumers
       "gainDb": -2.4,
       "sortOrder": 0,
       "createdAt": "2026-06-09T10:00:00Z",
-      "updatedAt": "2026-06-09T10:00:00Z"
+      "updatedAt": "2026-06-09T10:00:00Z",
+      "versions": [
+        {
+          "id": "pv-91c2",
+          "label": "Take 2",
+          "fileName": "p-7f3a-pv-91c2.wav",
+          "durationMs": 2210,
+          "gainDb": -1.9,
+          "createdAt": "2026-07-07T10:00:00Z"
+        }
+      ]
     }
   ],
   "tags": [
     { "name": "opening", "color": "#4F8EF7" }
+  ],
+  "conversations": [
+    {
+      "id": "v-3b1d",
+      "name": "Refund script",
+      "phraseIds": ["p-7f3a"],
+      "sortOrder": 0,
+      "useRandomVersion": false,
+      "createdAt": "2026-07-06T10:00:00Z",
+      "updatedAt": "2026-07-06T10:00:00Z"
+    }
   ]
 }
 ```
@@ -86,6 +107,15 @@ Notes:
 - `gainDb` is set automatically on save: the recorder loudness-matches the take to the
   wizard-calibrated live-mic RMS reference (`micReferenceRms`), so phrases and her live voice
   reach the client at the same perceived level (decision #13).
+- `versions` (`PhraseVersion`) are **alternate takes** of a phrase: each has its own WAV
+  (`{phraseId}-{versionId}.wav`) and its own loudness-match `gainDb`. The board always plays
+  the primary; a version plays only inside a Conversation step with `useRandomVersion` on.
+- `conversations` (`Conversation`) are ordered, named phrase scripts: order lives in
+  `phraseIds` (not on the phrase), a deleted phrase is pruned from every conversation, and
+  `useRandomVersion` opts a script into random take selection per step.
+- **Backups keep version WAVs; export deliberately strips them (v1 limit)** — the operator is
+  told how many takes were dropped on export. Recovery from a backup restores takes; a
+  transferred export does not.
 - Per-phrase hotkey field is intentionally absent in v1 (deferred decision); the schema
   carries a `version` field so adding it later is a non-breaking migration.
 
@@ -96,6 +126,7 @@ Notes:
 ├── library.json                  metadata (atomic write: tmp + rename)
 ├── settings.json
 ├── audio\                        p-{id}.wav — 48 kHz / 16-bit / mono PCM
+│                                 {phraseId}-{versionId}.wav — alternate takes (versions)
 │                                 deleted-{id}.wav — orphaned recordings (kept, see §3)
 ├── backups\                      adavoice-backup-YYYY-MM-DD.zip (daily, keep 7)
 └── logs\                         adavoice-YYYYMMDD.log (Serilog rolling)

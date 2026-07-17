@@ -1,6 +1,6 @@
 # AdaVoice Server — API Design
 
-Purpose: define the REST API surface, conventions, DTOs, error model, idempotency, and rate limiting for the AdaVoice monetization backend. Status: Proposed, 2026-07-05.
+Purpose: define the REST API surface, conventions, DTOs, error model, idempotency, and rate limiting for the AdaVoice monetization backend. Status: auth endpoints (`/api/auth/*`), error model, and auth rate limiting shipped in Phase 2 (2026-07-14); device, license, billing, and admin sections remain Proposed. See handoff.md.
 
 Source of truth for names and statuses: [README.md](README.md) (the canonical brief).
 

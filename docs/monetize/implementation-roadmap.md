@@ -2,8 +2,8 @@
 
 **Purpose:** ordered, phased plan to build AdaVoice monetization: server, licensing, billing, admin panel, and WPF integration. Each phase has a goal, numbered tasks, dependencies, and testable acceptance criteria.
 
-**Status: Phases 0–2 shipped (repo scaffold, domain/DB, auth API — see handoff.md). Phase 3
-onward: Proposed, 2026-07-05.**
+**Status:** per-phase ✅ markers on the phase headers below; the live one-line status is in
+[README.md](README.md) (the canonical brief) and handoff.md — not restated here.
 
 ---
 
@@ -217,7 +217,7 @@ Simple dependency list:
 
 **Depends on:** Phase 5.
 
-**Risk note:** this phase touches app startup — regression risk for the 360 green tests.
+**Risk note:** this phase touches app startup — regression risk for the full desktop test suite.
 Keep licensing behind a feature flag until pilot. With the flag off, the app behaves exactly as today.
 
 **Tasks**
@@ -239,7 +239,7 @@ Keep licensing behind a feature flag until pilot. With the flag off, the app beh
 
 **Acceptance criteria**
 
-- With the feature flag off, all ~360 existing tests stay green and startup behavior is unchanged.
+- With the feature flag off, the full existing desktop test suite stays green and startup behavior is unchanged.
 - With the flag on and a valid cached ticket, the app starts fully offline in the grace window (`offline_allowed`).
 - Setting the system clock back 6+ minutes past `lastAcceptedUtc` yields `offline_blocked`; an online refresh clears it (simulated in tests).
 - Every UX state maps to a visible, correct UI behavior per the brief's behavior summary.
@@ -396,7 +396,7 @@ Keep licensing behind a feature flag until pilot. With the flag off, the app beh
 | 0 | Hosting decision stalls | Gate blocks only Phase 11; keep building on local Docker |
 | 2 | Auth bugs are security bugs | Test matrix is the deliverable, not an afterthought |
 | 5 | Key management mistakes are unrecoverable in the field | Two pinned keys in client + JWKS + rotation drill in Phase 10 |
-| 6 | Startup changes break the stable desktop app (~360 tests) | Feature flag off by default until pilot; no references from Core/Audio/Host |
+| 6 | Startup changes break the stable desktop app (full test suite) | Feature flag off by default until pilot; no references from Core/Audio/Host |
 | 7 | Manual money handling with no audit trail | Audit rows on every billing action; idempotent mark-paid |
 | 8 | A job double-run corrupts statuses | Idempotency tests are acceptance criteria |
 | 11 | First customer hits an unknown failure mid-call | Offline grace (7 days) means server issues never block calls; runbook dry-run before go-live |

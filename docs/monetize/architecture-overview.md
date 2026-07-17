@@ -6,9 +6,12 @@ This doc follows the canonical brief. Detailed designs live in `licensing-design
 
 ---
 
-## 1. Current system (current state)
+## 1. Desktop-app baseline (facts, 2026-07-05 — dated snapshot)
 
-AdaVoice today is a fully offline WPF desktop app on .NET 10.
+This section is the point-in-time baseline the plan was written against, kept as a record.
+The `server/` backend has since shipped Phases 0–2 (see the status line above and handoff.md).
+
+At that point AdaVoice was a fully offline WPF desktop app on .NET 10.
 
 - Solution: `AdaVoice.slnx`, central package management (`Directory.Packages.props`), `TreatWarningsAsErrors=true`.
 - Projects, strictly layered:

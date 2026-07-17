@@ -133,7 +133,7 @@ not actioned here.)
 
 **Explicitly out of scope for this pass:** building the Full/Docked 720 px responsive layout —
 that's a separate, already-owned feature decision
-([ui-ux-localization-scope.md](../ui-ux-localization-scope.md) slice 3), not a structural bug
+([ui-ux-localization-scope.md](../../plans/ui-ux-localization-scope.md) slice 3), not a structural bug
 fix. Don't fold it into this UX pass without a separate go-ahead.
 
 **Risk:** none — no product code changed, only a new test.

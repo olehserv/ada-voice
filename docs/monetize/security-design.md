@@ -1,6 +1,6 @@
 # AdaVoice Security Design
 
-Purpose: threat model, auth and signing design, secrets, audit, and hardening for the AdaVoice monetization backend and WPF client. Status: Proposed, 2026-07-05.
+Purpose: threat model, auth and signing design, secrets, audit, and hardening for the AdaVoice monetization backend and WPF client. Status: the auth parts (JWT + refresh rotation, lockout, rate limiting, audit logging) shipped in Phase 2 (2026-07-14); ticket signing, key management, and client-side sections remain Proposed. See handoff.md.
 
 Source of truth for names and values: the canonical monetization brief. Companion docs: `licensing-design.md`, `wpf-client-integration.md`.
 

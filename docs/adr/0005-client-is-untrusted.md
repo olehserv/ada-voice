@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted — decision locked in the canonical brief (docs/monetize/README.md); implementation lands per the roadmap phases.
 
 ## Context
 

@@ -1,6 +1,6 @@
 # AdaVoice Server — Database Design
 
-Purpose: define the PostgreSQL schema for the AdaVoice monetization backend (tenants, auth, licensing, billing, audit). Status: Proposed, 2026-07-05.
+Purpose: define the PostgreSQL schema for the AdaVoice monetization backend (tenants, auth, licensing, billing, audit). Status: schema shipped in Phase 1 (2026-07-13) — all 13 tables live via the `InitialCreate` migration; retention/rotation and later-phase notes remain Proposed. See handoff.md.
 
 Source of truth for names and statuses: [README.md](README.md) (the canonical brief). Database: PostgreSQL 16, EF Core 10 + Npgsql, snake_case names, `uuid` PKs (v7 preferred), `created_at`/`updated_at timestamptz` on every table.
 

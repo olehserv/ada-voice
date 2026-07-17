@@ -128,7 +128,7 @@ drive the *mechanical* rules below, not just visuals:
   scrolls/wraps.
 - The Full/Docked responsive layout (category rail at ≥720 px) is a **known, separately-owned
   open decision** — see
-  [ui-ux-localization-scope.md](../../plans/ui-ux-localization-scope.md). Don't build it as a
+  [ui-ux-localization-scope.md](../plans/ui-ux-localization-scope.md). Don't build it as a
   side effect of a UX polish pass; it needs its own design decision first.
 - **Phrase tile sizing is planned but not yet shipped** — fixed `Width`/`Height` regardless of
   tag count, a title clamp, and a capped tag list with a "+N" overflow chip (full tag list stays
@@ -186,7 +186,7 @@ flow.** It renders OS chrome and is the single biggest visual tell that breaks t
 
 ## 10. Voice-assistant / engine state rules
 
-AdaVoice is non-AI today (per [CLAUDE.md](../../../CLAUDE.md)) — there is no
+AdaVoice is non-AI today (per [CLAUDE.md](../../CLAUDE.md)) — there is no
 Listening/Processing/Speaking pipeline. The states that actually exist and must stay visually
 distinct:
 

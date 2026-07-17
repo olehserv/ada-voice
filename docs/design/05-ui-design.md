@@ -44,8 +44,8 @@ from.
 └──────────────────────────────────────────────────────────┘
 ```
 
-*(Diagram shows the planned Full layout. The shipped Board uses a category dropdown
-instead of the left rail, and has no mic meter yet — see "Window sizing" below.)*
+*(Diagram shows the planned Full layout. The shipped Board uses compact filter menu
+buttons instead of the left rail, and has no mic meter yet — see "Window sizing" below.)*
 
 - **Always-on-top by default** (`Topmost`, 📌 toggle, decision #16): she docks AdaVoice
   beside a full-screen Chrome/Zoho and never hunts for the window mid-call.
@@ -54,18 +54,24 @@ instead of the left rail, and has no mic meter yet — see "Window sizing" below
 - **Status bar always visible:** engine state (token-colored LIVE / OFF AIR / DEGRADED /
   STOPPED, ≥14 DIP caps), current phrase + progress, large STOP. The live mic meter in the
   status bar is *planned — not built yet*.
-- Categories: the shipped Board uses a **category dropdown filter** above the grid. Phrases
+- Filters: the shipped Board uses two **compact menu buttons** above the grid (redesign
+  2026-07-07): **Categories** (multi-select, checkable) and **Conversations** (single-select).
+  The two are mutually exclusive — picking a conversation clears the category filter. Phrases
   move between categories via the edit dialog (drag-and-drop trimmed in review 2026-06-10).
+- **Conversations** (shipped 2026-07-06): an ordered phrase script selectable from the filter
+  bar; the board shows its phrases in call order with a step highlight that follows playback.
+  Managed in `ManageConversationsDialog`; per-conversation "random version" plays a random
+  alternate take per step (see design 04).
 - Top: search box — type-to-filter across title and tags, with a Clear button.
 
 ### Window sizing
 
-**Shipped:** one layout at all widths — category dropdown + phrase grid.
+**Shipped:** one layout at all widths — filter menu buttons + phrase grid.
 **Minimum window size 420 × 560 is enforced** (below-minimum resizing is blocked).
 
 The two named layouts below are a **slice-3 open item**, not built yet. Open design
-decision: bring back the category rail at ≥ 720 px, or keep dropdown-only and update this
-doc.
+decision: bring back the category rail at ≥ 720 px, or keep the single filter-bar layout and
+update this doc.
 
 | Layout (planned) | Width | Behavior |
 |---|---|---|

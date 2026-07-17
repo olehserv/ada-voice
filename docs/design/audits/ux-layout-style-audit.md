@@ -1,16 +1,11 @@
 # UX / Layout / Style Audit — 2026-07-12
 
-**Status as of 2026-07-12 (later the same day):** B1, D1, D2 are fixed (Pass 2, Pass 4 — see
-[the plan](../plans/ux-structural-fix-plan.md) and the review notes in
-[screenshots/review/](../screenshots/review/)). C1 was verified with no fix needed (`Pass 3`).
-E2 is still open, awaiting approval to start (`Pass 2b`). **F1 was pulled forward off the
-deferred list per direct owner feedback (2026-07-12)** and its scope expanded beyond the
-original title-wrap-height problem to also cover tag-count overflow — see `Pass 6` in the plan;
-not started, promoted ahead of Pass 2b. A separate batch of owner UX feedback (Done button
-color, row-height consistency, icon-only delete/remove buttons, swatch-only color dropdown,
-autosave) was also implemented — those were not audit findings, see the plan's "Owner UX rework
-batch" section and [wpf-ux-design-rules.md](../wpf-ux-design-rules.md) rule 5 for the resulting
-conventions.
+**Status:** live pass-by-pass status is tracked in one place — the status table in
+[the plan](../plans/ux-structural-fix-plan.md). This audit records the findings as of
+2026-07-12 and is not updated per pass. (F1 was pulled forward per owner feedback and folded
+into the plan's `Pass 6`; a separate owner-feedback rework batch — not audit findings — is
+described in the plan's "Owner UX rework batch" section, with the resulting conventions in
+[wpf-ux-design-rules.md](../wpf-ux-design-rules.md) rule 5.)
 
 Scope: `src/AdaVoice.App` (9 windows/dialogs) against the problems named in the modernization
 request, plus a fresh look at layout, buttons, and visual consistency.
