@@ -6,7 +6,9 @@ AdaVoice — a Windows desktop voice assistant for operators who talk to people 
 using scripts. Non-AI today; AI may come later, but do not overengineer for it now.
 
 Stack: WPF on .NET, MVVM (CommunityToolkit.Mvvm), WPF-UI (Fluent theme), NAudio/WASAPI
-audio, Serilog file logging, xunit tests. No web layer, no database.
+audio, Serilog file logging, xunit tests. No web layer, no database in the desktop app
+itself — `server/` is a separate monetization backend (ASP.NET Core + PostgreSQL/EF Core),
+its own workstream with its own docs under `docs/monetize/`.
 
 **Start here:** `handoff.md` is the live project status — read it first when picking up
 work. Design docs and decisions live under `docs/`. UX/layout mechanics rules (window
@@ -24,6 +26,8 @@ src/
   AdaVoice.Audio.Wasapi  WASAPI/COM seam (Windows only), depends on Audio
   AdaVoice.Host          composition root: wires Core + Audio + Wasapi, logging
 tests/                   one xunit test project per src project
+server/                  monetization backend (Api, Domain, Infrastructure, Workers, Tests) —
+                         separate workstream, own docs under docs/monetize/
 ```
 
 Dependency direction: `App → Host → {Core, Audio, Audio.Wasapi}`. Keep it that way:

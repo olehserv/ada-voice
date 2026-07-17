@@ -12,8 +12,8 @@ the two `ComboBox`es alone (each `MinWidth="160"`) leave no room for both manage
 Record button, which risks being clipped.
 
 Rather than just shrinking the existing controls (a subagent already tried — no `MinWidth`/margin
-tuning closes the gap; see `docs/superpowers/plans/2026-07-06-conversations.md` Task 7's fix
-history), the owner wants a different interaction model: merge each filter's dropdown and its
+tuning closes the gap; see the Conversations plan's Task 7 fix history in git log, the plan file
+itself was removed once its work shipped), the owner wants a different interaction model: merge each filter's dropdown and its
 manage-button into a single button that opens a menu. While doing this, the Category filter also
 gains real multi-select (checkboxes) — a small behavior improvement on top of the layout fix,
 since the two filters no longer share one UI pattern by coincidence but by design.
@@ -145,7 +145,8 @@ categories instead of a search term.
 
 ## Impact on already-completed plan tasks
 
-This spec supersedes parts of `docs/superpowers/plans/2026-07-06-conversations.md`:
+This spec supersedes parts of the Conversations plan (removed from `docs/superpowers/plans/`
+once shipped — see git history):
 - **Task 5** (`BoardViewModel`): the Conversation-side additions (selector, mutual exclusivity,
   step pointer) stand as built. Only the "turn off Category filter" half of the mutual-exclusivity
   code needs updating to the new checkbox-clearing mechanism (§3 above).

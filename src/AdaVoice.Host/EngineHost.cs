@@ -223,12 +223,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     public PhraseEntry? SetPhraseTags(string phraseId, IEnumerable<string> tags) => _library.SetPhraseTags(phraseId, tags);
 
     public PhraseEntry? DeletePhraseVersion(string phraseId, string versionId) =>
-        _library.DeletePhraseVersion(phraseId, versionId, (current, orphan) =>
-        {
-            var src = AdaVoicePaths.AudioPath(_dataRoot, current);
-            if (File.Exists(src))
-                File.Move(src, AdaVoicePaths.AudioPath(_dataRoot, orphan), overwrite: true);
-        });
+        _library.DeletePhraseVersion(phraseId, versionId, OrphanAudio);
 
     public PhraseEntry? SetPhraseVersionLabel(string phraseId, string versionId, string label) =>
         _library.SetPhraseVersionLabel(phraseId, versionId, label);
@@ -398,12 +393,16 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     /// <summary>Delete a phrase: drop the metadata and rename its WAV to <c>deleted-{id}.wav</c> in
     /// place (never destroyed — design 04 §3). Returns the removed entry, or null if not found.</summary>
     public PhraseEntry? DeleteEntry(PhraseEntry entry) =>
-        _library.Delete(entry.Id, (current, orphan) =>
-        {
-            var src = AdaVoicePaths.AudioPath(_dataRoot, current);
-            if (File.Exists(src))
-                File.Move(src, AdaVoicePaths.AudioPath(_dataRoot, orphan), overwrite: true);
-        });
+        _library.Delete(entry.Id, OrphanAudio);
+
+    /// <summary>Rename a take's WAV to its orphan name in place — used by both <see cref="DeleteEntry"/>
+    /// and <see cref="DeletePhraseVersion"/>, which never destroy audio (design 04 §3).</summary>
+    private void OrphanAudio(string current, string orphan)
+    {
+        var src = AdaVoicePaths.AudioPath(_dataRoot, current);
+        if (File.Exists(src))
+            File.Move(src, AdaVoicePaths.AudioPath(_dataRoot, orphan), overwrite: true);
+    }
 
     /// <summary>Export the library (metadata + active phrase WAVs) to a zip. Version recordings are
     /// not included (v1 limitation) — logged when any are dropped, and the count is returned so a
@@ -429,24 +428,19 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
 
     /// <summary>Load a catalogued phrase from disk and preview it. Returns an error message, or null
     /// on success.</summary>
-    public string? PreviewEntry(PhraseEntry entry)
-    {
-        var path = AdaVoicePaths.AudioPath(_dataRoot, entry.FileName);
-        if (!File.Exists(path))
-            return $"missing audio file: {entry.FileName}";
-
-        return Preview(WavFile.Load(path), entry.GainDb);
-    }
+    public string? PreviewEntry(PhraseEntry entry) => PreviewFile(entry.FileName, entry.GainDb);
 
     /// <summary>Load one version of a phrase from disk and preview it. Returns an error message, or
     /// null on success.</summary>
-    public string? PreviewVersion(PhraseVersion version)
-    {
-        var path = AdaVoicePaths.AudioPath(_dataRoot, version.FileName);
-        if (!File.Exists(path))
-            return $"missing audio file: {version.FileName}";
+    public string? PreviewVersion(PhraseVersion version) => PreviewFile(version.FileName, version.GainDb);
 
-        return Preview(WavFile.Load(path), version.GainDb);
+    private string? PreviewFile(string fileName, double gainDb)
+    {
+        var path = AdaVoicePaths.AudioPath(_dataRoot, fileName);
+        if (!File.Exists(path))
+            return $"missing audio file: {fileName}";
+
+        return Preview(WavFile.Load(path), gainDb);
     }
 
     // ---- ISettingsHost --------------------------------------------------------------------------

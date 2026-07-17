@@ -2,7 +2,8 @@
 
 ## Status
 
-Proposed
+Accepted — shipped in monetization Phase 2 (2026-07-14): ES256 JWT access tokens, rotating
+refresh tokens with family-revocation reuse detection. See handoff.md.
 
 ## Context
 

@@ -2,7 +2,7 @@
 
 Purpose: the single source of truth for names, statuses, field names, and core decisions used
 by every document in this folder. If a doc disagrees with this file, this file wins — fix the
-doc. Status: Proposed, 2026-07-05.
+doc. Status: Phases 0–2 shipped (see handoff.md); Phase 3 onward Proposed, 2026-07-05.
 
 ## Document index
 

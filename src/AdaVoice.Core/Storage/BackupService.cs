@@ -36,7 +36,7 @@ public sealed class BackupService(string root, int keep = 7)
         }
         catch
         {
-            TryDelete(tmp);
+            FileOps.TryDelete(tmp);
             return null; // best-effort: a failed backup must not break startup
         }
 
@@ -108,7 +108,7 @@ public sealed class BackupService(string root, int keep = 7)
     private void Prune()
     {
         foreach (var old in BackupFilesNewestFirst().Skip(_keep))
-            TryDelete(old);
+            FileOps.TryDelete(old);
     }
 
     /// <summary>Completed backups, newest first. Filtered by prefix + <c>.zip</c> in code (not a glob)
@@ -130,18 +130,5 @@ public sealed class BackupService(string root, int keep = 7)
         var name = Path.GetFileName(path);
         return name.StartsWith(AdaVoicePaths.BackupFilePrefix, StringComparison.OrdinalIgnoreCase)
             && name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static void TryDelete(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-        catch
-        {
-            // Best-effort cleanup.
-        }
     }
 }

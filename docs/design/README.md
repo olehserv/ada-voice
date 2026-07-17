@@ -29,7 +29,6 @@ and `screenshots/` in this folder — start at
 [plans/ux-structural-fix-plan.md](plans/ux-structural-fix-plan.md) for current status.
 
 Planning docs:
-[roadmap](../roadmaps/mvp-roadmap.md) (strategy) ·
 [production-readiness plan](../plans/production-readiness-plan.md) (release gate) ·
 [handoff.md](../../handoff.md) (live status)
 

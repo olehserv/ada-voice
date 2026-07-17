@@ -771,8 +771,7 @@ public partial class BoardViewModel : ObservableObject
         // overwrite it. Just show the recorder so the operator can finish (save/discard) first.
         if (!ShowRecordButton)
         {
-            _pendingMetadata = default; // a Re-record/CTA stash must not misfile the waiting take
-            _pendingVersionForPhraseId = null;
+            ClearPendingRecording(); // a Re-record/CTA stash must not misfile the waiting take
             _showRecorder();
             return;
         }
@@ -781,8 +780,7 @@ public partial class BoardViewModel : ObservableObject
         // instead of opening an empty recorder window over a stopped engine.
         if (!Status.IsEngineRunning)
         {
-            _pendingMetadata = default; // same reasoning as the no-signal branches below
-            _pendingVersionForPhraseId = null;
+            ClearPendingRecording(); // same reasoning as the no-signal branches below
             Notify("Start the engine before recording.", NoticeSeverity.Warning);
             return;
         }
@@ -802,8 +800,7 @@ public partial class BoardViewModel : ObservableObject
                     // No take will ever be created for this attempt (StopRecording never runs) — a
                     // stash made before this call (RecordIntoCategory / repair dialog Re-record)
                     // must not survive to misfile the operator's next, unrelated recording.
-                    _pendingMetadata = default;
-                    _pendingVersionForPhraseId = null;
+                    ClearPendingRecording();
                     Notify("Press Start to go Live before recording.", NoticeSeverity.Warning);
                 }
             });
@@ -813,8 +810,7 @@ public partial class BoardViewModel : ObservableObject
             // Same reasoning as above: the mic failed, so no take — and no pending stash — exists.
             _onUiThread(() =>
             {
-                _pendingMetadata = default;
-                _pendingVersionForPhraseId = null;
+                ClearPendingRecording();
                 Notify("Could not start recording — check the microphone and try again.", NoticeSeverity.Error);
             });
         }
@@ -863,8 +859,7 @@ public partial class BoardViewModel : ObservableObject
                     // so any stash from a repair-dialog Re-record or RecordIntoCategory must be
                     // cleared here or it would leak into the operator's next, unrelated recording.
                     PendingTake = null;
-                    _pendingMetadata = default;
-                    _pendingVersionForPhraseId = null;
+                    ClearPendingRecording();
                     Notify("No signal — nothing recorded.", NoticeSeverity.Warning);
                 }
             });
@@ -875,8 +870,7 @@ public partial class BoardViewModel : ObservableObject
             {
                 // Same reasoning as the no-signal branch above: no take, so no stash may survive.
                 PendingTake = null;
-                _pendingMetadata = default;
-                _pendingVersionForPhraseId = null;
+                ClearPendingRecording();
                 Notify("Could not finish the recording — the take was lost.", NoticeSeverity.Error);
             });
         }
@@ -1003,9 +997,16 @@ public partial class BoardViewModel : ObservableObject
     private void DiscardTake()
     {
         PendingTake = null;
+        ClearPendingRecording();
+        Notify("Take discarded.", NoticeSeverity.Info);
+    }
+
+    /// <summary>Clear both pending-recording stashes — used everywhere an attempt produces no take
+    /// (or the take is discarded), so a stale stash never misfiles the operator's next recording.</summary>
+    private void ClearPendingRecording()
+    {
         _pendingMetadata = default;
         _pendingVersionForPhraseId = null;
-        Notify("Take discarded.", NoticeSeverity.Info);
     }
 
     /// <summary>Called from <c>RecorderDialog.OnClosing</c> once the Recorder window actually closes —

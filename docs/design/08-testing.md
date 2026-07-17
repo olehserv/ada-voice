@@ -99,8 +99,8 @@ Run on the target machine against a real Zoho Voice call (done at Phase 0, passe
 
 ## 5. Phase gates (test-related exit criteria)
 
-Phase exit criteria in the [roadmap](../roadmaps/mvp-roadmap.md) reference this document;
-the rule is: **a phase's code ships with its tests** — coverage is written alongside the
+The rule is: **a phase's code ships with its tests** — coverage is written alongside the
 feature, not deferred. CI runs the unit + DSP suites on every commit.
 
-Current suite: **360 tests across 5 projects** (72 Core, 97 Audio, 8 Wasapi, 5 Host, 178 App).
+Current test counts live in [handoff.md](../../handoff.md) ("Status in one line") — they
+move too often to keep a second copy in sync here.

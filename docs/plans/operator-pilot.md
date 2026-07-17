@@ -5,8 +5,7 @@
 > for example before the next big UI change or the monetization pilot.
 
 **What this is:** the script for the half-day supervised pilot with the real operator, on the
-real machine. It is the **only acceptance gate before the late phases** (see
-[roadmap](../roadmaps/mvp-roadmap.md#operator-pilot--day-after-phase-3)).
+real machine. It is the **only acceptance gate before the late phases**.
 
 **Goal for THIS pilot (chosen 2026-06-29):** *functional smoke — does it work at all, safely,
 on the real machine in a real test call?* The operator **records fresh phrases live** during

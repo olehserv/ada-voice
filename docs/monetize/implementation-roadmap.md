@@ -2,7 +2,8 @@
 
 **Purpose:** ordered, phased plan to build AdaVoice monetization: server, licensing, billing, admin panel, and WPF integration. Each phase has a goal, numbered tasks, dependencies, and testable acceptance criteria.
 
-**Status: Proposed, 2026-07-05**
+**Status: Phases 0–2 shipped (repo scaffold, domain/DB, auth API — see handoff.md). Phase 3
+onward: Proposed, 2026-07-05.**
 
 ---
 
@@ -41,7 +42,7 @@ Simple dependency list:
 
 ---
 
-## Phase 0 — Repository assessment and preparation (S) — MVP
+## Phase 0 — Repository assessment and preparation (S) — MVP — ✅ Shipped 2026-07-12
 
 **Goal:** the repo can host a server without disturbing the desktop app or its 360 green tests.
 
@@ -69,7 +70,7 @@ Simple dependency list:
 
 ---
 
-## Phase 1 — Domain model and database (M) — MVP
+## Phase 1 — Domain model and database (M) — MVP — ✅ Shipped 2026-07-13
 
 **Goal:** all canonical tables exist as EF Core entities with migrations and seed data.
 
@@ -97,7 +98,7 @@ Simple dependency list:
 
 ---
 
-## Phase 2 — Auth (M) — MVP
+## Phase 2 — Auth (M) — MVP — ✅ Shipped 2026-07-14
 
 **Goal:** users can log in and hold a session safely; every auth event is audited.
 

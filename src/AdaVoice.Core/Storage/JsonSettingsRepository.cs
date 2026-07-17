@@ -14,12 +14,6 @@ namespace AdaVoice.Core.Storage;
 /// </remarks>
 public sealed class JsonSettingsRepository(string root)
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-    };
-
     /// <summary>True when the last <see cref="Load"/> found a settings file it could not use and fell
     /// back to defaults. The host surfaces this: a silent reset also drops the wizard mic-calibration
     /// reference, which changes how loud phrases play — the operator must know to re-run calibration
@@ -39,7 +33,7 @@ public sealed class JsonSettingsRepository(string root)
             if (string.IsNullOrWhiteSpace(json))
                 return new Settings();
 
-            var settings = JsonSerializer.Deserialize<Settings>(json, Options);
+            var settings = JsonSerializer.Deserialize<Settings>(json, JsonDefaults.Options);
             if (settings is not null)
                 return settings;
 
@@ -63,26 +57,13 @@ public sealed class JsonSettingsRepository(string root)
         var tmp = path + ".tmp";
         try
         {
-            File.WriteAllText(tmp, JsonSerializer.Serialize(settings, Options));
+            File.WriteAllText(tmp, JsonSerializer.Serialize(settings, JsonDefaults.Options));
             File.Move(tmp, path, overwrite: true);
         }
         catch
         {
-            TryDelete(tmp);
+            FileOps.TryDelete(tmp);
             throw;
-        }
-    }
-
-    private static void TryDelete(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-        catch
-        {
-            // Best-effort cleanup; the original failure is what matters.
         }
     }
 }

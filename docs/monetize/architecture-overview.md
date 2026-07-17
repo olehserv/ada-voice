@@ -1,6 +1,6 @@
 # Architecture Overview — AdaVoice Monetization
 
-Purpose: high-level target architecture for adding licensing, billing, and an admin panel to AdaVoice. Status: Proposed, 2026-07-05.
+Purpose: high-level target architecture for adding licensing, billing, and an admin panel to AdaVoice. Status: Phases 0–2 shipped (see handoff.md); Phase 3 onward Proposed, 2026-07-05.
 
 This doc follows the canonical brief. Detailed designs live in `licensing-design.md`, `billing-subscription-design.md`, `api-design.md`, and `database-design.md`.
 

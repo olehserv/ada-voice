@@ -13,11 +13,7 @@ namespace AdaVoice.Core.Storage;
 /// </summary>
 internal static class LibraryJson
 {
-    public static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-    };
+    public static readonly JsonSerializerOptions Options = JsonDefaults.Options;
 
     public static string Serialize(Library library) => JsonSerializer.Serialize(library, Options);
 

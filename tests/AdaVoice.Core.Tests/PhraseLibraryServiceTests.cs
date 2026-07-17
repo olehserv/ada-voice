@@ -7,10 +7,13 @@ public class PhraseLibraryServiceTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "adavoice-svc-" + Guid.NewGuid().ToString("N"));
 
+    // A fresh service re-reads from disk, so using one to assert proves the change was persisted.
+    private PhraseLibraryService NewService() => new(new JsonPhraseRepository(_root));
+
     [Fact]
     public void Add_assigns_a_prefixed_id_writes_audio_first_and_persists()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
 
         string? writtenFileName = null;
         var entry = service.Add("Take one", "c-default", durationMs: 1200, gainDb: -3.5,
@@ -21,7 +24,7 @@ public class PhraseLibraryServiceTests : IDisposable
         Assert.Equal(entry.FileName, writtenFileName); // writeAudio ran with the resolved file name
         Assert.Equal(-3.5, entry.GainDb, precision: 4);
 
-        var reloaded = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var reloaded = NewService();
         var persisted = Assert.Single(reloaded.Phrases);
         Assert.Equal(entry.Id, persisted.Id);
         Assert.Equal("Take one", persisted.Title);
@@ -30,12 +33,12 @@ public class PhraseLibraryServiceTests : IDisposable
     [Fact]
     public void A_failed_audio_write_catalogues_nothing()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
 
         Assert.Throws<IOException>(() =>
             service.Add("bad", "c-default", 100, 0, _ => throw new IOException("disk full")));
 
-        Assert.Empty(new PhraseLibraryService(new JsonPhraseRepository(_root)).Phrases);
+        Assert.Empty(NewService().Phrases);
     }
 
     /// <summary>Review finding 3: <c>Add</c> used to store an unknown category id verbatim, while
@@ -45,7 +48,7 @@ public class PhraseLibraryServiceTests : IDisposable
     [Fact]
     public void Add_with_an_unknown_category_falls_back_to_uncategorized()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
 
         var entry = service.Add("Take one", "c-does-not-exist", 100, 0, _ => { });
 
@@ -55,7 +58,7 @@ public class PhraseLibraryServiceTests : IDisposable
     [Fact]
     public void Add_with_a_known_category_keeps_it()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
         var category = service.AddCategory("Greetings", "#123456");
 
         var entry = service.Add("Take one", category.Id, 100, 0, _ => { });
@@ -66,7 +69,7 @@ public class PhraseLibraryServiceTests : IDisposable
     [Fact]
     public void Each_added_phrase_gets_a_distinct_id_and_increasing_sort_order()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
 
         var a = service.Add("A", "c-default", 100, 0, _ => { });
         var b = service.Add("B", "c-default", 100, 0, _ => { });
@@ -79,7 +82,7 @@ public class PhraseLibraryServiceTests : IDisposable
     [Fact]
     public void Broken_phrase_ids_reflect_the_audio_exists_predicate()
     {
-        var seed = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var seed = NewService();
         var entry = seed.Add("missing audio", "c-default", 100, 0, _ => { });
 
         var reloaded = new PhraseLibraryService(new JsonPhraseRepository(_root), audioExists: _ => false);
@@ -90,7 +93,7 @@ public class PhraseLibraryServiceTests : IDisposable
     [Fact]
     public void Load_status_is_surfaced_from_the_repository()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
 
         Assert.Equal(LibraryLoadStatus.SeededDefault, service.LoadStatus);
         Assert.Null(service.LoadDetail);
@@ -99,7 +102,7 @@ public class PhraseLibraryServiceTests : IDisposable
     [Fact]
     public void Delete_removes_the_entry_persists_and_orphans_the_wav()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
         var entry = service.Add("to delete", "c-default", 100, 0, _ => { });
 
         (string from, string to)? renamed = null;
@@ -108,13 +111,13 @@ public class PhraseLibraryServiceTests : IDisposable
         Assert.Equal(entry.Id, deleted!.Id);
         Assert.Equal((entry.FileName, "deleted-" + entry.FileName), renamed); // never destroyed, just renamed
         Assert.Empty(service.Phrases);
-        Assert.Empty(new PhraseLibraryService(new JsonPhraseRepository(_root)).Phrases); // persisted
+        Assert.Empty(NewService().Phrases); // persisted
     }
 
     [Fact]
     public void Delete_unknown_id_is_a_noop_and_does_not_touch_audio()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
         service.Add("keep", "c-default", 100, 0, _ => { });
 
         var orphaned = false;
@@ -128,7 +131,7 @@ public class PhraseLibraryServiceTests : IDisposable
     [Fact]
     public void AddPhraseVersion_writes_audio_before_persisting_and_returns_the_updated_entry()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
         var phrase = service.Add("Greeting", "c-default", 1000, 0, _ => { });
 
         string? writtenFileName = null;
@@ -141,14 +144,14 @@ public class PhraseLibraryServiceTests : IDisposable
         Assert.Equal("Friendly", version.Label);
         Assert.Equal(-1.5, version.GainDb, precision: 4);
 
-        var reloaded = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var reloaded = NewService();
         Assert.Single(Assert.Single(reloaded.Phrases).Versions); // persisted
     }
 
     [Fact]
     public void AddPhraseVersion_unknown_phrase_returns_null_and_never_writes_audio()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
 
         var audioWritten = false;
         var result = service.AddPhraseVersion("p-nope", "Label", 100, 0, _ => audioWritten = true);
@@ -160,7 +163,7 @@ public class PhraseLibraryServiceTests : IDisposable
     [Fact]
     public void DeletePhraseVersion_removes_it_and_orphans_the_right_file()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
         var phrase = service.Add("Greeting", "c-default", 1000, 0, _ => { });
         var withVersion = service.AddPhraseVersion(phrase.Id, "Friendly", 900, -1.5, _ => { });
         var versionId = withVersion!.Versions[0].Id;
@@ -171,13 +174,13 @@ public class PhraseLibraryServiceTests : IDisposable
 
         Assert.Empty(updated!.Versions);
         Assert.Equal((versionFileName, "deleted-" + versionFileName), renamed); // never destroyed, just renamed
-        Assert.Empty(new PhraseLibraryService(new JsonPhraseRepository(_root)).Phrases[0].Versions); // persisted
+        Assert.Empty(NewService().Phrases[0].Versions); // persisted
     }
 
     [Fact]
     public void DeletePhraseVersion_unknown_version_or_phrase_is_a_noop_and_does_not_orphan_anything()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
         var phrase = service.Add("Greeting", "c-default", 1000, 0, _ => { });
         service.AddPhraseVersion(phrase.Id, "Friendly", 900, -1.5, _ => { });
 
@@ -192,7 +195,7 @@ public class PhraseLibraryServiceTests : IDisposable
     [Fact]
     public void SetPhraseVersionLabel_updates_only_the_targeted_version()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
         var phrase = service.Add("Greeting", "c-default", 1000, 0, _ => { });
         var v1 = service.AddPhraseVersion(phrase.Id, "First", 900, -1.5, _ => { })!.Versions[0];
         var v2 = service.AddPhraseVersion(phrase.Id, "Second", 900, -1.5, _ => { })!.Versions[1];
@@ -206,7 +209,7 @@ public class PhraseLibraryServiceTests : IDisposable
     [Fact]
     public void SetPhraseVersionLabel_unknown_version_or_phrase_returns_null()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
         var phrase = service.Add("Greeting", "c-default", 1000, 0, _ => { });
         service.AddPhraseVersion(phrase.Id, "First", 900, -1.5, _ => { });
 
@@ -217,21 +220,21 @@ public class PhraseLibraryServiceTests : IDisposable
     [Fact]
     public void SetConversationUseRandomVersion_updates_the_flag_and_persists()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
         var conversation = service.AddConversation("Script");
         Assert.False(conversation.UseRandomVersion);
 
         var updated = service.SetConversationUseRandomVersion(conversation.Id, true);
 
         Assert.True(updated!.UseRandomVersion);
-        var reloaded = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var reloaded = NewService();
         Assert.True(reloaded.Conversations[0].UseRandomVersion);
     }
 
     [Fact]
     public void SetConversationUseRandomVersion_unknown_id_returns_null()
     {
-        var service = new PhraseLibraryService(new JsonPhraseRepository(_root));
+        var service = NewService();
 
         Assert.Null(service.SetConversationUseRandomVersion("v-nope", true));
     }

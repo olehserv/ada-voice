@@ -4,7 +4,7 @@
 real workday?*
 
 This is the **release gate** — the definition of "done for production." It cross-cuts the
-phases in the [roadmap](../roadmaps/mvp-roadmap.md); many items are *built* earlier
+project's phases; many items are *built* earlier
 but only *signed off* here, against real hardware and a real call. Sources: NFRs in
 [design 01 §7](../design/01-overview.md#7-non-functional-requirements), edge cases and risks in
 [design 07](../design/07-risks-security.md), and the test strategy in
@@ -104,7 +104,7 @@ call. The gating subset:
 - [ ] Post-Phase-3 supervised pilot findings addressed (button sizes, duck defaults, category
       workflow, Topmost ergonomics, OFF AIR clarity).
 - [ ] **Final acceptance:** the operator completes a full real workday on AdaVoice without
-      developer help (Phase 5 exit, [roadmap](../roadmaps/mvp-roadmap.md)).
+      developer help (Phase 5 exit).
 
 ---
 

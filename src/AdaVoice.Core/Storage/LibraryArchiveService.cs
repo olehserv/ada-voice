@@ -56,7 +56,7 @@ public sealed class LibraryArchiveService(string root, IPhraseRepository reposit
         }
         catch
         {
-            TryDelete(tmp);
+            FileOps.TryDelete(tmp);
             throw;
         }
     }
@@ -157,7 +157,7 @@ public sealed class LibraryArchiveService(string root, IPhraseRepository reposit
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             foreach (var (tmp, _) in staged)
-                TryDelete(tmp);
+                FileOps.TryDelete(tmp);
             return new ImportResult(false, 0, 0, $"import failed, the library was not changed: {ex.Message}");
         }
 
@@ -248,18 +248,5 @@ public sealed class LibraryArchiveService(string root, IPhraseRepository reposit
     {
         using var reader = new StreamReader(entry.Open());
         return reader.ReadToEnd();
-    }
-
-    private static void TryDelete(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-        catch
-        {
-            // Best-effort cleanup.
-        }
     }
 }

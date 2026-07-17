@@ -253,9 +253,7 @@ public sealed class AudioEngine : IDisposable
         }
         catch (AudioDeviceException ex) when (ex.IsTransient)
         {
-            Raise(new EngineEvent.RebuildResult(_faultedRole, Success: false, _attempt));
-            _attempt++;
-            _nextAttemptMs = _clock.NowMs + Backoff[Math.Min(_attempt, Backoff.Length - 1)];
+            ScheduleNextRebuild(); // transient: keep backing off
             return;
         }
         catch (AudioDeviceException ex)
@@ -272,9 +270,7 @@ public sealed class AudioEngine : IDisposable
             // would leave the backoff schedule unadvanced and turn the 100 ms watchdog into a
             // tight rebuild loop. Treat unknown errors as transient: keep the alarm, keep backing
             // off, and let a replug (or the steady 5 s poll) recover.
-            Raise(new EngineEvent.RebuildResult(_faultedRole, Success: false, _attempt));
-            _attempt++;
-            _nextAttemptMs = _clock.NowMs + Backoff[Math.Min(_attempt, Backoff.Length - 1)];
+            ScheduleNextRebuild();
             return;
         }
 
@@ -285,6 +281,15 @@ public sealed class AudioEngine : IDisposable
         // very next watchdog tick would re-degrade before the render thread's first pull (M6).
         _gate.MarkAlive();
         SetState(_restoreState);
+    }
+
+    /// <summary>Report this attempt as failed and schedule the next one on the backoff schedule —
+    /// shared by every "treat as transient, keep backing off" catch above.</summary>
+    private void ScheduleNextRebuild()
+    {
+        Raise(new EngineEvent.RebuildResult(_faultedRole, Success: false, _attempt));
+        _attempt++;
+        _nextAttemptMs = _clock.NowMs + Backoff[Math.Min(_attempt, Backoff.Length - 1)];
     }
 
     private void RebuildCable()

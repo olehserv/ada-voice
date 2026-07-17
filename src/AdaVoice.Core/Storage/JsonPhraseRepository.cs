@@ -88,7 +88,7 @@ public sealed class JsonPhraseRepository(string root, Func<Library?>? recoverFro
         }
         catch
         {
-            TryDelete(tmp);
+            FileOps.TryDelete(tmp);
             throw;
         }
     }
@@ -112,17 +112,4 @@ public sealed class JsonPhraseRepository(string root, Func<Library?>? recoverFro
         Categories = [new Category { Id = Category.DefaultId, Name = "Uncategorized", Color = "#808080", SortOrder = 0 }],
         Phrases = [],
     };
-
-    private static void TryDelete(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-        catch
-        {
-            // Best-effort cleanup; the original failure is what matters.
-        }
-    }
 }

@@ -21,6 +21,29 @@ public static class AuthEndpoints
     private static string DummyPasswordHash(IPasswordHasher<User> hasher) =>
         _dummyPasswordHash ??= hasher.HashPassword(new User(), "unused-dummy-password");
 
+    // Every audit call here is entityType "user" with the acting user as both the entity and the
+    // actor (entityId == actorUserId at every site below) — this is the shared shape.
+    private static Task WriteUserAudit(
+        IAuditWriter audit, string action, Guid? userId, Guid? tenantId, string? ip, CancellationToken ct) =>
+        audit.WriteAsync(action, "user", userId, tenantId, userId, ActorType.User, ip, null, ct);
+
+    /// <summary>Resolve the calling user from the "sub" claim, or the Unauthorized problem to return
+    /// if the claim is missing or the user no longer exists (gone/other-tenant). Shared by every
+    /// authenticated endpoint that needs "the current user".</summary>
+    private static async Task<(User? User, IResult? Problem)> ResolveCurrentUserAsync(
+        ClaimsPrincipal principal, IUserAuthenticationService users, ICorrelationContext correlation, CancellationToken ct)
+    {
+        var userId = ParseGuidClaim(principal, "sub");
+        if (userId is null)
+            return (null, AuthProblems.Unauthorized(correlation));
+
+        var user = await users.FindByIdAsync(userId.Value, ct);
+        if (user is null)
+            return (null, AuthProblems.Unauthorized(correlation));
+
+        return (user, null);
+    }
+
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/auth").RequireRateLimiting(AuthRateLimit.PolicyName);
@@ -60,15 +83,11 @@ public static class AuthEndpoints
                 var justLocked = await users.RegisterFailedAttemptAsync(user.Id, now, ct);
                 if (justLocked)
                 {
-                    await audit.WriteAsync(
-                        "auth.account_locked", "user", user.Id, user.TenantId, user.Id,
-                        ActorType.User, ip, null, ct);
+                    await WriteUserAudit(audit, "auth.account_locked", user.Id, user.TenantId, ip, ct);
                 }
             }
 
-            await audit.WriteAsync(
-                "auth.login_failed", "user", user?.Id, user?.TenantId, user?.Id,
-                ActorType.User, ip, null, ct);
+            await WriteUserAudit(audit, "auth.login_failed", user?.Id, user?.TenantId, ip, ct);
             return AuthProblems.InvalidCredentials(correlation);
         }
 
@@ -76,9 +95,7 @@ public static class AuthEndpoints
         // wrong password, never revealing the lockout (SEC-03).
         if (users.IsLocked(user, now))
         {
-            await audit.WriteAsync(
-                "auth.login_failed", "user", user.Id, user.TenantId, user.Id,
-                ActorType.User, ip, null, ct);
+            await WriteUserAudit(audit, "auth.login_failed", user.Id, user.TenantId, ip, ct);
             return AuthProblems.InvalidCredentials(correlation);
         }
 
@@ -88,9 +105,7 @@ public static class AuthEndpoints
             accessTokens.Issue(user.Id, user.TenantId, RoleClaimValue.For(user.Role));
         var refresh = await refreshTokens.IssueNewFamilyAsync(user.Id, now, ct);
 
-        await audit.WriteAsync(
-            "auth.login_succeeded", "user", user.Id, user.TenantId, user.Id,
-            ActorType.User, ip, null, ct);
+        await WriteUserAudit(audit, "auth.login_succeeded", user.Id, user.TenantId, ip, ct);
 
         return Results.Ok(new TokenResponse(
             accessToken, accessTokenExpiresAt, refresh.RawToken, refresh.ExpiresAt));
@@ -123,17 +138,13 @@ public static class AuthEndpoints
 
                 var (accessToken, accessTokenExpiresAt) =
                     accessTokens.Issue(user.Id, user.TenantId, RoleClaimValue.For(user.Role));
-                await audit.WriteAsync(
-                    "auth.token_refreshed", "user", user.Id, user.TenantId, user.Id,
-                    ActorType.User, ip, null, ct);
+                await WriteUserAudit(audit, "auth.token_refreshed", user.Id, user.TenantId, ip, ct);
                 return Results.Ok(new TokenResponse(
                     accessToken, accessTokenExpiresAt, outcome.NewRawToken!, outcome.NewExpiresAt));
 
             case RotationStatus.Reuse:
                 // Token-theft tripwire: the family was revoked. Audit and fail generically.
-                await audit.WriteAsync(
-                    "auth.refresh_reuse_detected", "user", outcome.UserId, null, outcome.UserId,
-                    ActorType.User, ip, null, ct);
+                await WriteUserAudit(audit, "auth.refresh_reuse_detected", outcome.UserId, null, ip, ct);
                 return AuthProblems.InvalidRefreshToken(correlation);
 
             default: // NotFound, Expired
@@ -156,8 +167,7 @@ public static class AuthEndpoints
 
         var userId = ParseGuidClaim(principal, "sub");
         var tenantId = ParseGuidClaim(principal, "tenant_id");
-        await audit.WriteAsync(
-            "auth.logout", "user", userId, tenantId, userId, ActorType.User, ip, null, ct);
+        await WriteUserAudit(audit, "auth.logout", userId, tenantId, ip, ct);
 
         return Results.NoContent();
     }
@@ -168,21 +178,14 @@ public static class AuthEndpoints
         ICorrelationContext correlation,
         CancellationToken ct)
     {
-        var userId = ParseGuidClaim(principal, "sub");
-        if (userId is null)
+        var (user, problem) = await ResolveCurrentUserAsync(principal, users, correlation, ct);
+        if (problem is not null)
         {
-            return AuthProblems.Unauthorized(correlation);
-        }
-
-        var user = await users.FindByIdAsync(userId.Value, ct);
-        if (user is null)
-        {
-            // Token is valid but the user is gone/other-tenant — no longer a valid principal.
-            return AuthProblems.Unauthorized(correlation);
+            return problem;
         }
 
         return Results.Ok(new MeResponse(
-            user.Id, user.Email, RoleClaimValue.For(user.Role), user.TenantId, user.DisplayName));
+            user!.Id, user.Email, RoleClaimValue.For(user.Role), user.TenantId, user.DisplayName));
     }
 
     private static async Task<IResult> ChangePasswordAsync(
@@ -199,19 +202,13 @@ public static class AuthEndpoints
         var now = DateTimeOffset.UtcNow;
         var ip = http.Connection.RemoteIpAddress?.ToString();
 
-        var userId = ParseGuidClaim(principal, "sub");
-        if (userId is null)
+        var (user, problem) = await ResolveCurrentUserAsync(principal, users, correlation, ct);
+        if (problem is not null)
         {
-            return AuthProblems.Unauthorized(correlation);
+            return problem;
         }
 
-        var user = await users.FindByIdAsync(userId.Value, ct);
-        if (user is null)
-        {
-            return AuthProblems.Unauthorized(correlation);
-        }
-
-        var verification = hasher.VerifyHashedPassword(user, user.PasswordHash, request.CurrentPassword);
+        var verification = hasher.VerifyHashedPassword(user!, user!.PasswordHash, request.CurrentPassword);
         if (verification == PasswordVerificationResult.Failed)
         {
             return AuthProblems.InvalidCredentials(correlation);
@@ -221,8 +218,7 @@ public static class AuthEndpoints
         await users.SetPasswordHashAsync(user.Id, newHash, now, ct);
         // Force re-login everywhere: every existing refresh token for this user is revoked.
         await refreshTokens.RevokeAllForUserAsync(user.Id, now, ct);
-        await audit.WriteAsync(
-            "auth.password_changed", "user", user.Id, user.TenantId, user.Id, ActorType.User, ip, null, ct);
+        await WriteUserAudit(audit, "auth.password_changed", user.Id, user.TenantId, ip, ct);
 
         return Results.NoContent();
     }

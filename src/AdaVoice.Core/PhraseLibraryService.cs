@@ -141,7 +141,7 @@ public sealed class PhraseLibraryService
     public PhraseEntry Add(string title, string categoryId, int durationMs, double gainDb, Action<string> writeAudio)
     {
         EnsureWritable();
-        var id = NewId();
+        var id = NewId("p");
         var fileName = $"{id}.wav";
         writeAudio(fileName);
 
@@ -222,7 +222,7 @@ public sealed class PhraseLibraryService
         var trimmed = RequireName(name, "category");
         var category = new Category
         {
-            Id = "c-" + Guid.NewGuid().ToString("N")[..8],
+            Id = NewId("c"),
             Name = trimmed,
             Color = color,
             SortOrder = _library.Categories.Count,
@@ -280,7 +280,7 @@ public sealed class PhraseLibraryService
         var now = DateTime.UtcNow;
         var conversation = new Conversation
         {
-            Id = "v-" + Guid.NewGuid().ToString("N")[..8],
+            Id = NewId("v"),
             Name = RequireName(name, "conversation"),
             PhraseIds = [],
             SortOrder = _library.Conversations.Count,
@@ -426,7 +426,7 @@ public sealed class PhraseLibraryService
         if (index < 0)
             return null;
 
-        var versionId = NewVersionId();
+        var versionId = NewId("pv");
         // Flatten the composed name: a tampered library.json can carry a phrase id with path traversal,
         // and this file name reaches a real file write — keep the take inside audio\ (security scan
         // 2026-07-12 finding 1; the load-time flatten in LibraryJson does not cover the id).
@@ -486,9 +486,8 @@ public sealed class PhraseLibraryService
     /// is unknown.</summary>
     public PhraseEntry? SetPhraseVersionLabel(string phraseId, string versionId, string label)
     {
-        if (_library.Phrases.All(p => p.Id != phraseId))
-            return null;
-        if (_library.Phrases.First(p => p.Id == phraseId).Versions.All(v => v.Id != versionId))
+        var phrase = _library.Phrases.FirstOrDefault(p => p.Id == phraseId);
+        if (phrase is null || phrase.Versions.All(v => v.Id != versionId))
             return null;
 
         var trimmed = label?.Trim() ?? "";
@@ -514,7 +513,5 @@ public sealed class PhraseLibraryService
         return trimmed;
     }
 
-    private static string NewId() => "p-" + Guid.NewGuid().ToString("N")[..8];
-
-    private static string NewVersionId() => "pv-" + Guid.NewGuid().ToString("N")[..8];
+    private static string NewId(string prefix) => prefix + "-" + Guid.NewGuid().ToString("N")[..8];
 }

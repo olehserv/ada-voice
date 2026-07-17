@@ -1,8 +1,8 @@
 # AdaVoice — UI/UX pass + localization: scope & slice order
 
 _Written 2026-07-02; slice statuses updated 2026-07-05._ Scopes out the "next action" named in
-[handoff.md](../../handoff.md): the remaining Phase 3/4 UI work from the
-[roadmap](../roadmaps/mvp-roadmap.md) and [design 05](../design/05-ui-design.md) that
+[handoff.md](../../handoff.md): the remaining Phase 3/4 UI work from
+[design 05](../design/05-ui-design.md) that
 wasn't covered by the Board library UI or setup-wizard UI builds.
 
 ## Why one label was hiding four different jobs
