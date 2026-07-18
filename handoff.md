@@ -27,6 +27,30 @@ the request).
 
 ## Latest work (2026-07-19)
 
+- **Pass 2b — scoped to the board's delete-confirm dialog: `MessageBox` → `ui:ContentDialog`.**
+  Exploration found the plan's "inject one service into `MainWindow`" assumption broke on a real
+  structural fact: 4 of the audit's 5 `MessageBox` prompts are raised from `BackupSettingsViewModel`,
+  which lives inside the *modal* `SettingsWindow` (`ShowDialog()`, `Owner = MainWindow`) — a
+  `ContentDialog` hosted in `MainWindow` would render behind that modal child and be unreachable.
+  Owner chose the low-risk cut: migrate only `ConfirmDelete` (the board's own prompt, the only one
+  raised from the non-modal window) now; leave the 4 SettingsWindow prompts and the 2 `App.xaml.cs`
+  system prompts (`MessageBox`, by design) for Phase C, which reworks those dialogs anyway. Added a
+  `ui:ContentDialogHost` overlay to `MainWindow.xaml`, a `ContentDialogService` wired in the
+  constructor, and made `ConfirmDelete` `async Task<bool>` via `ShowSimpleDialogAsync` (CTRL-008:
+  Primary button says "Delete", not "Yes"). That forced `BoardViewModel`'s `_confirmDelete` delegate
+  and `Delete` command async (`IAsyncRelayCommand`) — the ripple the plan warned about, but scoped
+  to one command. Verified two ways: build + full test suite green (271 App tests, 2 Delete tests
+  updated to `await ExecuteAsync`), and a live smoke test against the running app (FlaUI driver,
+  since the dialog isn't a standalone `Window` and the existing screenshot harness can't render it)
+  confirmed the dialog is a true in-window overlay (top-level window count stayed at 1, unlike the
+  old `MessageBox`), Escape closes it without deleting the phrase, and the Delete button removes it
+  end-to-end. One thing to watch, not yet conclusively verified: whether Escape *also* silently
+  fires `MainWindow`'s window-level `Escape → StopCommand` panic-stop binding (a `MessageBox` was a
+  separate top-level window so its Escape never reached that binding; a same-window `ContentDialog`
+  overlay might bubble unhandled key events up to it) — harmless today since `StopCommand` no-ops
+  when nothing is playing, but worth a closer look if Phase C adds a dialog that opens *during*
+  playback. See [ux-structural-fix-plan.md](docs/design/plans/ux-structural-fix-plan.md) (Pass 2b)
+  for the full writeup.
 - **Server Phase-2 review comments resolved: typed `ProblemDetails`, an `AuditEntry` DTO, and
   batched audit persistence.** Three follow-ups on the just-shipped auth API. **(1)**
   `GlobalExceptionHandler`/`AuthRateLimit` now build a real `ProblemDetails` instead of an

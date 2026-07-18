@@ -33,7 +33,7 @@ public partial class BoardViewModel : ObservableObject
     private readonly Action _confirmAndRestart;
     private readonly Action<string> _showError;
     private readonly Action<string> _showSettingsInfo;
-    private readonly Func<PhraseItemViewModel, bool> _confirmDelete;
+    private readonly Func<PhraseItemViewModel, Task<bool>> _confirmDelete;
     private readonly Func<PhraseEditViewModel, bool> _showEditDialog;
     private readonly Action<PhraseVersionsViewModel> _showVersionsDialog;
     private readonly Func<RepairPhraseViewModel, bool> _showRepairDialog;
@@ -112,7 +112,7 @@ public partial class BoardViewModel : ObservableObject
         ISettingsHost settingsHost, StatusViewModel status, SettingsViewModel settings,
         Func<string?>? getActiveHotkey = null,
         Action<Action>? onUiThread = null,
-        Func<PhraseItemViewModel, bool>? confirmDelete = null,
+        Func<PhraseItemViewModel, Task<bool>>? confirmDelete = null,
         Func<PhraseEditViewModel, bool>? showEditDialog = null,
         Action<PhraseVersionsViewModel>? showVersionsDialog = null,
         Func<RepairPhraseViewModel, bool>? showRepairDialog = null,
@@ -136,7 +136,7 @@ public partial class BoardViewModel : ObservableObject
         _settingsHost = settingsHost;
         _getActiveHotkey = getActiveHotkey ?? (() => null); // default: no hotkey (unit tests)
         _onUiThread = onUiThread ?? (action => action()); // default: inline (unit tests)
-        _confirmDelete = confirmDelete ?? (_ => true);     // default: confirm (unit tests)
+        _confirmDelete = confirmDelete ?? (_ => Task.FromResult(true)); // default: confirm (unit tests)
         _showEditDialog = showEditDialog ?? (_ => false);  // default: cancel (unit tests opt in)
         _showVersionsDialog = showVersionsDialog ?? (_ => { }); // default: no-op (unit tests opt in)
         _showRepairDialog = showRepairDialog ?? (_ => false); // default: cancel (unit tests opt in)
@@ -719,9 +719,9 @@ public partial class BoardViewModel : ObservableObject
 
     /// <summary>Delete a phrase after confirmation: orphan its WAV, drop it from the board, and toast.</summary>
     [RelayCommand]
-    private void Delete(PhraseItemViewModel? item)
+    private async Task Delete(PhraseItemViewModel? item)
     {
-        if (item is null || !_confirmDelete(item))
+        if (item is null || !await _confirmDelete(item))
             return;
 
         var title = item.Title;

@@ -10,7 +10,7 @@ public class BoardViewModelTests
 {
     private static BoardViewModel NewBoard(
         FakePlaybackHost host,
-        Func<PhraseItemViewModel, bool>? confirmDelete = null,
+        Func<PhraseItemViewModel, Task<bool>>? confirmDelete = null,
         Func<PhraseEditViewModel, bool>? showEditDialog = null,
         Action<PhraseVersionsViewModel>? showVersionsDialog = null,
         Action<CategoriesViewModel>? showManageCategories = null,
@@ -1093,15 +1093,15 @@ public class BoardViewModelTests
     }
 
     [Fact]
-    public void Delete_command_orphans_removes_and_raises_Deleted_when_confirmed()
+    public async Task Delete_command_orphans_removes_and_raises_Deleted_when_confirmed()
     {
         var host = new FakePlaybackHost { Phrases = [new PhraseEntry { Id = "p-1", Title = "Bye" }] };
-        var board = NewBoard(host, confirmDelete: _ => true);
+        var board = NewBoard(host, confirmDelete: _ => Task.FromResult(true));
         var item = board.Phrases[0];
         string? deleted = null;
         board.Deleted += (_, title) => deleted = title;
 
-        board.DeleteCommand.Execute(item);
+        await board.DeleteCommand.ExecuteAsync(item);
 
         Assert.Empty(board.Phrases);
         Assert.Equal("p-1", Assert.Single(host.Deleted).Id);
@@ -1109,12 +1109,12 @@ public class BoardViewModelTests
     }
 
     [Fact]
-    public void Delete_command_does_nothing_when_not_confirmed()
+    public async Task Delete_command_does_nothing_when_not_confirmed()
     {
         var host = new FakePlaybackHost { Phrases = [new PhraseEntry { Id = "p-1" }] };
-        var board = NewBoard(host, confirmDelete: _ => false);
+        var board = NewBoard(host, confirmDelete: _ => Task.FromResult(false));
 
-        board.DeleteCommand.Execute(board.Phrases[0]);
+        await board.DeleteCommand.ExecuteAsync(board.Phrases[0]);
 
         Assert.Single(board.Phrases);
         Assert.Empty(host.Deleted);

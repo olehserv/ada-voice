@@ -7,13 +7,19 @@ using AdaVoice.App.ViewModels;
 using AdaVoice.Core.Storage;
 using Microsoft.Win32;
 using Serilog;
+using Wpf.Ui;
 using Wpf.Ui.Controls;
+using Wpf.Ui.Extensions;
 
 namespace AdaVoice.App;
 
 public partial class MainWindow : FluentWindow
 {
     private HotkeyService? _hotkeys;
+
+    // Backs the one in-flow Fluent dialog this window raises today (the board's delete confirm,
+    // Pass 2b / audit E2). Hosted by RootDialogHost, wired in the constructor.
+    private readonly ContentDialogService _dialogService = new();
 
     /// <summary>The stop hotkey label <see cref="HotkeyService"/> resolved on load ("Pause",
     /// "Ctrl+F12", or null if neither could be registered). Read by the setup wizard's hotkey step.</summary>
@@ -22,6 +28,7 @@ public partial class MainWindow : FluentWindow
     public MainWindow()
     {
         InitializeComponent();
+        _dialogService.SetDialogHost(RootDialogHost);
         Loaded += OnLoaded;
     }
 
@@ -92,15 +99,20 @@ public partial class MainWindow : FluentWindow
         }
     }
 
-    /// <summary>Confirm a delete (the board calls this before orphaning the WAV). Synchronous so it fits
-    /// the view-model's <c>Func&lt;_, bool&gt;</c> callback.</summary>
-    public bool ConfirmDelete(PhraseItemViewModel item) =>
-        System.Windows.MessageBox.Show(
-            this,
-            $"Delete “{item.Title}”?\n\nThe recording is kept as a backup and can be recovered.",
-            "Delete phrase",
-            System.Windows.MessageBoxButton.YesNo,
-            System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.Yes;
+    /// <summary>Confirm a delete (the board calls this before orphaning the WAV) as a Fluent
+    /// in-window dialog (Pass 2b / audit E2), following CTRL-008: the confirm is the whole method,
+    /// Primary names the action, and the caller awaits before mutating anything.</summary>
+    public async Task<bool> ConfirmDelete(PhraseItemViewModel item)
+    {
+        var result = await _dialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
+        {
+            Title = "Delete phrase",
+            Content = $"Delete “{item.Title}”?\n\nThe recording is kept as a backup and can be recovered.",
+            PrimaryButtonText = "Delete",
+            CloseButtonText = "Cancel",
+        });
+        return result == ContentDialogResult.Primary;
+    }
 
     /// <summary>Show the modal edit form; returns true if the user pressed Save.</summary>
     public bool ShowEditDialog(PhraseEditViewModel edit) =>

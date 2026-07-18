@@ -626,5 +626,11 @@
             </StackPanel>
         </Grid>
 
+        <!--
+            Fluent in-window dialog host (Pass 2b, audit E2): last in document order = top
+            z-order, spans both rows so a dialog dims the title bar too.
+        -->
+        <ui:ContentDialogHost x:Name="RootDialogHost" Grid.RowSpan="2" />
+
     </Grid>
 </ui:FluentWindow>

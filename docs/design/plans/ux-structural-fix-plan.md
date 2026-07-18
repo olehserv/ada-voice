@@ -14,7 +14,7 @@ approval after each), per the workflow's critical rules.
 | 4 | Button/action consistency (D1, D2) | ✅ **Shipped** — commit `c47167c`. Review: [button-consistency-review.md](../screenshots/review/button-consistency-review.md) |
 | 3 | `MainWindow` resize verification (C1) | ✅ **Verified, no fix needed** — see Pass 3 below |
 | 6 | Phrase tile fixed size + tag overflow (F1, expanded) | ✅ **Shipped** — absorbed into commit `41e3a6f` (Phase B, 2026-07-18); one layout bug found + fixed 2026-07-19, see below |
-| 2b | `MessageBox` → `ContentDialog` (E2) | ⬜ **Not started** — biggest/riskiest remaining item |
+| 2b | `MessageBox` → `ContentDialog` (E2) | 🟡 **Partially shipped** — board `ConfirmDelete` only; 4 SettingsWindow prompts deferred to Phase C (see below) |
 | 5 | Form layout cleanup | ✅ No work needed (verified in audit) |
 
 **A separate, larger batch of ad-hoc owner UX feedback** (not audit findings — direct feedback
@@ -30,10 +30,13 @@ buttons, matched row heights, auto-persist pattern) are now documented in
 [wpf-ux-design-rules.md](../wpf-ux-design-rules.md) rule 5 — follow them for any further work
 on these dialogs or new ones like them.
 
-**Next step: Pass 2b — the only remaining structural item.** Pass 6 was added 2026-07-12 from
-direct owner feedback, absorbed into the Phase B board rebuild (commit `41e3a6f`, 2026-07-18),
-and confirmed correctly shipped 2026-07-19 after fixing a real layout bug found during that
-verification (see the Pass 6 section below) — still needs approval to start Pass 2b.
+**Pass 2b landed partially, 2026-07-19: board delete-confirm only.** Exploration found the plan
+below under-specified the modal-`SettingsWindow` host problem (see the updated Pass 2b section) —
+owner chose to ship the low-risk half (`ConfirmDelete`) now and defer the other 4 prompts to
+Phase C, which reworks the settings/wizard dialogs anyway. Pass 6 was added 2026-07-12 from direct
+owner feedback, absorbed into the Phase B board rebuild (commit `41e3a6f`, 2026-07-18), and
+confirmed correctly shipped 2026-07-19 after fixing a real layout bug found during that
+verification (see the Pass 6 section below).
 
 ## Pass 1 — Modal/dialog resizing stabilization
 
@@ -79,37 +82,62 @@ actually happened (a stray whole-file `xstyler` reformat, then a margin regressi
 automated reviewer missed but a screenshot caught). Also received the separate green-Done /
 row-height owner feedback afterward (see the Status table above).
 
-## Pass 2b — Replace `MessageBox` with `ui:ContentDialog` (audit E2)
+## Pass 2b — Replace `MessageBox` with `ui:ContentDialog` (audit E2) — 🟡 PARTIALLY SHIPPED
 
-**Target:** `src/AdaVoice.App/MainWindow.xaml.cs` (6 call sites: `ConfirmDelete`,
-`PickImportFile`, `ConfirmAndRestart`, `ShowError`, `ShowInfo`). **Not** `App.xaml.cs` (the
-2 system-level calls there stay `MessageBox` — see audit's open question 1).
+**Status: board delete-confirm shipped 2026-07-19; the other 4 prompts deferred to Phase C.**
+Exploration ahead of implementation found the plan below (as originally written) under-specified
+a real structural problem: **4 of the 5 `MainWindow.xaml.cs` prompts are raised from
+`BackupSettingsViewModel`, which lives inside `SettingsWindow` — a *modal* `ui:FluentWindow` shown
+via `ShowDialog()` with `Owner = MainWindow`.** A `ContentDialog` renders into one window's visual
+tree; hosted in `MainWindow` it would appear *behind* the modal `SettingsWindow` and be
+unreachable. Only `ConfirmDelete` is raised from the non-modal board itself, so it was the one
+prompt that could migrate cleanly without a second host. Owner chose to ship that now and defer
+the rest — see `handoff.md`'s 2026-07-19 entry for the full writeup and the smoke-test evidence.
 
-**Exact change:** introduce `IContentDialogService` (WPF-UI 4.3, already referenced), wire it
-via constructor injection alongside the existing dependencies, and replace each `MessageBox.Show`
-body with `ShowSimpleDialogAsync`/`ContentDialogResult`, following CTRL-008 in the
-dotnet-wpf-design skill. Each method that becomes `async` must return `Task`, not stay
-`void`/synchronous — this changes call-site signatures (`ConfirmDelete`, `PickImportFile`, and
-`ConfirmAndRestart` are currently synchronous `Func<T,bool>`/similar callbacks the ViewModels
-call directly).
+**What shipped:** `ConfirmDelete` (`MainWindow.xaml.cs`) → `ui:ContentDialogHost` overlay in
+`MainWindow.xaml` + a `ContentDialogService` wired in the constructor + `ShowSimpleDialogAsync`,
+following CTRL-008 (Primary button says "Delete", not "Yes"; no `Danger` appearance — the delete
+keeps a recoverable backup). This forced `BoardViewModel`'s `_confirmDelete` delegate and `Delete`
+command to become async (`Func<PhraseItemViewModel, Task<bool>>`, `IAsyncRelayCommand`) — the
+ripple the original plan warned about, but contained to one command. `BoardViewModelTests`'s two
+Delete tests updated to `await DeleteCommand.ExecuteAsync(...)`.
 
-**Risk:** Medium — this is the one pass that touches method signatures consumed by ViewModels
-(the `Func<PhraseItemViewModel, bool>` style callbacks). Making them `async Task<bool>` ripples
-into `BoardViewModel`/`SettingsWindowViewModel` call sites, which must `await` instead of
-reading a return value synchronously. This is more than a layout change — flag for extra review
-and its own test pass before merging.
+**Original target (as planned, before the scoping above):** `src/AdaVoice.App/MainWindow.xaml.cs`
+(the plan said 6 call sites; exploration found 5: `ConfirmDelete`, `PickImportFile`,
+`ConfirmAndRestart`, `ShowError`, `ShowInfo`). `App.xaml.cs`'s 2 system-level calls stay
+`MessageBox` regardless (single-instance notice, global crash handler — see audit's open
+question 1).
 
-**Verification:** same 5 steps as Pass 2, plus explicit manual exercise of each of the 5 flows
-(delete a phrase, import merge/replace, language-change restart prompt, an export failure, an
-import success) since dialogs are also a common tests-can't-see gap in this codebase (already a
-theme in `handoff.md`'s "needs a hardware/user smoke test" notes).
+**Deferred to Phase C — `PickImportFile` (merge/replace choice), `ConfirmAndRestart`, `ShowError`,
+`ShowInfo`.** All 4 are invoked from `BackupSettingsViewModel`, shown inside the modal
+`SettingsWindow`. Migrating them needs a **second** `ContentDialogHost` inside `SettingsWindow.xaml`
+and re-sourcing their delegates from `SettingsWindow` instead of `MainWindow` (today they're built
+in `BoardViewModel.RunSettings()` from `window.*` method groups, before `SettingsWindow` exists —
+see `App.xaml.cs`'s composition order). Also note: `BackupSettingsViewModel.OnLanguageChanged` is a
+CommunityToolkit-generated `partial void` hook — it cannot be made `async`, so migrating
+`ConfirmAndRestart` needs a fire-and-forget (`_ = ConfirmRestartAsync()`) or a redesign of that
+hook, not a direct `await`. Phase C reworks these dialogs anyway (`handoff.md`: "Pass 2b is best
+done before/with Phase C") — do the host + re-wiring there.
 
-**Recommendation:** do this pass *last* among the structural fixes, and only after Pass 2/3/4
-are approved — it's the highest-effort, highest-risk item, and the other three are quick,
-low-risk wins that shouldn't wait on it.
+**Risk (materialized as described):** Medium — this was the one pass that touched method
+signatures consumed by ViewModels. Making `_confirmDelete` `async Task<bool>` rippled into
+`BoardViewModel.Delete` (now `IAsyncRelayCommand`) and its two unit tests, exactly as flagged.
+Scoping to one delegate kept the ripple small.
 
-**Rollback:** revert `MainWindow.xaml.cs`; no XAML changes required for this pass (the dialogs
-are raised entirely from code-behind today).
+**Verification (done for the shipped scope):** build + `xstyler` + full `AdaVoice.App.Tests` green
+(271 tests). Manual/live verification via a throwaway FlaUI driver against the running app (the
+existing screenshot harness can't render a hosted `ContentDialog` — it's not a standalone
+`Window`) confirmed: the dialog is a true in-window overlay (top-level window count stayed at 1,
+unlike the old `MessageBox`'s separate window); Escape closes it without deleting the phrase; the
+Delete button removes the phrase end-to-end. **Not conclusively verified:** whether Escape also
+silently fires `MainWindow`'s window-level `Escape → StopCommand` panic-stop `KeyBinding` (a
+`MessageBox` was a separate top-level window, so its Escape never reached that binding; an
+in-window `ContentDialog` overlay might bubble an unhandled key event up to it). Harmless today
+since `StopCommand` no-ops when nothing is playing — worth a closer look before Phase C adds a
+dialog that could open while a phrase is playing.
+
+**Rollback:** revert `MainWindow.xaml`, `MainWindow.xaml.cs`, `BoardViewModel.cs`, and
+`BoardViewModelTests.cs` (the 4 files this scoped pass touched).
 
 ## Pass 3 — MainWindow layout stability (audit C1) — ✅ VERIFIED, NO FIX NEEDED
 
@@ -224,8 +252,9 @@ per `handoff.md`'s open follow-ups) is added without following the rules in
 3. ✅ Pass 3 (MainWindow verification) — done, verified no fix needed.
 4. ✅ Pass 6 (phrase tile fixed size + tag overflow) — done, shipped in Phase B, layout bug
    found and fixed 2026-07-19.
-5. **Pass 2b (ContentDialog migration)** — the only remaining item; last, biggest, needs its
-   own careful review.
+5. 🟡 Pass 2b (`ContentDialog` migration) — **board delete-confirm shipped 2026-07-19**; the
+   4 SettingsWindow prompts deferred to Phase C (needs a second dialog host — see the Pass 2b
+   section above).
 6. Pass 1 and 5 — already done; no implementation turn needed, just recorded here.
 
-**Waiting for approval before starting Pass 2b — the last remaining item.**
+**Remaining open item: the 4 deferred Pass 2b prompts, to be picked up with Phase C.**
