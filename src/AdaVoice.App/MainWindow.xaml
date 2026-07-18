@@ -328,7 +328,16 @@
                                             marker down the left, not a full fill — so every text mark uses theme
                                             brushes and stays legible in both light and dark, no auto-contrast.
                                         -->
-                                        <Grid>
+                                        <!--
+                                            Width/Height here must match PhraseButtonStyle's Width="148"/Height="128"
+                                            exactly (Theme/Controls.xaml). Without this, WPF-UI's ui:Button template
+                                            centers its ContentPresenter instead of stretching it, so this Grid (and
+                                            the visible tile Border below) sizes to its own content instead of filling
+                                            the button's fixed box — the tile then still grows/shrinks with tag count
+                                            and title length, silently reintroducing the exact F1 bug Pass 6 fixed.
+                                            Confirmed by live visual-tree measurement during the Pass 6 doc-review pass.
+                                        -->
+                                        <Grid Width="148" Height="128">
                                             <Border Style="{StaticResource PhraseTileFillStyle}">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>

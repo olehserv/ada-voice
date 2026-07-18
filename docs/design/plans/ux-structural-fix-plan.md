@@ -13,7 +13,7 @@ approval after each), per the workflow's critical rules.
 | 2 | `SettingsWindow` footer fix (B1) | ✅ **Shipped** — commits `4c41715`, `26b4dd0`, `fa85f18` (2 fix rounds — a stray full-file `xstyler` reformat, then a margin regression). Review: [settings-window-review.md](../screenshots/review/settings-window-review.md) |
 | 4 | Button/action consistency (D1, D2) | ✅ **Shipped** — commit `c47167c`. Review: [button-consistency-review.md](../screenshots/review/button-consistency-review.md) |
 | 3 | `MainWindow` resize verification (C1) | ✅ **Verified, no fix needed** — see Pass 3 below |
-| 6 | Phrase tile fixed size + tag overflow (F1, expanded) | ⬜ **Not started** — owner request 2026-07-12, promoted ahead of Pass 2b |
+| 6 | Phrase tile fixed size + tag overflow (F1, expanded) | ✅ **Shipped** — absorbed into commit `41e3a6f` (Phase B, 2026-07-18); one layout bug found + fixed 2026-07-19, see below |
 | 2b | `MessageBox` → `ContentDialog` (E2) | ⬜ **Not started** — biggest/riskiest remaining item |
 | 5 | Form layout cleanup | ✅ No work needed (verified in audit) |
 
@@ -30,9 +30,10 @@ buttons, matched row heights, auto-persist pattern) are now documented in
 [wpf-ux-design-rules.md](../wpf-ux-design-rules.md) rule 5 — follow them for any further work
 on these dialogs or new ones like them.
 
-**Next step: Pass 6, then Pass 2b — both still need approval to start.** Pass 6 was added
-2026-07-12 from direct owner feedback (not a re-run of the audit) and moved ahead of Pass 2b in
-the suggested order — see below.
+**Next step: Pass 2b — the only remaining structural item.** Pass 6 was added 2026-07-12 from
+direct owner feedback, absorbed into the Phase B board rebuild (commit `41e3a6f`, 2026-07-18),
+and confirmed correctly shipped 2026-07-19 after fixing a real layout bug found during that
+verification (see the Pass 6 section below) — still needs approval to start Pass 2b.
 
 ## Pass 1 — Modal/dialog resizing stabilization
 
@@ -160,69 +161,53 @@ screenshot set should visibly show the color change), screenshot each of the 4 f
 **Actual outcome:** shipped exactly as planned, clean on first review — see
 [button-consistency-review.md](../screenshots/review/button-consistency-review.md).
 
-## Pass 6 — Phrase tile fixed size + tag overflow indicator (audit F1, expanded)
+## Pass 6 — Phrase tile fixed size + tag overflow indicator (audit F1, expanded) — ✅ SHIPPED
 
-**Status: not started.** Added 2026-07-12 from direct owner feedback while reviewing the board
-screenshots (not a re-run of the audit) and promoted ahead of Pass 2b. This absorbs and expands
-the audit's original **F1** finding (tile height varies with title-wrap length), which had been
-deferred as low/cosmetic — the owner now wants it fixed directly, plus a second, related problem
-the audit didn't cover: tile height/width also varies with **tag count**, and there's no cap on
-how many tags a tile can show.
+**Status: shipped.** Added 2026-07-12 from direct owner feedback while reviewing the board
+screenshots (not a re-run of the audit). Absorbed into the Phase B board rebuild (commit
+`41e3a6f`, 2026-07-18) rather than landing as its own Phase 5 turn — this plan doc's status
+table just never got updated to say so, which is what the 2026-07-19 doc-review pass below
+caught and corrected.
 
-**Problem:** in `MainWindow.xaml`'s phrase tile `DataTemplate` (~lines 224–332), the tile's
-outer container has no explicit size — height and width both grow with content. A phrase with
-0 tags renders visibly shorter than one with 2 tags; a phrase with a long title (original F1)
-renders taller still. In the board's `WrapPanel`, mismatched tile heights within the same row
-look uneven. There's also no upper bound on tag count — a phrase with many tags could grow a
-tile arbitrarily tall.
+**What actually shipped (Phase B, `41e3a6f`):**
+- Fixed tile footprint: `PhraseButtonStyle` sets `Width="148" Height="128"`
+  (`Theme/Controls.xaml`).
+- Title clamp: **not** `TextTrimming` (confirmed in code review that `TextTrimming` +
+  `TextWrapping="Wrap"` doesn't ellipsize a wrapped line in WPF — a real gap, not this plan's
+  assumption). Instead a `TitleClampConverter` does real `FormattedText` measurement to
+  guarantee ≤2 lines with an ellipsis; `TileTitleStyle`'s `MaxHeight="48"` is a safety net only.
+- Tag overflow: **Option A** (view-model-computed), not Option B — `PhraseItemViewModel`
+  exposes `VisibleTagChips`/`OverflowTagCount`/`HasOverflowTags`, capped by
+  `MaxVisibleTagChips`. Shipped at **1**, not the 2 this plan proposed — tuned down after
+  rendering showed 2 short tags + the "+N" chip together clipping past the tile's rounded
+  corners.
+- Broken-tile warning and the tag strip share the same Grid row, mutually exclusive via a
+  `DataTrigger` — so the fixed height holds up in the broken-audio state too, not just the
+  tag-count/title-length cases this plan described.
 
-**Target:** `src/AdaVoice.App/MainWindow.xaml` (phrase tile `DataTemplate`), and, if the
-recommended fixed-count cap (Option A below) is chosen, `src/AdaVoice.App/ViewModels/
-PhraseItemViewModel.cs` + `BoardViewModel.cs:556` (where `TagChips` is populated per tile today).
+**Bug found and fixed during the 2026-07-19 doc-reconciliation pass:** re-verifying this pass
+against a fresh render (owner spotted it directly in the PNG) showed tiles were **still**
+rendering at inconsistent heights — a no-tag tile measured ~89.6px of visible fill vs. ~108.8px
+for a 3-tag/long-title tile (confirmed via live visual-tree instrumentation, not just the
+screenshot). Root cause: the Button's own `Width`/`Height` Setters correctly fix its outer
+hit-box (confirmed uniformly 128 at every WrapPanel position), but WPF-UI's `ui:Button` control
+template centers its `ContentPresenter` instead of stretching it — so `VerticalContentAlignment
+="Stretch"` on `PhraseButtonStyle` was a no-op, and the tile's visible content (the
+`PhraseTileFillStyle` Border) sized itself to its own content instead of filling the fixed box,
+silently reintroducing the exact F1 defect this pass was meant to eliminate. Fixed by adding an
+explicit `Width="148" Height="128"` directly to the tile's content-root `Grid`
+(`MainWindow.xaml`, immediately inside the `ui:Button`) — validated live (forcing the same
+property change made the visible fill render at exactly 128 for both a no-tag and a 3-tag tile)
+before touching the shipped file. See the new
+`PhraseTileLayoutTests.Phrase_tiles_render_at_a_uniform_height_regardless_of_tags_or_title`
+regression test (`tests/AdaVoice.App.Tests/Screenshots/`), confirmed red without the fix and
+green with it.
 
-**Proposed change:**
-1. **Fixed tile size** — give the tile an explicit `Width`/`Height` so every tile in the
-   `WrapPanel` is identical regardless of tag count or title length. Reserve room for: category
-   edge marker + title (existing 2-line wrap, `MaxWidth="130"`) + duration + at most one row of
-   tag chips. Exact pixel values to be tuned during implementation and checked against the
-   `MainWindow_board_wide` screenshot test (added for Pass 3) — its 10 sample phrases already mix
-   0/1/2-tag phrases, so it doubles as a ready-made regression check for this pass.
-2. **Title overflow** — with a fixed tile height, a title that would wrap to a 3rd line needs a
-   hard stop: add `TextTrimming="CharacterEllipsis"` (with a matching `MaxHeight`) on top of the
-   existing `TextWrapping="Wrap"`, so a very long title clips with an ellipsis instead of
-   pushing content out of the fixed box. This folds the original F1 problem into the same fix.
-3. **Tag overflow indicator** — cap visible tags to a small fixed count (start at 2, tune by
-   eye) and show a trailing "+N" chip when there are more, styled like the existing tag chip
-   (`Scrim.Tag` background) but with a neutral/secondary border since it isn't a real tag. No
-   click behavior needed on the chip itself — the tile's existing context menu already has
-   "Edit…", which opens `PhraseEditDialog` and lists every tag in full (verified:
-   `PhraseEditDialog.xaml` line 43's `ItemsControl` over the complete `Tags` collection). That
-   already satisfies "the user can see all tags by opening the phrase's details" — no new dialog
-   needed.
-
-**Decision needed before implementation (flag for approval, not resolved here):** where the
-"cap to N, show +N more" logic lives.
-- **Option A — fixed-count cap (recommended).** `BoardViewModel` (which already populates
-  `TagChips` per item) also computes a bounded list + overflow count, exposed as new
-  `PhraseItemViewModel` properties (e.g. `VisibleTagChips`, `HiddenTagCount`). Deterministic, no
-  runtime measurement, a small and contained ViewModel change — matches the project's existing
-  pattern of view-model-computed display state (same shape as `DurationLabel`).
-- **Option B — true width-measured overflow** (show only as many chips as actually fit the
-  tile's pixel width). More visually precise — two short tags might both fit where two long tags
-  wouldn't — but needs a measuring behavior/converter in code-behind, real extra machinery for a
-  cosmetic feature. Not recommended given the project's "good enough for now" bias unless Option
-  A looks visually wrong once tried.
-
-**Risk:** Low-medium. Mostly a visual change, plus (if Option A) one small, contained ViewModel
-addition — no behavior change to editing, deleting, or playing phrases.
-
-**Verification:** same 5 steps as other passes — build, `xstyler`, full `AdaVoice.App.Tests` run
-(a new bounded tag-list property needs its own small unit tests alongside the existing
-`TagChips` coverage), screenshot the board with a mix of 0/1/2/5+-tag phrases (extend the
-`MainWindow_board_wide` fixture added for Pass 3 rather than building a new one), visual review.
-
-**Rollback:** revert the XAML file (and the ViewModel addition, if made) — independent of
-Pass 2b/3.
+**Original problem statement (2026-07-12, for context):** the tile's outer container had no
+explicit size — height and width both grew with content, so a phrase with 0 tags rendered
+visibly shorter than one with 2 tags, and a long title (audit's original F1) rendered taller
+still. Resolved as described above — fixed size, view-model-computed tag cap (Option A), title
+clamp via converter, plus the content-stretch bug caught and fixed 2026-07-19.
 
 ## Pass 5 — Form layout cleanup
 
@@ -237,10 +222,10 @@ per `handoff.md`'s open follow-ups) is added without following the rules in
 1. ✅ Pass 2 (Settings footer) — done.
 2. ✅ Pass 4 (button semantics) — done.
 3. ✅ Pass 3 (MainWindow verification) — done, verified no fix needed.
-4. **Pass 6 (phrase tile fixed size + tag overflow)** — owner priority, added 2026-07-12;
-   do this before Pass 2b since it's lower-risk (mostly visual, at most one small ViewModel
-   addition) than the dialog-signature rewrite below.
-5. Pass 2b (ContentDialog migration) — last, biggest, needs its own careful review.
+4. ✅ Pass 6 (phrase tile fixed size + tag overflow) — done, shipped in Phase B, layout bug
+   found and fixed 2026-07-19.
+5. **Pass 2b (ContentDialog migration)** — the only remaining item; last, biggest, needs its
+   own careful review.
 6. Pass 1 and 5 — already done; no implementation turn needed, just recorded here.
 
-**Waiting for approval before starting Pass 6.**
+**Waiting for approval before starting Pass 2b — the last remaining item.**

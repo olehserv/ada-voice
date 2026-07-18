@@ -130,12 +130,20 @@ drive the *mechanical* rules below, not just visuals:
   open decision** — see
   [ui-ux-localization-scope.md](../plans/ui-ux-localization-scope.md). Don't build it as a
   side effect of a UX polish pass; it needs its own design decision first.
-- **Phrase tile sizing is planned but not yet shipped** — fixed `Width`/`Height` regardless of
-  tag count, a title clamp, and a capped tag list with a "+N" overflow chip (full tag list stays
-  reachable via the tile's "Edit…" context-menu item). See `Pass 6` in
-  [ux-structural-fix-plan.md](plans/ux-structural-fix-plan.md) for the design and the open
-  fixed-count-vs-measured-width decision. Don't add ad-hoc tile-height special-casing anywhere
-  else until that pass lands and this note is replaced with the actual shipped rule.
+- **Phrase tile sizing is shipped and fixed at `148×128`** — `PhraseButtonStyle` sets
+  `Width`/`Height` on the `ui:Button`; a title clamp (`TitleClampConverter`, real
+  `FormattedText` measurement — `TextTrimming` does not ellipsize a wrapped line in WPF) caps
+  the title at 2 lines; tags are view-model-computed (`PhraseItemViewModel.VisibleTagChips`/
+  `OverflowTagCount`), capped at `MaxVisibleTagChips` (currently 1) with a "+N" overflow chip;
+  full tag list stays reachable via the tile's "Edit…" context-menu item. See `Pass 6` in
+  [ux-structural-fix-plan.md](plans/ux-structural-fix-plan.md) for the full history.
+  **Landmine:** the tile's content-root `Grid` (`MainWindow.xaml`, direct child of the
+  `ui:Button`) *also* needs an explicit `Width="148" Height="128"` matching
+  `PhraseButtonStyle` — WPF-UI's `ui:Button` control template centers its `ContentPresenter`
+  instead of stretching it, so `VerticalContentAlignment="Stretch"` on the Style alone does
+  nothing; without the matching size on the content root, the visible tile silently goes back
+  to sizing itself to tag count/title length. Don't remove that Grid's explicit size without
+  re-running `PhraseTileLayoutTests`.
 
 ## 7. WPF layout implementation rules
 

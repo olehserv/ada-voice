@@ -48,6 +48,20 @@ the request).
   cover the batching mechanics directly (enqueue-time `CreatedAt` survives a real flush delay;
   `StopAsync`'s shutdown drain — not the periodic tick — persists rows written just before a
   graceful stop). 60 server tests green (30 DB-less + 30 integration, was 28).
+- **Pass 6 (phrase tiles) confirmed shipped, then found + fixed a real layout bug in it.**
+  Re-verifying [ux-structural-fix-plan.md](docs/design/plans/ux-structural-fix-plan.md)'s Pass 6
+  (its status table still said "not started" — stale; the work had actually landed in Phase B),
+  the owner spotted inconsistent tile heights directly in a fresh render. Confirmed via live
+  visual-tree measurement (not just the screenshot): the tile's `ui:Button` hit-box was correctly
+  fixed at 128 px, but WPF-UI's `ui:Button` control template centers its `ContentPresenter`
+  instead of stretching it, so `VerticalContentAlignment="Stretch"` on `PhraseButtonStyle` did
+  nothing — the visible tile still sized itself to tag count/title length (a no-tag tile's
+  content measured ~89.6 px vs. ~108.8 px for a 3-tag/long-title one), silently reintroducing the
+  exact defect Pass 6 was meant to fix. Fixed with one explicit `Width`/`Height` on the tile's
+  content-root `Grid` (`MainWindow.xaml`) matching `PhraseButtonStyle` — validated live before
+  and after the change, plus a new permanent regression test
+  (`PhraseTileLayoutTests`, confirmed red without the fix, green with it). 271 App tests green
+  (248 passed + 23 screenshot, skipped without `ADAVOICE_SCREENSHOTS=1`; was 270/248+22).
 
 ## Latest work (2026-07-18)
 
