@@ -36,6 +36,10 @@
     <PackageVersion Include="EFCore.NamingConventions" Version="10.0.1" />
     <!-- PasswordHasher for the Task-4 seeder; referenced now so Infrastructure is ready. -->
     <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="10.0.9" />
+    <!-- BackgroundService (AuditFlushService, periodic audit-log batching). Abstractions-only:
+         Infrastructure defines the hosted service, the Api host runs it — no need for the
+         full Microsoft.Extensions.Hosting host-builder package here. -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.9" />
     <!-- Design-time only (dotnet ef); added to the Api with PrivateAssets=all. -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9" />
     <!-- Auth (Phase 2): JWT bearer validation. Added now (Task 1) so Api references it;

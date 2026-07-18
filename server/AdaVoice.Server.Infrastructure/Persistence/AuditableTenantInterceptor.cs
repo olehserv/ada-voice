@@ -49,7 +49,11 @@ public sealed class AuditableTenantInterceptor : SaveChangesInterceptor
             switch (entry.State)
             {
                 case EntityState.Added:
-                    if (entry.Entity is IHasCreatedAt created)
+                    // Respect an already-set CreatedAt: batched audit writes (AuditFlushService)
+                    // stamp the real event time at enqueue, before the row ever reaches a
+                    // DbContext, so the value here would otherwise misdate the row by up to the
+                    // flush interval.
+                    if (entry.Entity is IHasCreatedAt created && created.CreatedAt == default)
                     {
                         created.CreatedAt = now;
                     }

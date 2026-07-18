@@ -60,7 +60,16 @@ public sealed class LoginTests
         var user = await ctx.Users.IgnoreQueryFilters().SingleAsync(u => u.Id == userId);
         Assert.NotNull(user.LastLoginAt);
         Assert.Equal(0, user.FailedLoginCount);
-        var actions = await ctx.AuditLogs.Where(a => a.ActorUserId == userId).Select(a => a.Action).ToListAsync();
+
+        // The audit row is persisted by a background flush, not synchronously with the
+        // request — poll instead of asserting on this immediate query's result.
+        var actions = await AuditPolling.UntilAsync(
+            async () =>
+            {
+                await using var pollCtx = _fixture.CreateContext(new AmbientTenantProvider());
+                return await pollCtx.AuditLogs.Where(a => a.ActorUserId == userId).Select(a => a.Action).ToListAsync();
+            },
+            actions => actions.Contains("auth.login_succeeded"));
         Assert.Contains("auth.login_succeeded", actions);
     }
 
@@ -80,7 +89,14 @@ public sealed class LoginTests
         await using var ctx = _fixture.CreateContext(new AmbientTenantProvider());
         var user = await ctx.Users.IgnoreQueryFilters().SingleAsync(u => u.Id == userId);
         Assert.Equal(1, user.FailedLoginCount);
-        var actions = await ctx.AuditLogs.Where(a => a.ActorUserId == userId).Select(a => a.Action).ToListAsync();
+
+        var actions = await AuditPolling.UntilAsync(
+            async () =>
+            {
+                await using var pollCtx = _fixture.CreateContext(new AmbientTenantProvider());
+                return await pollCtx.AuditLogs.Where(a => a.ActorUserId == userId).Select(a => a.Action).ToListAsync();
+            },
+            actions => actions.Contains("auth.login_failed"));
         Assert.Contains("auth.login_failed", actions);
     }
 

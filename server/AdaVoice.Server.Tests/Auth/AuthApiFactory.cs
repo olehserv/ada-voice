@@ -81,6 +81,11 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
 
         builder.UseSetting("ADAVOICE_DB_CONNECTION", connection);
         builder.UseSetting("RateLimit:AuthPermitPerMinute", _authPermitPerMinute.ToString());
+        // Audit rows are now persisted by a background flush (AuditFlushService), not
+        // synchronously with the request. A 1s interval keeps integration tests fast without
+        // relying on host-shutdown flush timing, which WebApplicationFactory disposal does not
+        // guarantee (BackgroundService.StopAsync only runs if the host is gracefully stopped).
+        builder.UseSetting("Audit:FlushIntervalSeconds", "1");
 
         builder.ConfigureLogging(logging => logging.AddProvider(new CapturingLoggerProvider(LogMessages)));
     }

@@ -94,13 +94,22 @@ public sealed class RateLimitAndLoggingTests
             await client.PostAsJsonAsync("/api/auth/login", new { email = lockEmail, password = "wrong" });
         }
 
-        await using var ctx = _fixture.CreateContext(new AmbientTenantProvider());
-        var actions = await ctx.AuditLogs.Select(a => a.Action).Distinct().ToListAsync();
-        foreach (var expected in new[]
-        {
+        // Audit rows are now written by a background flush (AuditFlushService), not
+        // synchronously with the request — poll instead of asserting on an immediate query
+        // (the factory sets a 1s flush interval; this test does not depend on that number).
+        string[] expectedActions =
+        [
             "auth.login_failed", "auth.login_succeeded", "auth.token_refreshed",
             "auth.refresh_reuse_detected", "auth.logout", "auth.password_changed", "auth.account_locked",
-        })
+        ];
+        var actions = await AuditPolling.UntilAsync(
+            async () =>
+            {
+                await using var ctx = _fixture.CreateContext(new AmbientTenantProvider());
+                return await ctx.AuditLogs.Select(a => a.Action).Distinct().ToListAsync();
+            },
+            actions => expectedActions.All(actions.Contains));
+        foreach (var expected in expectedActions)
         {
             Assert.Contains(expected, actions);
         }

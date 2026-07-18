@@ -40,11 +40,20 @@ public sealed class LockoutTests
         await using (var ctx = _fixture.CreateContext(new AmbientTenantProvider()))
         {
             var user = await ctx.Users.IgnoreQueryFilters().SingleAsync(u => u.Id == userId);
-            Assert.NotNull(user.LockedUntil); // locked
-            var lockedAudits = await ctx.AuditLogs
-                .Where(a => a.ActorUserId == userId && a.Action == "auth.account_locked").CountAsync();
-            Assert.Equal(1, lockedAudits); // audited exactly once
+            Assert.NotNull(user.LockedUntil); // locked, written synchronously by RegisterFailedAttemptAsync
         }
+
+        // The audit row is persisted by a background flush, not synchronously with the
+        // request — poll instead of asserting on an immediate query.
+        var lockedAudits = await AuditPolling.UntilAsync(
+            async () =>
+            {
+                await using var pollCtx = _fixture.CreateContext(new AmbientTenantProvider());
+                return await pollCtx.AuditLogs
+                    .Where(a => a.ActorUserId == userId && a.Action == "auth.account_locked").CountAsync();
+            },
+            count => count >= 1);
+        Assert.Equal(1, lockedAudits); // audited exactly once
 
         // A CORRECT password while locked still fails, and fails identically to a wrong password.
         var correctWhileLocked = await client.PostAsJsonAsync("/api/auth/login", new { email, password = Password });

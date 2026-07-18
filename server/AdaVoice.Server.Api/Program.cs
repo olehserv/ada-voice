@@ -38,8 +38,17 @@ builder.Services.AddScoped<ITenantProvider, HttpContextTenantProvider>();
 // Auth application services (orchestration + persistence; no ASP.NET/JOSE types).
 builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
-builder.Services.AddScoped<IAuditWriter, AuditWriter>();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
+
+// Audit logging: request-scoped writer enqueues onto a singleton bounded channel; a background
+// service batch-persists it on a configurable interval (see AuditWriter/AuditFlushService for
+// why the write is deferred, not synchronous, and why that is still safe for a security log).
+var auditOptions = builder.Configuration.GetSection("Audit").Get<AuditBatchingOptions>()
+    ?? new AuditBatchingOptions();
+builder.Services.AddSingleton(auditOptions);
+builder.Services.AddSingleton<IAuditQueue, AuditQueue>();
+builder.Services.AddScoped<IAuditWriter, AuditWriter>();
+builder.Services.AddHostedService<AuditFlushService>();
 
 var authPolicy = builder.Configuration.GetSection("Auth").Get<AuthPolicyOptions>()
     ?? new AuthPolicyOptions();
@@ -100,7 +109,7 @@ app.MapAuthEndpoints();
 
 // Rate limiting arrives in Task 6.
 
-app.Run();
+await app.RunAsync();
 
 // WebApplicationFactory<Program> binds to this implicit Program type (ASP.NET Core 10 exposes it
 // for integration tests without an explicit `public partial class Program`).

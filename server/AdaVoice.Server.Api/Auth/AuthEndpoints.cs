@@ -25,7 +25,18 @@ public static class AuthEndpoints
     // actor (entityId == actorUserId at every site below) — this is the shared shape.
     private static Task WriteUserAudit(
         IAuditWriter audit, string action, Guid? userId, Guid? tenantId, string? ip, CancellationToken ct) =>
-        audit.WriteAsync(action, "user", userId, tenantId, userId, ActorType.User, ip, null, ct);
+        audit.WriteAsync(
+            new AuditEntry
+            {
+                Action = action,
+                EntityType = "user",
+                EntityId = userId,
+                TenantId = tenantId,
+                ActorUserId = userId,
+                ActorType = ActorType.User,
+                Ip = ip,
+            },
+            ct);
 
     /// <summary>Resolve the calling user from the "sub" claim, or the Unauthorized problem to return
     /// if the claim is missing or the user no longer exists (gone/other-tenant). Shared by every

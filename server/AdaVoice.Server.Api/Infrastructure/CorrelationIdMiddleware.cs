@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Http;
-
 namespace AdaVoice.Server.Api.Infrastructure;
 
 /// <summary>Reads <c>X-Correlation-Id</c> from the request (or mints a new GUID), stores it

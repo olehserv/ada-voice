@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using AdaVoice.Server.Infrastructure.Auth;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AdaVoice.Server.Api.Infrastructure;
 
@@ -19,12 +20,14 @@ public static class AuthRateLimit
                 // needs ForwardedHeaders with KnownProxies/KnownNetworks configured for the real
                 // deployment topology — that is Phase-10 work; do not read forwarded headers here.
                 var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-                return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
-                {
-                    PermitLimit = permitPerMinute,
-                    Window = TimeSpan.FromMinutes(1),
-                    QueueLimit = 0,
-                });
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey,
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = permitPerMinute,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                    });
             });
 
             options.OnRejected = async (context, ct) =>
@@ -39,16 +42,22 @@ public static class AuthRateLimit
 
                 var correlationId = context.HttpContext.RequestServices
                     .GetRequiredService<ICorrelationContext>().CorrelationId;
-                await response.WriteAsJsonAsync(
-                    new
+
+                var problem = new ProblemDetails
+                {
+                    Type = "https://adavoice.example/problems/rate_limited",
+                    Title = "Too many requests",
+                    Status = StatusCodes.Status429TooManyRequests,
+                    Detail = "Too many requests. Please retry after a short wait.",
+                    Extensions =
                     {
-                        type = "https://adavoice.example/problems/rate_limited",
-                        title = "Too many requests",
-                        status = StatusCodes.Status429TooManyRequests,
-                        detail = "Too many requests. Please retry after a short wait.",
-                        code = "rate_limited",
-                        correlationId,
+                        ["code"] = "rate_limited",
+                        ["correlationId"] = correlationId,
                     },
+                };
+
+                await response.WriteAsJsonAsync(
+                    problem,
                     options: null,
                     contentType: "application/problem+json",
                     cancellationToken: ct);

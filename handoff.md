@@ -9,7 +9,7 @@ back up. It answers one question: *where are we right now?*
 - Details of past work live in git history and in the dated docs under `docs/reviews/`.
   This file stays short on purpose.
 
-_Last updated: 2026-07-18._
+_Last updated: 2026-07-19._
 
 ## Status in one line
 
@@ -17,11 +17,37 @@ _Last updated: 2026-07-18._
 setup wizard, Settings window, stop hotkey, backups, export/import, **Conversations** (ordered
 phrase scripts with a step-by-step highlight), **phrase versions** (alternate takes, randomized
 during a Conversation step); 508 tests passed + 16 skipped across 6 projects (107 Core + 98 Audio +
-8 Wasapi + 12 Host + 253 App + 30 Server DB-less) plus 28 server integration tests against
+8 Wasapi + 12 Host + 253 App + 30 Server DB-less) plus 30 server integration tests against
 PostgreSQL 16. Monetization: Phases 0–2 shipped — the full 13-table EF Core schema, multi-tenant
 query filters and idempotent seeder (Phase 1), and the **auth API** (Phase 2): ES256-JWT
 login/refresh/logout/change-password/me, rotating refresh tokens with family-revocation reuse
-detection, account lockout, per-IP rate limiting, RFC 7807 errors, and audit logging.
+detection, account lockout, per-IP rate limiting, RFC 7807 errors (typed `ProblemDetails`), and
+**batched audit logging** (see 2026-07-19 below — audit writes are no longer synchronous with
+the request).
+
+## Latest work (2026-07-19)
+
+- **Server Phase-2 review comments resolved: typed `ProblemDetails`, an `AuditEntry` DTO, and
+  batched audit persistence.** Three follow-ups on the just-shipped auth API. **(1)**
+  `GlobalExceptionHandler`/`AuthRateLimit` now build a real `ProblemDetails` instead of an
+  anonymous object (`code`/`correlationId` ride in `Extensions`, still serializing at the JSON
+  root — both existing tests needed no changes). **(2)** `IAuditWriter.WriteAsync`'s 8 positional
+  parameters (where `userId` fed both `EntityId` and `ActorUserId`) became one `AuditEntry`
+  record with `required` init-only properties, closing the transposition risk. **(3)** Audit rows
+  are now enqueued onto a bounded `Channel` and batch-persisted every 10 s (configurable,
+  `Audit:*`) by a new `AuditFlushService` background service, instead of one `SaveChangesAsync`
+  per request. Two correctness points that made this safe rather than just faster:
+  `AuditableTenantInterceptor` now stamps `CreatedAt` only when unset, since the writer captures
+  the real event time at enqueue (not at the later flush) — a naive change would have misdated
+  every batched row; and the enqueue always uses `CancellationToken.None`, not the request's
+  token, so a client disconnecting right after a failed login or lockout can no longer drop its
+  own security-audit row. Trade-off accepted knowingly: audit rows are eventually consistent
+  (up to one flush interval) and a queue full during a DB outage makes new requests stall on
+  enqueue rather than fail fast. Three existing integration tests that asserted audit rows
+  immediately after the HTTP call now poll instead (`AuditPolling` helper); two new focused tests
+  cover the batching mechanics directly (enqueue-time `CreatedAt` survives a real flush delay;
+  `StopAsync`'s shutdown drain — not the periodic tick — persists rows written just before a
+  graceful stop). 60 server tests green (30 DB-less + 30 integration, was 28).
 
 ## Latest work (2026-07-18)
 
