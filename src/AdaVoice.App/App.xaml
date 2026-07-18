@@ -22,6 +22,7 @@
 
             <!--  Shared converters (category fill + wizard checks + bool-to-visibility).  -->
             <app:HexToBrushConverter x:Key="HexToBrush" />
+            <app:TitleClampConverter x:Key="TitleClamp" />
             <BooleanToVisibilityConverter x:Key="BoolToVis" />
             <app:CheckStatusToLabelConverter x:Key="CheckStatusToLabel" />
             <app:FailedCableCheckToVisibilityConverter x:Key="FailedCableCheckToLink" />

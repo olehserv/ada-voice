@@ -46,6 +46,16 @@ meet in exactly one decorative place: the 2 px title-bar hairline.
   to have zero effect on any real button). Every screen that needs a brand-red/green/amber
   button skips `Appearance=` and sets `Background`/`Foreground`/`BorderBrush` directly via a
   custom style against our own tokens (`Danger.Solid`, `Status.Live`, `Status.OffAir`).
+- **`Appearance="Primary"` washes out too, for a different reason** (found 2026-07-18,
+  Phase B). `SystemAccentColor` correctly tracks `Accent` (confirmed via a resource dump),
+  but WPF-UI's Fluent tint-ramp generator (`AccentFillColorDefaultBrush`) computes a
+  *lighter* variant assuming a moderate-lightness base accent (e.g. Windows blue `#0078D4`);
+  our brand green (`#7BC96A`) is already light, so the generated "default fill" washes to
+  near-white (`#F0F4EF`) in both themes. Same fix as above: skip `Appearance="Primary"`, set
+  `Background="{DynamicResource Brand.Gradient}"` directly. Fixed on MainWindow's Start
+  toggle; still open on 5 other screens (`CalibrationStepView`, `RecorderDialog`,
+  `SetupWizardWindow`, `RepairPhraseDialog`, `PhraseEditDialog`) — fix each when Phase C
+  reworks it.
 - **No colour literals outside `Theme/`** — including converters and code-behind
   (the 2026-07-18 audit found two frozen hex brushes in `Converters.cs`; that class of
   leak is now explicitly in scope for this rule).

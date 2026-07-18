@@ -57,6 +57,39 @@ detection, account lockout, per-IP rate limiting, RFC 7807 errors, and audit log
   `Background`/`Foreground` styles (skip `Appearance=`) — see the plan doc. Verified via
   screenshot tests + pixel sampling in both themes; 258 App tests green (242 passed + 16
   screenshot, skipped without `ADAVOICE_SCREENSHOTS=1`).
+- **Phase B (MainWindow) shipped.** State-lit backdrop (4 gradient layers + 3 radial blooms,
+  `Opacity`-switched per `Status.State`, all 4 states screenshot-verified in both themes),
+  status pill (dot + ALL-CAPS label + tint + static LIVE glow), fixed `148×128` phrase tile
+  (2-line title clamp + ellipsis, pill-shaped duration chip, "+1"-cap tag overflow, 5 px
+  ribbon), brand-red STOP fill, title-bar hairline (`#2E7D4F → #3E5D3A → #C63C34`). Two
+  findings beyond the plan, both pixel-sample/screenshot-confirmed, not assumed: **(1)**
+  `Appearance="Primary"` also washes to near-white in both themes (WPF-UI's accent-tint ramp
+  assumes a darker base accent than our light brand green) — fixed on MainWindow's Start
+  toggle via direct `Background="{DynamicResource Brand.Gradient}"`; **5 other screens still
+  need the same fix when Phase C touches them** (Calibration, Recorder, Setup wizard, Repair
+  dialog, Phrase edit). **(2)** WPF's `TextBlock` cannot ellipsize a wrapped multi-line clamp
+  (`TextTrimming` + `Wrap` silently collapses to single-line — a real, non-obvious WPF gap;
+  `MaxLines` doesn't exist either, that's WinUI-only) — fixed via a new `TitleClampConverter`
+  that measures against a real off-screen `TextBlock` and truncates the string itself. Full
+  detail (including the tile-height/tag-cap corrections found via screenshot, not the
+  mockup's literal numbers): [the plan doc](docs/design/plans/brand-redesign-implementation-plan.md).
+  A second-opinion review then caught 3 more gaps the fixtures never exercised (populated,
+  non-playing, non-broken board only): the playing-tile `Accent` border was missing its
+  `Status.Live.Tint` **fill** (09/plan said border **+ fill**; only the border Setter had
+  been added) — fixed; the empty-board "Record"/"Record into…" CTAs were still
+  `Appearance="Primary"` in the very file whose Start toggle had just been fixed for the
+  same bug — fixed via a new shared `BrandCtaButtonStyle`; and the broken-tile
+  warning-replaces-tags restructure had never actually been rendered. Added 3 more
+  screenshots (playing/broken/empty board) to catch exactly this class of miss going
+  forward. **A follow-up look then caught a 4th, related gap**: the tile-clamp stress data
+  (a 49-char title + 3rd tag) had been added to `SampleHost()`'s shared `p-1`, distorting
+  other dialogs' screenshots that reuse the same fixture (`ManageConversationsDialog`'s row
+  text ran behind its buttons) — `Save()` only asserts the PNG exists, not that it looks
+  right. Fixed by reverting `p-1` and moving the stress data to a test-local addition; while
+  re-verifying, also tightened the title-clamp's measured width (108, not the original 113)
+  after a live `ActualWidth` read (110.4) exposed a 2.6 px gap that a longer test string
+  turned into a real clipping bug. 270 App tests green (248 passed + 22 screenshot, skipped
+  without `ADAVOICE_SCREENSHOTS=1`).
 
 ## Latest work (2026-07-17)
 
@@ -245,13 +278,13 @@ detection, account lockout, per-IP rate limiting, RFC 7807 errors, and audit log
 
 ## Next action
 
-**Pine Signal brand redesign implementation** — Phase A shipped (see above), fixing the
-audit's worst bug (light-theme wizard AA failure). **Phase B (MainWindow: state-lit
-window, status pill, tile rework, STOP zone)** of
+**Pine Signal brand redesign implementation** — Phases A and B shipped (see above).
+**Phase C (dialogs + wizard)** of
 [the plan](docs/design/plans/brand-redesign-implementation-plan.md) is next, pending
-owner screenshot review of Phase A. Phases C–D follow, one owner review per phase.
-Pass 6 (tile sizing) is absorbed into Phase B; Pass 2b (`ContentDialog`) is best done
-before/with Phase C.
+owner screenshot review of Phase B. Phase C must also apply Phase B's `Appearance="Primary"`
+fix to the 5 screens it touches that still use it (Calibration, Recorder, Setup wizard,
+Repair dialog, Phrase edit). Phase D (motion) follows. Pass 6 (tile sizing) was absorbed
+into Phase B; Pass 2b (`ContentDialog`) is best done before/with Phase C.
 
 Then **UI/UX pass + localization** — remaining slices (scope + rationale in
 [ui-ux-localization-scope.md](docs/plans/ui-ux-localization-scope.md)):

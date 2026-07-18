@@ -54,6 +54,13 @@
     <!--  Filled-red destructive/hot actions.  -->
     <SolidColorBrush x:Key="Danger.Solid" Color="#B3362C" />
 
+    <!--  Title-bar hairline — see Tokens.Dark.xaml's comment. Same fixed brand gradient in both themes.  -->
+    <LinearGradientBrush x:Key="Brand.Hairline" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Offset="0" Color="#2E7D4F" />
+        <GradientStop Offset="0.55" Color="#3E5D3A" />
+        <GradientStop Offset="1" Color="#C63C34" />
+    </LinearGradientBrush>
+
     <!--  Plain Color shadows of the tokens above — see Tokens.Dark.xaml's comment.  -->
     <Color x:Key="Danger.Solid.Color">#B3362C</Color>
     <Color x:Key="Status.Live.Color">#2E5D3A</Color>
@@ -87,5 +94,19 @@
         <GradientStop Offset="0" Color="#F7F5F0" />
         <GradientStop Offset="1" Color="#FAF6EF" />
     </LinearGradientBrush>
+
+    <!--  Radial bloom, top-left, one per state (STOPPED has none) — see Tokens.Dark.xaml's comment. Fainter than dark theme so it stays ambient on a light wash.  -->
+    <RadialGradientBrush x:Key="Bloom.Live">
+        <GradientStop Offset="0" Color="#122E5D3A" />
+        <GradientStop Offset="1" Color="#002E5D3A" />
+    </RadialGradientBrush>
+    <RadialGradientBrush x:Key="Bloom.OffAir">
+        <GradientStop Offset="0" Color="#0F8A5A00" />
+        <GradientStop Offset="1" Color="#008A5A00" />
+    </RadialGradientBrush>
+    <RadialGradientBrush x:Key="Bloom.Degraded">
+        <GradientStop Offset="0" Color="#0FB3362C" />
+        <GradientStop Offset="1" Color="#00B3362C" />
+    </RadialGradientBrush>
 
 </ResourceDictionary>

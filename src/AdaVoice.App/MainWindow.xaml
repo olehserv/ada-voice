@@ -30,12 +30,36 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
+        <!--
+            State-lit backdrop (09's signature): behind the title bar AND the content, so it reads
+            as the window itself, not a panel. Four gradient layers + three blooms, each Opacity="0"
+            by default with one DataTrigger per layer (Controls.xaml) — exactly one is visible at
+            rest per Status.State. MainWindow.Background above stays the STOPPED-equivalent solid
+            fallback for any instant before the first layout pass.
+        -->
+        <Grid Grid.RowSpan="2" IsHitTestVisible="False">
+            <Border Style="{StaticResource StateLayerLiveStyle}" />
+            <Border Style="{StaticResource StateLayerOffAirStyle}" />
+            <Border Style="{StaticResource StateLayerDegradedStyle}" />
+            <Border Style="{StaticResource StateLayerStoppedStyle}" />
+            <Border Style="{StaticResource BloomLiveStyle}" />
+            <Border Style="{StaticResource BloomOffAirStyle}" />
+            <Border Style="{StaticResource BloomDegradedStyle}" />
+        </Grid>
+
         <!--  Fluent title bar (compact tool: no maximize)  -->
         <ui:TitleBar
             Title="AdaVoice"
             Grid.Row="0"
             CanMaximize="False"
             ShowMaximize="False" />
+
+        <!--  The one decorative place green and red meet (09) — sits at the title-bar/content seam.  -->
+        <Border
+            Grid.Row="0"
+            Height="2"
+            VerticalAlignment="Bottom"
+            Background="{DynamicResource Brand.Hairline}" />
 
         <Grid Grid.Row="1" Margin="12,4,12,12">
             <Grid.RowDefinitions>
@@ -64,6 +88,24 @@
                         button would never visually or functionally toggle.
                     -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <!--
+                            Status pill: the second state channel (09) — dot + ALL-CAPS label + tint,
+                            independent of the toggle's own dot below.
+                        -->
+                        <Border Margin="0,0,8,0" Style="{StaticResource StatusPillStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse
+                                    Width="9"
+                                    Height="9"
+                                    Margin="0,0,8,0"
+                                    VerticalAlignment="Center"
+                                    Style="{StaticResource StateDotStyle}" />
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontSize="{StaticResource FontSize.Label}"
+                                    Text="{Binding Status.StateLabel}" />
+                            </StackPanel>
+                        </Border>
                         <ui:Button Style="{StaticResource EngineToggleButtonStyle}">
                             <StackPanel Orientation="Horizontal">
                                 <!--
@@ -298,22 +340,43 @@
                                                         Grid.Column="0"
                                                         Background="{Binding CategoryColor, Converter={StaticResource HexToBrush}}"
                                                         Style="{StaticResource CategoryEdgeMarkerStyle}" />
-                                                    <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                                    <!--
+                                                        Fixed rows so the tag/warning strip always pins to the tile's
+                                                        bottom (row 2 is a "*" spacer that absorbs whatever the title
+                                                        doesn't use) regardless of title length or tag count.
+                                                    -->
+                                                    <Grid Grid.Column="1" Margin="10,0,0,0">
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="*" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <!--  MaxWidth matches TitleClampConverter's own measurement width exactly — see its comment.  -->
                                                         <TextBlock
-                                                            MaxWidth="130"
-                                                            FontSize="{StaticResource FontSize.SectionTitle}"
-                                                            FontWeight="{StaticResource Weight.Strong}"
-                                                            Foreground="{DynamicResource Text.Primary}"
-                                                            Text="{Binding Title}"
-                                                            TextWrapping="Wrap" />
-                                                        <TextBlock
+                                                            Grid.Row="0"
+                                                            MaxWidth="108"
+                                                            Style="{StaticResource TileTitleStyle}"
+                                                            Text="{Binding Title, Converter={StaticResource TitleClamp}}"
+                                                            ToolTip="{Binding Title}" />
+                                                        <Border
+                                                            Grid.Row="1"
                                                             Margin="0,6,0,0"
-                                                            FontSize="{StaticResource FontSize.Label}"
-                                                            Foreground="{DynamicResource Text.Secondary}"
-                                                            Text="{Binding DurationLabel}"
-                                                            Typography.NumeralAlignment="Tabular" />
+                                                            HorizontalAlignment="Left"
+                                                            Background="{DynamicResource Surface.Overlay}"
+                                                            CornerRadius="{StaticResource Radius.Pill}">
+                                                            <TextBlock
+                                                                Margin="8,1"
+                                                                FontSize="{StaticResource FontSize.Label}"
+                                                                FontWeight="{StaticResource Weight.Strong}"
+                                                                Foreground="{DynamicResource Text.Secondary}"
+                                                                Text="{Binding DurationLabel}"
+                                                                Typography.NumeralAlignment="Tabular" />
+                                                        </Border>
+
+                                                        <!--  Broken audio replaces the tag strip entirely below — never both at once.  -->
                                                         <TextBlock
-                                                            Margin="0,4,0,0"
+                                                            Grid.Row="3"
                                                             FontSize="{StaticResource FontSize.Label}"
                                                             Foreground="{DynamicResource Status.Degraded}"
                                                             Text="⚠ audio missing"
@@ -322,32 +385,64 @@
                                                         <!--
                                                             Tag chips: the tag's colour lives on the border (its identity);
                                                             the text stays primary-on-scrim so a dark tag colour can never
-                                                            make its own name unreadable.
+                                                            make its own name unreadable. Capped to VisibleTagChips + a "+N"
+                                                            overflow chip so the tile's fixed size never depends on tag count.
                                                         -->
-                                                        <ItemsControl Margin="0,6,0,0" ItemsSource="{Binding TagChips}">
-                                                            <ItemsControl.ItemsPanel>
-                                                                <ItemsPanelTemplate>
-                                                                    <WrapPanel />
-                                                                </ItemsPanelTemplate>
-                                                            </ItemsControl.ItemsPanel>
-                                                            <ItemsControl.ItemTemplate>
-                                                                <DataTemplate>
-                                                                    <Border
-                                                                        Margin="0,0,4,4"
-                                                                        Padding="6,1"
-                                                                        Background="{DynamicResource Scrim.Tag}"
-                                                                        BorderBrush="{Binding Color, Converter={StaticResource HexToBrush}}"
-                                                                        BorderThickness="1"
-                                                                        CornerRadius="{StaticResource Radius.Small}">
-                                                                        <TextBlock
-                                                                            FontSize="{StaticResource FontSize.Label}"
-                                                                            Foreground="{DynamicResource Text.Primary}"
-                                                                            Text="{Binding Name}" />
-                                                                    </Border>
-                                                                </DataTemplate>
-                                                            </ItemsControl.ItemTemplate>
-                                                        </ItemsControl>
-                                                    </StackPanel>
+                                                        <!--
+                                                            A single non-wrapping row (mockup: "display:flex; gap:4px", no
+                                                            flex-wrap) — nesting a wrapping ItemsControl inside a wrapping
+                                                            outer panel measures the inner block unwrapped (infinite-width
+                                                            measure pass) then wraps it during arrange, so the outer panel's
+                                                            sibling ends up misordered next to whichever tag landed on row 1.
+                                                            Flat StackPanel avoids that: VisibleTagChips is capped at 2 short,
+                                                            curated tag names, so overflow here is not expected in practice.
+                                                        -->
+                                                        <StackPanel Grid.Row="3" Orientation="Horizontal">
+                                                            <StackPanel.Style>
+                                                                <Style TargetType="StackPanel">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsBroken}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </StackPanel.Style>
+                                                            <ItemsControl ItemsSource="{Binding VisibleTagChips}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <StackPanel Orientation="Horizontal" />
+                                                                    </ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <Border
+                                                                            Margin="0,0,4,0"
+                                                                            Padding="6,1"
+                                                                            Background="{DynamicResource Scrim.Tag}"
+                                                                            BorderBrush="{Binding Color, Converter={StaticResource HexToBrush}}"
+                                                                            BorderThickness="1"
+                                                                            CornerRadius="{StaticResource Radius.Small}">
+                                                                            <TextBlock
+                                                                                FontSize="{StaticResource FontSize.Label}"
+                                                                                Foreground="{DynamicResource Text.Primary}"
+                                                                                Text="{Binding Name}" />
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                            <!--  "+N" overflow: outline only (Border.Strong), no fill — distinct from a real tag chip.  -->
+                                                            <Border
+                                                                Padding="6,1"
+                                                                BorderBrush="{DynamicResource Border.Strong}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="{StaticResource Radius.Small}"
+                                                                Visibility="{Binding HasOverflowTags, Converter={StaticResource BoolToVis}}">
+                                                                <TextBlock FontSize="{StaticResource FontSize.Label}" Foreground="{DynamicResource Text.Secondary}">
+                                                                    <Run Text="+" /><Run Text="{Binding OverflowTagCount, Mode=OneWay}" />
+                                                                </TextBlock>
+                                                            </Border>
+                                                        </StackPanel>
+                                                    </Grid>
                                                 </Grid>
                                             </Border>
                                             <!--
@@ -386,9 +481,9 @@
                                 TextWrapping="Wrap" />
                             <ui:Button
                                 HorizontalAlignment="Center"
-                                Appearance="Primary"
                                 Command="{Binding StartRecordingCommand}"
-                                Content="Record" />
+                                Content="Record"
+                                Style="{StaticResource BrandCtaButtonStyle}" />
                         </StackPanel>
                     </ui:Card>
 
@@ -413,8 +508,8 @@
                             <ui:Button
                                 Margin="0,12,0,0"
                                 HorizontalAlignment="Center"
-                                Appearance="Primary"
-                                Command="{Binding RecordIntoCategoryCommand}">
+                                Command="{Binding RecordIntoCategoryCommand}"
+                                Style="{StaticResource BrandCtaButtonStyle}">
                                 <TextBlock><Run Text="Record into " /><Run Text="{Binding EffectiveSingleCategoryName, Mode=OneWay}" /></TextBlock>
                             </ui:Button>
                         </StackPanel>
@@ -508,12 +603,10 @@
                     Height="56"
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center"
-                    Appearance="Danger"
                     Command="{Binding StopCommand}"
                     Content="STOP"
-                    FontSize="{StaticResource FontSize.Title}"
-                    FontWeight="Bold"
-                    IsEnabled="{Binding CanStop}" />
+                    IsEnabled="{Binding CanStop}"
+                    Style="{StaticResource StopButtonStyle}" />
                 <TextBlock
                     x:Name="HotkeyHint"
                     Margin="0,6,0,0"

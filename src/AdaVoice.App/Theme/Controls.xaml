@@ -35,22 +35,48 @@
     </Style>
 
     <!--
-        The big two-line phrase button, shared by every item on the board (no per-item inline style).
-        BasedOn keeps WPF-UI's Fluent template; chrome border is zero on purpose so a hovered tile
-        can't imitate the playing ring. Hover feedback is the overlay wash in the tile template; the
+        The big phrase button, shared by every item on the board (no per-item inline style). BasedOn
+        keeps WPF-UI's Fluent template; chrome border is zero on purpose so a hovered tile can't
+        imitate the playing ring. Hover feedback is the overlay wash in the tile template; the
         playing ring lives on PhraseTileFillStyle below.
+        
+        Fixed size (09/mockup, Phase B): tag count or title length must never change the tile's
+        footprint or reflow the WrapPanel around it — title clamps, tags cap at VisibleTagChips
+        + a "+N" overflow chip instead. Height is 128, not the mockup's literal 106: confirmed by
+        rendering a genuinely 2-line-clamped title (using its full height budget) that 106 clips
+        the tags row beneath it — the mockup's own reference tiles never exercise that combination
+        (title + duration + tags all at once, with a full 2-line title), so its number understated
+        the real worst case.
     -->
     <Style
         x:Key="PhraseButtonStyle"
         BasedOn="{StaticResource {x:Type ui:Button}}"
         TargetType="{x:Type ui:Button}">
-        <Setter Property="MinWidth" Value="150" />
-        <Setter Property="MinHeight" Value="96" />
+        <Setter Property="Width" Value="148" />
+        <Setter Property="Height" Value="128" />
         <Setter Property="Margin" Value="4" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="VerticalContentAlignment" Value="Stretch" />
         <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <!--
+        Tile title: 2-line clamp with an ellipsis on overflow (09's "2-line clamp + ellipsis, full
+        title in tooltip"). WPF's TextBlock has no MaxLines (that's a WinUI-only property), and
+        TextTrimming + TextWrapping="Wrap" does NOT ellipsize a wrapped line either — confirmed by
+        rendering the same long title at several MaxHeight values: WPF collapses to single-line-with-
+        ellipsis the instant the full wrapped text doesn't fit, never showing 2 full lines first. The
+        text itself is pre-clamped by TitleClampConverter (real FormattedText measurement, so it's
+        exactly right for this FontSize/FontWeight) — Wrap alone renders it; no TextTrimming needed.
+        MaxHeight is a generous safety net only (converter already guarantees <= 2 lines).
+    -->
+    <Style x:Key="TileTitleStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSize.SectionTitle}" />
+        <Setter Property="FontWeight" Value="{StaticResource Weight.Strong}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="MaxHeight" Value="48" />
     </Style>
 
     <!--
@@ -70,9 +96,10 @@
             <DataTrigger Binding="{Binding IsCurrentStep}" Value="True">
                 <Setter Property="BorderBrush" Value="{DynamicResource Text.Secondary}" />
             </DataTrigger>
-            <!--  Accent ring while this phrase is playing  -->
+            <!--  Accent ring + Live tint fill while this phrase is playing (09 "Interaction states").  -->
             <DataTrigger Binding="{Binding IsPlaying}" Value="True">
                 <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+                <Setter Property="Background" Value="{DynamicResource Status.Live.Tint}" />
             </DataTrigger>
         </Style.Triggers>
     </Style>
@@ -82,28 +109,57 @@
         a bound Background in the view; this only fixes geometry/shape.
     -->
     <Style x:Key="CategoryEdgeMarkerStyle" TargetType="Border">
-        <Setter Property="Width" Value="4" />
+        <Setter Property="Width" Value="5" />
         <Setter Property="CornerRadius" Value="2" />
         <Setter Property="HorizontalAlignment" Value="Left" />
         <Setter Property="Margin" Value="0,2,0,2" />
     </Style>
 
     <!--
+        Static brand-green CTA (the board's empty-state "Record"/"Record into…" buttons — always
+        the commit/ready look, never switching state, unlike EngineToggleButtonStyle below). Skips
+        Appearance="Primary" for the same reason as that style: WPF-UI's accent-tint ramp washes our
+        light brand green to near-white (Phase B finding, see Tokens.Dark.xaml's Accent comment).
+    -->
+    <Style
+        x:Key="BrandCtaButtonStyle"
+        BasedOn="{StaticResource {x:Type ui:Button}}"
+        TargetType="{x:Type ui:Button}">
+        <Setter Property="Background" Value="{DynamicResource Brand.Gradient}" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <!--
         MainWindow's engine Start/Stop toggle. Extracted from an inline style (Phase A, brand
         redesign) so future phases are token/style-only. Content/icon stay local on the button —
-        only Appearance/Command are style-owned, matching PhraseButtonStyle's own local-vs-style
-        split above.
+        only Appearance/Background/Command are style-owned, matching PhraseButtonStyle's own
+        local-vs-style split above.
+        
+        Start state sets Background/Foreground directly against Brand.Gradient instead of
+        Appearance="Primary" (Phase B finding): WPF-UI's Fluent accent-tint ramp assumes a
+        moderate-lightness base accent (e.g. Windows blue #0078D4); our brand green (#7BC96A) is
+        already light, so the generated "AccentFillColorDefaultBrush" washes out to near-white
+        (confirmed via a live ui:Button + resource dump — SystemAccentColor correctly tracked our
+        green, but AccentFillColorDefault/Secondary/Tertiary did not). The mockup's own "WPF
+        fidelity note" anticipated this exact mismatch. The two DataTriggers below are mutually
+        exclusive (IsEngineRunning is a bool) so neither state's Setters bleed into the other —
+        no unconditioned base Setter for Background/Foreground to leak past the trigger.
     -->
     <Style
         x:Key="EngineToggleButtonStyle"
         BasedOn="{StaticResource {x:Type ui:Button}}"
         TargetType="{x:Type ui:Button}">
-        <Setter Property="Appearance" Value="Primary" />
-        <Setter Property="Command" Value="{Binding StartEngineCommand}" />
         <Style.Triggers>
+            <DataTrigger Binding="{Binding Status.IsEngineRunning}" Value="False">
+                <Setter Property="Command" Value="{Binding StartEngineCommand}" />
+                <Setter Property="Background" Value="{DynamicResource Brand.Gradient}" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="BorderThickness" Value="0" />
+            </DataTrigger>
             <DataTrigger Binding="{Binding Status.IsEngineRunning}" Value="True">
-                <Setter Property="Appearance" Value="Secondary" />
                 <Setter Property="Command" Value="{Binding StopEngineCommand}" />
+                <Setter Property="Appearance" Value="Secondary" />
             </DataTrigger>
         </Style.Triggers>
     </Style>
@@ -123,6 +179,46 @@
             </DataTrigger>
             <DataTrigger Binding="{Binding Status.State}" Value="Degraded">
                 <Setter Property="Fill" Value="{DynamicResource Status.Degraded}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
+        Status pill (09 "the second state channel, never colour alone"): dot + ALL-CAPS label +
+        per-state tint background, next to the Start/Stop toggle. Its dot reuses StateDotStyle
+        directly so both channels agree on the exact fill colour. LIVE only gets a static green
+        glow halo (max one glowing element at rest, per 09) — Phase D animates this same trigger's
+        Effect.Opacity for the breathe. TextElement.* are attached properties Border can set and a
+        child TextBlock inherits, even though Border itself has no Foreground/FontWeight of its own.
+    -->
+    <Style x:Key="StatusPillStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Status.Stopped.Tint}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Status.Stopped}" />
+        <Setter Property="TextElement.FontWeight" Value="Bold" />
+        <Setter Property="CornerRadius" Value="{StaticResource Radius.Pill}" />
+        <Setter Property="Padding" Value="12,5" />
+        <Setter Property="MinHeight" Value="24" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Status.State}" Value="Live">
+                <Setter Property="Background" Value="{DynamicResource Status.Live.Tint}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource Status.Live}" />
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect
+                            BlurRadius="16"
+                            Opacity="0.55"
+                            ShadowDepth="0"
+                            Color="{DynamicResource Status.Live.Color}" />
+                    </Setter.Value>
+                </Setter>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Status.State}" Value="OffAir">
+                <Setter Property="Background" Value="{DynamicResource Status.OffAir.Tint}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource Status.OffAir}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Status.State}" Value="Degraded">
+                <Setter Property="Background" Value="{DynamicResource Status.Degraded.Tint}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource Status.Degraded}" />
             </DataTrigger>
         </Style.Triggers>
     </Style>
@@ -161,6 +257,29 @@
     </Style>
 
     <!--
+        STOP: brand-red destructive fill. WPF-UI's Appearance="Danger" bakes its color into a
+        ControlTemplate trigger (Phase A finding — see Tokens.Dark.xaml's comment) and ignores any
+        resource override, so this skips Appearance entirely and sets Background/Foreground directly
+        against our own tokens. Disabled state falls back to a neutral surface (mockup ".stopbtn:disabled").
+    -->
+    <Style
+        x:Key="StopButtonStyle"
+        BasedOn="{StaticResource {x:Type ui:Button}}"
+        TargetType="{x:Type ui:Button}">
+        <Setter Property="Background" Value="{DynamicResource Danger.Solid}" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontSize" Value="{StaticResource FontSize.Stop}" />
+        <Setter Property="FontWeight" Value="ExtraBold" />
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{DynamicResource Surface.Overlay}" />
+                <Setter Property="Foreground" Value="{DynamicResource Text.Muted}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
         Hover/press wash painted over a phrase tile, over any category fill. Not hit-testable, so
         clicks and the context menu pass straight through it. RelativeSource is evaluated at the
         usage site, so this resolves correctly once keyed here instead of inline.
@@ -173,6 +292,99 @@
             </DataTrigger>
             <DataTrigger Binding="{Binding IsPressed, RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="True">
                 <Setter Property="Background" Value="{DynamicResource Overlay.Pressed}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
+        State-lit window backdrop (the redesign's signature, 09 "Gradients"). Four gradient layers +
+        three bloom layers sit behind the title bar and content (MainWindow's backdrop Grid), each
+        defaulting to Opacity="0" with one DataTrigger flipping it to "1" for its own Status.State —
+        deliberately four/three separate styles, not one BasedOn chain, so each layer only reacts to
+        its own state (a shared base Style's trigger would leak into every derived layer). Phase B
+        switches instantly (screenshot-correct at rest); Phase D adds EnterActions/ExitActions
+        Storyboards to these same triggers for the 500 ms crossfade — no structural change then.
+    -->
+    <Style x:Key="StateLayerLiveStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Surface.Window.Live}" />
+        <Setter Property="Opacity" Value="0" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Status.State}" Value="Live">
+                <Setter Property="Opacity" Value="1" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="StateLayerOffAirStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Surface.Window.OffAir}" />
+        <Setter Property="Opacity" Value="0" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Status.State}" Value="OffAir">
+                <Setter Property="Opacity" Value="1" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="StateLayerDegradedStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Surface.Window.Degraded}" />
+        <Setter Property="Opacity" Value="0" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Status.State}" Value="Degraded">
+                <Setter Property="Opacity" Value="1" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="StateLayerStoppedStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Surface.Window.Stopped}" />
+        <Setter Property="Opacity" Value="0" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Status.State}" Value="Stopped">
+                <Setter Property="Opacity" Value="1" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
+        Radial bloom, top-left (mockup: 340x340, offset -90,-110 — kept as literal Setters here, the
+        one place these sizes live). STOPPED has no bloom layer at all (09's gradient table).
+    -->
+    <Style x:Key="BloomLiveStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Bloom.Live}" />
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="Width" Value="340" />
+        <Setter Property="Height" Value="340" />
+        <Setter Property="Margin" Value="-90,-110,0,0" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Status.State}" Value="Live">
+                <Setter Property="Opacity" Value="1" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="BloomOffAirStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Bloom.OffAir}" />
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="Width" Value="340" />
+        <Setter Property="Height" Value="340" />
+        <Setter Property="Margin" Value="-90,-110,0,0" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Status.State}" Value="OffAir">
+                <Setter Property="Opacity" Value="1" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="BloomDegradedStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Bloom.Degraded}" />
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="Width" Value="340" />
+        <Setter Property="Height" Value="340" />
+        <Setter Property="Margin" Value="-90,-110,0,0" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Status.State}" Value="Degraded">
+                <Setter Property="Opacity" Value="1" />
             </DataTrigger>
         </Style.Triggers>
     </Style>

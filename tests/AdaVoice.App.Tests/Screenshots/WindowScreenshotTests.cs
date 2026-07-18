@@ -40,6 +40,56 @@ public sealed class WindowScreenshotTests(WpfAppFixture app)
         }, "main-board-wide");
     }
 
+    /// <summary>
+    /// Phase B (brand redesign): the state-lit window backdrop, status pill, and STOP fill all vary
+    /// by <see cref="EngineState"/> — the owner reviews the signature by seeing all four, not just
+    /// the one LIVE state <see cref="MainWindow_board"/> already covers.
+    /// </summary>
+    [ScreenshotFact]
+    public void MainWindow_board_stopped() =>
+        Save(() => new MainWindow { DataContext = NewBoard(EngineState.Stopped) }, "main-board-stopped");
+
+    [ScreenshotFact]
+    public void MainWindow_board_offAir() =>
+        Save(() => new MainWindow { DataContext = NewBoard(EngineState.OffAir) }, "main-board-offair");
+
+    [ScreenshotFact]
+    public void MainWindow_board_degraded() =>
+        Save(() => new MainWindow { DataContext = NewBoard(EngineState.Degraded) }, "main-board-degraded");
+
+    /// <summary>Phase B item 3's Accent-border + Live-tint tile fill only shows on a playing tile —
+    /// <see cref="MainWindow_board"/>'s fixture never plays anything, so this is the only screenshot
+    /// that renders it.</summary>
+    [ScreenshotFact]
+    public void MainWindow_board_playing()
+    {
+        var host = SampleHost();
+        var board = NewBoardFor(host);
+        host.RaisePlayingPhraseChanged("p-1");
+        Save(() => new MainWindow { DataContext = board }, "main-board-playing");
+    }
+
+    /// <summary>Phase B's tile rework made the broken-audio warning replace the tag strip
+    /// (mutually exclusive via a DataTrigger) — unverified by any other fixture, none of which
+    /// mark a phrase broken.</summary>
+    [ScreenshotFact]
+    public void MainWindow_board_broken()
+    {
+        var host = SampleHost();
+        host.BrokenPhraseIds = ["p-1"];
+        Save(() => new MainWindow { DataContext = NewBoardFor(host) }, "main-board-broken");
+    }
+
+    /// <summary>The empty-state "Record" CTA (Phase B: direct Background, not Appearance="Primary")
+    /// only renders when the board has no phrases.</summary>
+    [ScreenshotFact]
+    public void MainWindow_board_empty()
+    {
+        var host = SampleHost();
+        host.Phrases = [];
+        Save(() => new MainWindow { DataContext = NewBoardFor(host) }, "main-board-empty");
+    }
+
     [ScreenshotFact]
     public void SettingsWindow() =>
         Save(() => new SettingsWindow { DataContext = NewSettings() }, "settings");
@@ -141,12 +191,12 @@ public sealed class WindowScreenshotTests(WpfAppFixture app)
         };
     }
 
-    private static BoardViewModel NewBoard()
+    private static BoardViewModel NewBoard(EngineState? state = null)
     {
         var host = SampleHost();
-        var settingsHost = new FakeSettingsHost();
-        return new BoardViewModel(host, host, host, host, settingsHost,
-            new StatusViewModel(host), new SettingsViewModel(settingsHost));
+        if (state is { } s)
+            host.State = s;
+        return NewBoardFor(host);
     }
 
     private static BoardViewModel NewWideBoard()
@@ -155,13 +205,21 @@ public sealed class WindowScreenshotTests(WpfAppFixture app)
         host.Phrases =
         [
             .. host.Phrases,
-            new PhraseEntry { Id = "p-5", Title = "Booking a follow-up call", CategoryId = "c-greet", Tags = ["opening"], DurationMs = 4800 },
+            // 3 tags (cap is 1 — see PhraseItemViewModel.MaxVisibleTagChips) exercises the "+N"
+            // overflow chip; the long title exercises the 2-line clamp + ellipsis (Phase B). Lives
+            // only here, not on SampleHost's p-1 — see NewBoard()'s p-1 comment for why.
+            new PhraseEntry { Id = "p-5", Title = "Booking a follow-up call — thanks so much for calling us today", CategoryId = "c-greet", Tags = ["vip", "opening", "friendly"], DurationMs = 4800 },
             new PhraseEntry { Id = "p-6", Title = "Explaining the refund policy", CategoryId = Category.DefaultId, DurationMs = 6100 },
             new PhraseEntry { Id = "p-7", Title = "Objection: need to think about it", CategoryId = Category.DefaultId, Tags = ["friendly"], DurationMs = 3900 },
             new PhraseEntry { Id = "p-8", Title = "Escalating to a manager", CategoryId = "c-close", DurationMs = 2900 },
             new PhraseEntry { Id = "p-9", Title = "Confirming the appointment time", CategoryId = "c-greet", DurationMs = 3300 },
             new PhraseEntry { Id = "p-10", Title = "Wrapping up the call", CategoryId = "c-close", DurationMs = 2400 },
         ];
+        return NewBoardFor(host);
+    }
+
+    private static BoardViewModel NewBoardFor(FakePlaybackHost host)
+    {
         var settingsHost = new FakeSettingsHost();
         return new BoardViewModel(host, host, host, host, settingsHost,
             new StatusViewModel(host), new SettingsViewModel(settingsHost));
@@ -190,11 +248,18 @@ public sealed class WindowScreenshotTests(WpfAppFixture app)
         [
             new TagInfo { Name = "opening", Color = "#4CC2FF" },
             new TagInfo { Name = "friendly", Color = "#57C7A6" },
+            new TagInfo { Name = "vip", Color = "#E8B04B" },
         ],
         Phrases =
         [
             new PhraseEntry
             {
+                // Kept short and 2-tag on purpose: p-1 is Phrases[0], reused by several OTHER
+                // dialogs' screenshots (PhraseEditDialog, PhraseVersionsDialog, ManageConversations
+                // — it's a "Cold call" member). A long title + 3rd tag here once distorted those
+                // dialogs' layouts (a row's text ran behind its buttons) even though it correctly
+                // exercised MainWindow's tile clamp/overflow — that stress data now lives only in
+                // NewWideBoard's p-5, which no other dialog's fixture touches.
                 Id = "p-1", Title = "Warm intro", CategoryId = "c-greet",
                 Tags = ["opening", "friendly"], DurationMs = 3200,
                 Versions = [new PhraseVersion { Id = "pv-1", Label = "Energetic", DurationMs = 3100 }],

@@ -57,6 +57,16 @@
     <SolidColorBrush x:Key="Danger.Solid" Color="#C63C34" />
 
     <!--
+        The title-bar hairline: the ONE decorative place green and red meet (09 "Direction" / red
+        budget rule). A fixed brand statement, not surface-tinted — same gradient in both themes.
+    -->
+    <LinearGradientBrush x:Key="Brand.Hairline" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Offset="0" Color="#2E7D4F" />
+        <GradientStop Offset="0.55" Color="#3E5D3A" />
+        <GradientStop Offset="1" Color="#C63C34" />
+    </LinearGradientBrush>
+
+    <!--
         Plain Color (not Brush) shadows of the tokens above, for consumers that need a raw Color
         (GradientStop.Color, ApplicationAccentColorManager-style APIs) rather than a Brush. NOTE:
         WPF-UI's ui:Button bakes its Appearance="Danger"/"Success"/"Caution" coloring into a
@@ -100,5 +110,25 @@
         <GradientStop Offset="0" Color="#141614" />
         <GradientStop Offset="1" Color="#0F110F" />
     </LinearGradientBrush>
+
+    <!--
+        Radial bloom, top-left, one per state (STOPPED has none — 09's gradient table). A distinct
+        hue from Status.*/Status.*.Tint above: the bloom is a soft ambient glow behind the window
+        content, not the pill/dot signal color, so it gets its own token family. Phase B places this
+        as a fixed-size (340x340) Border, top-left offset, cross-faded by Opacity with its matching
+        Surface.Window.* layer (Controls.xaml's StateLayer*/Bloom*Style).
+    -->
+    <RadialGradientBrush x:Key="Bloom.Live">
+        <GradientStop Offset="0" Color="#292FBF71" />
+        <GradientStop Offset="1" Color="#002FBF71" />
+    </RadialGradientBrush>
+    <RadialGradientBrush x:Key="Bloom.OffAir">
+        <GradientStop Offset="0" Color="#24E8B04B" />
+        <GradientStop Offset="1" Color="#00E8B04B" />
+    </RadialGradientBrush>
+    <RadialGradientBrush x:Key="Bloom.Degraded">
+        <GradientStop Offset="0" Color="#21FF7A70" />
+        <GradientStop Offset="1" Color="#00FF7A70" />
+    </RadialGradientBrush>
 
 </ResourceDictionary>

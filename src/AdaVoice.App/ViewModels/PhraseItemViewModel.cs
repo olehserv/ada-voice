@@ -46,8 +46,27 @@ public partial class PhraseItemViewModel(PhraseEntry entry) : ObservableObject
 
     /// <summary>The phrase's tags with their registry colours (set by the board). Empty until the board
     /// resolves them against the tag registry.</summary>
+    [NotifyPropertyChangedFor(nameof(VisibleTagChips))]
+    [NotifyPropertyChangedFor(nameof(OverflowTagCount))]
+    [NotifyPropertyChangedFor(nameof(HasOverflowTags))]
     [ObservableProperty]
     private IReadOnlyList<TagChipViewModel> _tagChips = [];
+
+    /// <summary>Tile tag strip has room for this many chips before overflowing — the tile is
+    /// fixed-size (09), so tag count can never change its layout. 1, not 2: confirmed against a
+    /// rendered screenshot (Phase B) that 2 short tags + the "+N" overflow chip together clip past
+    /// the tile's rounded-corner content bounds; the mockup's own reference tile shows the same
+    /// (1 tag + "+2", never 2 tags + overflow).</summary>
+    private const int MaxVisibleTagChips = 1;
+
+    /// <summary>The chips shown on the tile; the rest collapse behind <see cref="OverflowTagCount"/>.</summary>
+    public IReadOnlyList<TagChipViewModel> VisibleTagChips =>
+        TagChips.Count <= MaxVisibleTagChips ? TagChips : TagChips.Take(MaxVisibleTagChips).ToList();
+
+    /// <summary>How many tags are hidden behind the "+N" overflow chip (0 when they all fit).</summary>
+    public int OverflowTagCount => Math.Max(0, TagChips.Count - MaxVisibleTagChips);
+
+    public bool HasOverflowTags => OverflowTagCount > 0;
 
     /// <summary>Swap in the edited entry and refresh every derived, bound property. <see cref="PhraseEntry"/>
     /// is an immutable record, so an edit returns a new instance — without this the UI keeps the old one.</summary>
