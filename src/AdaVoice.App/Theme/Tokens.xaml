@@ -1,31 +1,60 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
 
-    <!-- THEME-INVARIANT tokens (Direction A "Studio Graphite", redesign 2026-07-11). These do not
-         change between light and dark. All COLOR tokens live in Tokens.Dark.xaml / Tokens.Light.xaml
-         (identical keys, swapped at runtime by App). A view uses only tokens — no hex, no raw sizes. -->
+    <!--
+        THEME-INVARIANT tokens ("Pine Signal" brand redesign, 2026-07-18; typography/spacing carried
+        over from the 2026-07-11 "Studio Graphite" redesign). These do not change between light and
+        dark. All COLOR tokens live in Tokens.Dark.xaml / Tokens.Light.xaml (identical keys, swapped
+        at runtime by App). A view uses only tokens — no hex, no raw sizes.
+    -->
 
-    <!-- Typography scale. Weight hierarchy: titles 600, body 400. Floor: nothing below 12;
-         status elements never below 14. Font family stays the native Segoe UI Variable. -->
+    <!--
+        Typography scale. Weight hierarchy: titles 600, body 400. Floor: nothing below 12;
+        status elements never below 14. Font family stays the native Segoe UI Variable.
+    -->
     <sys:Double x:Key="FontSize.Title">20</sys:Double>
     <sys:Double x:Key="FontSize.SectionTitle">16</sys:Double>
     <sys:Double x:Key="FontSize.Body">14</sys:Double>
     <sys:Double x:Key="FontSize.Label">12</sys:Double>
 
-    <!-- Font weights (previously inline in views — now one place). -->
+    <!--  Font weights (previously inline in views — now one place).  -->
     <FontWeight x:Key="Weight.Strong">SemiBold</FontWeight>
 
-    <!-- Spacing (4 px grid). Was scattered as literal margins across dialogs. -->
+    <!--  Spacing (4 px grid). Was scattered as literal margins across dialogs.  -->
     <Thickness x:Key="Space.DialogContent">16,8,16,16</Thickness>
     <Thickness x:Key="Space.ButtonRow">0,16,0,0</Thickness>
     <Thickness x:Key="Pad.Panel">14,12</Thickness>
 
-    <!-- Shape. One radius scale, no ad-hoc radii: Small = chips/swatches, Control = buttons/inputs/
-         tiles, Panel = grouping panels/cards, Pill = status pill. -->
+    <!--
+        Shape. One radius scale, no ad-hoc radii: Small = chips/swatches, Control = buttons/inputs/
+        tiles, Panel = grouping panels/cards, Pill = status pill. Control/Panel are chunkier than the
+        prior Studio Graphite scale, per the Pine Signal redesign (09).
+    -->
     <CornerRadius x:Key="Radius.Small">4</CornerRadius>
-    <CornerRadius x:Key="Radius.Control">6</CornerRadius>
-    <CornerRadius x:Key="Radius.Panel">8</CornerRadius>
+    <CornerRadius x:Key="Radius.Control">10</CornerRadius>
+    <CornerRadius x:Key="Radius.Panel">14</CornerRadius>
     <CornerRadius x:Key="Radius.Pill">12</CornerRadius>
+
+    <!--
+        Motion. Every Storyboard uses these — no ad-hoc durations. Storyboard-safe rule (09 "Motion"):
+        animate only Opacity, RenderTransform sub-properties, an inline-declared brush Color, and
+        Effect.Opacity — never a container's Width/Height/Margin, never a shared {StaticResource}
+        brush. Every looping storyboard's trigger EnterActions must be paired with ExitActions
+        (StopStoryboard) so state never sticks.
+    -->
+    <Duration x:Key="Motion.Fast">0:0:0.12</Duration>
+    <Duration x:Key="Motion.Base">0:0:0.16</Duration>
+    <Duration x:Key="Motion.State">0:0:0.5</Duration>
+
+    <!--  Standard ease-out, for a SplineDoubleKeyFrame's KeySpline (hover/press/focus enters).  -->
+    <KeySpline x:Key="KeySpline.Standard">0.2,0 0,1</KeySpline>
+
+    <!--
+        Ease-in-out, as an IEasingFunction for a DoubleAnimation.EasingFunction — used only by the
+        window's state-gradient crossfade (paired with Motion.State).
+    -->
+    <QuadraticEase x:Key="Easing.State" EasingMode="EaseInOut" />
 
 </ResourceDictionary>

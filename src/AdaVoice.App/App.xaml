@@ -1,15 +1,18 @@
-<Application x:Class="AdaVoice.App.App"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-             xmlns:app="clr-namespace:AdaVoice.App">
+﻿<Application
+    x:Class="AdaVoice.App.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:app="clr-namespace:AdaVoice.App"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- WPF-UI Fluent theme + control styles first, then our brand tokens on top.
-                     Tokens.Dark.xaml is the declared default (so a test that only loads XAML, or the
-                     first paint before OnStartup, has a full palette); App.OnStartup swaps it to
-                     Tokens.Light.xaml when the OS theme is light and follows changes at runtime. -->
+                <!--
+                    WPF-UI Fluent theme + control styles first, then our brand tokens on top.
+                    Tokens.Dark.xaml is the declared default (so a test that only loads XAML, or the
+                    first paint before OnStartup, has a full palette); App.OnStartup swaps it to
+                    Tokens.Light.xaml when the OS theme is light and follows changes at runtime.
+                -->
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
                 <ResourceDictionary Source="Theme/Tokens.xaml" />
@@ -17,11 +20,10 @@
                 <ResourceDictionary Source="Theme/Controls.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- Shared converters (category fill + wizard checks + bool-to-visibility). -->
+            <!--  Shared converters (category fill + wizard checks + bool-to-visibility).  -->
             <app:HexToBrushConverter x:Key="HexToBrush" />
             <BooleanToVisibilityConverter x:Key="BoolToVis" />
             <app:CheckStatusToLabelConverter x:Key="CheckStatusToLabel" />
-            <app:CheckStatusToBrushConverter x:Key="CheckStatusToBrush" />
             <app:FailedCableCheckToVisibilityConverter x:Key="FailedCableCheckToLink" />
         </ResourceDictionary>
     </Application.Resources>

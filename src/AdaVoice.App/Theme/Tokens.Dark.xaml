@@ -1,39 +1,104 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Direction A "Studio Graphite" — DARK color tokens. Keys match Tokens.Light.xaml exactly;
-         App swaps the active file at runtime to follow the OS theme. Every text/surface pair holds
-         contrast >= 4.5:1 (verified 2026-07-11). Restraint is the point: color is a marker, not a fill. -->
+    <!--
+        "Pine Signal" brand redesign (owner-approved 2026-07-18) — DARK color tokens. Keys match
+        Tokens.Light.xaml exactly; App swaps the active file at runtime to follow the OS theme. Every
+        text/surface pair holds contrast >= 4.5:1 (script-verified 2026-07-18, incl. gradient stops).
+        Restraint is the point: color is a marker, not a fill.
+        Phase A (docs/design/plans/brand-redesign-implementation-plan.md) is the token layer only —
+        no view is rewired to Surface.Window.* yet, so Surface.Window stays a solid; Phase B wires
+        MainWindow's background to the per-state gradients below.
+    -->
 
-    <!-- Surfaces: a three-step cool-graphite ramp. Depth = ramp + subtle borders, no shadows. -->
-    <SolidColorBrush x:Key="Surface.Window" Color="#141619" />
-    <SolidColorBrush x:Key="Surface.Raised" Color="#1B1F23" />
-    <SolidColorBrush x:Key="Surface.Overlay" Color="#23282D" />
+    <!--  Surfaces. Surface.Window is the STOPPED gradient's darker stop, kept solid until Phase B.  -->
+    <SolidColorBrush x:Key="Surface.Window" Color="#0F110F" />
+    <SolidColorBrush x:Key="Surface.Raised" Color="#1A241A" />
+    <SolidColorBrush x:Key="Surface.Overlay" Color="#232F23" />
 
-    <!-- Borders: white at low alpha so they hold on every surface step. -->
-    <SolidColorBrush x:Key="Border.Subtle" Color="#14FFFFFF" />
-    <SolidColorBrush x:Key="Border.Strong" Color="#2EFFFFFF" />
+    <!--  Borders: warm off-white at low alpha so they hold on every surface step.  -->
+    <SolidColorBrush x:Key="Border.Subtle" Color="#17F4F1EA" />
+    <SolidColorBrush x:Key="Border.Strong" Color="#2EF4F1EA" />
 
-    <!-- Text: all three hold >= 4.5:1 on Surface.Raised. -->
-    <SolidColorBrush x:Key="Text.Primary" Color="#F2F3F5" />
-    <SolidColorBrush x:Key="Text.Secondary" Color="#A7ACB4" />
-    <SolidColorBrush x:Key="Text.Muted" Color="#8B919A" />
+    <!--  Text: all three hold >= 4.5:1 on Surface.Raised.  -->
+    <SolidColorBrush x:Key="Text.Primary" Color="#F4F1EA" />
+    <SolidColorBrush x:Key="Text.Secondary" Color="#ADB8A9" />
+    <SolidColorBrush x:Key="Text.Muted" Color="#8E9A8A" />
 
-    <!-- Status: verified against both dark surfaces. -->
-    <SolidColorBrush x:Key="Status.Live" Color="#54D262" />
-    <SolidColorBrush x:Key="Status.OffAir" Color="#F2A33C" />
-    <SolidColorBrush x:Key="Status.Degraded" Color="#FF6B6B" />
-    <SolidColorBrush x:Key="Status.Stopped" Color="#8B919A" />
+    <!--  Status: dot / pill / window-tint colour per engine state, verified against both dark surfaces.  -->
+    <SolidColorBrush x:Key="Status.Live" Color="#7BC96A" />
+    <SolidColorBrush x:Key="Status.OffAir" Color="#E8B04B" />
+    <SolidColorBrush x:Key="Status.Degraded" Color="#FF7A70" />
+    <SolidColorBrush x:Key="Status.Stopped" Color="#8E9A8A" />
 
-    <!-- One accent, used sparingly: focus, playing ring, Primary buttons. -->
-    <SolidColorBrush x:Key="Accent" Color="#58B0F0" />
+    <!--  Status tints: pill/tile background wash — same hue as Status.* above, low alpha (ambient, not a fill).  -->
+    <SolidColorBrush x:Key="Status.Live.Tint" Color="#217BC96A" />
+    <SolidColorBrush x:Key="Status.OffAir.Tint" Color="#24E8B04B" />
+    <SolidColorBrush x:Key="Status.Degraded.Tint" Color="#24FF7A70" />
+    <SolidColorBrush x:Key="Status.Stopped.Tint" Color="#1A8E9A8A" />
 
-    <!-- Interaction overlays: painted on top of a tile so hover/press read on any surface.
-         Pressed is dimmer than hover (Fluent convention). -->
-    <SolidColorBrush x:Key="Overlay.Hover" Color="#17FFFFFF" />
+    <!--
+        The brand accent, used sparingly: focus, playing ring. Stays a SolidColorBrush —
+        App.SyncBrandLayer pattern-matches it before feeding ApplicationAccentColorManager;
+        never turn this into a gradient (see Brand.Gradient below for the gradient CTA face).
+    -->
+    <SolidColorBrush x:Key="Accent" Color="#7BC96A" />
+
+    <!--
+        Filled-green CTA faces (commit/ready actions: Start, Save, Done). Brand.Deep is the flat
+        fallback; Brand.Gradient is the primary CTA face (135°, per 09).
+    -->
+    <SolidColorBrush x:Key="Brand.Deep" Color="#2E7D4F" />
+    <LinearGradientBrush x:Key="Brand.Gradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0" Color="#2E7D4F" />
+        <GradientStop Offset="1" Color="#1F6B41" />
+    </LinearGradientBrush>
+
+    <!--  Filled-red destructive/hot actions (STOP, Record while recording, Delete).  -->
+    <SolidColorBrush x:Key="Danger.Solid" Color="#C63C34" />
+
+    <!--
+        Plain Color (not Brush) shadows of the tokens above, for consumers that need a raw Color
+        (GradientStop.Color, ApplicationAccentColorManager-style APIs) rather than a Brush. NOTE:
+        WPF-UI's ui:Button bakes its Appearance="Danger"/"Success"/"Caution" coloring into a
+        ControlTemplate trigger with a literal value (confirmed via GetValueSource returning
+        BaseValueSource=TemplateTrigger at runtime) — it does NOT read SystemFillColor*Brush, so no
+        resource override can brand those buttons. Phase B/C brand-colors them directly instead
+        (Background/Foreground Setters, no Appearance=) using the Brush tokens above.
+    -->
+    <Color x:Key="Danger.Solid.Color">#C63C34</Color>
+    <Color x:Key="Status.Live.Color">#7BC96A</Color>
+    <Color x:Key="Status.OffAir.Color">#E8B04B</Color>
+
+    <!--
+        Interaction overlays: painted on top of a tile so hover/press read on any surface.
+        Pressed is dimmer than hover (Fluent convention).
+    -->
+    <SolidColorBrush x:Key="Overlay.Hover" Color="#14FFFFFF" />
     <SolidColorBrush x:Key="Overlay.Pressed" Color="#0DFFFFFF" />
 
-    <!-- Dark scrim behind tag chips so chip text stays legible over any tile. -->
-    <SolidColorBrush x:Key="Scrim.Tag" Color="#66000000" />
+    <!--  Dark scrim behind tag chips so chip text stays legible over any tile.  -->
+    <SolidColorBrush x:Key="Scrim.Tag" Color="#6B000000" />
+
+    <!--
+        State-lit window backgrounds — Phase B wires MainWindow.Background to these; no view binds
+        them yet. 165° two-stop linear gradient per engine state (angle shared across states; only
+        the two stops change) — the window itself is the primary state signal, per 09.
+    -->
+    <LinearGradientBrush x:Key="Surface.Window.Live" StartPoint="0,0" EndPoint="0.27,1">
+        <GradientStop Offset="0" Color="#111C14" />
+        <GradientStop Offset="1" Color="#0C110E" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="Surface.Window.OffAir" StartPoint="0,0" EndPoint="0.27,1">
+        <GradientStop Offset="0" Color="#1C170D" />
+        <GradientStop Offset="1" Color="#12100A" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="Surface.Window.Degraded" StartPoint="0,0" EndPoint="0.27,1">
+        <GradientStop Offset="0" Color="#1D1210" />
+        <GradientStop Offset="1" Color="#120D0C" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="Surface.Window.Stopped" StartPoint="0,0" EndPoint="0.27,1">
+        <GradientStop Offset="0" Color="#141614" />
+        <GradientStop Offset="1" Color="#0F110F" />
+    </LinearGradientBrush>
 
 </ResourceDictionary>

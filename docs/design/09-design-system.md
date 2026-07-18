@@ -1,132 +1,200 @@
 # AdaVoice — Design System
 
 Single source of truth for visual decisions. Screens are specified in
-[05-ui-design.md](05-ui-design.md); they are built from the
-tokens below. Established by design review 2026-06-10; refreshed by the
-UI redesign 2026-07-06 ([brief](10-ui-redesign-brief.md)).
+[05-ui-design.md](05-ui-design.md); they are built from the tokens below.
+Established 2026-06-10; "Studio Graphite" refresh 2026-07-11; **"Pine Signal"
+brand redesign approved 2026-07-18** (owner pick from the three mockups in
+[mockups/](mockups/README.md)).
+
+> **Status:** Pine Signal is the *approved target*. Visual reference:
+> [mockups/final-pine-signal.html](mockups/final-pine-signal.html). The shipped app still
+> renders Studio Graphite until the implementation plan lands — see
+> [plans/brand-redesign-implementation-plan.md](plans/brand-redesign-implementation-plan.md)
+> and [handoff.md](../../handoff.md).
 
 ## Direction
 
-**"Studio Graphite" (owner redesign 2026-07-11).** A calm, dark-or-light, native Windows
-utility — OBS/Voicemeeter class, not a SaaS dashboard. The best design here is invisible:
-the operator stops noticing the app exists. Subtraction default: if an element doesn't earn
-its pixels mid-call, cut it. **Restraint over loudness: colour is a marker, not a fill.**
-Phrase tiles are neutral surfaces with a slim category **edge marker**, not full category
-fills — so text is always legible and nothing shouts. One command-center exception: call
-state (LIVE / OFF AIR / DEGRADED / STOPPED) reads at a glance — colour, a dot, and a pill;
-the one accent is spent on the *playing* tile's ring.
+**"Pine Signal" (owner decision 2026-07-18 — replaces "Studio Graphite").** A mix of
+mockup variant 3 (Scarlet Pine base: pine chrome, warm off-whites, cream light theme,
+bold shapes) with variant 2's gradient window and glow effects, plus one owner idea that
+became the signature: **the window itself signals engine state.** The window background
+is a deep, quiet gradient tinted by state — green when LIVE, amber when OFF AIR, red
+when DEGRADED, grey when STOPPED — so the operator reads the room, not a widget.
+
+The operator-first principles stay: invisible when working, colour is a marker not a
+fill, red never decorates. Green is the brand (chrome, ready/positive actions, LIVE).
+Red means *hot or destructive* (Record, STOP, DEGRADED, delete). The two brand colours
+meet in exactly one decorative place: the 2 px title-bar hairline.
 
 ## Theme
 
 - **WPF-UI** library (Fluent / Windows 11 style, MIT) — no hand-rolled chrome.
-- **Light + dark, following the OS** (owner decision 2026-07-11 — this **replaced** the
-  earlier fixed-dark-only stance). `App.OnStartup` calls `ApplicationThemeManager.ApplySystemTheme`
-  then `SystemThemeWatcher.Watch(window)` to follow OS changes live. Colour tokens live in
-  `Theme/Tokens.Dark.xaml` / `Tokens.Light.xaml` (identical keys); `App` swaps the active one
-  on `ApplicationThemeManager.Changed`. Every text/surface pair holds ≥ 4.5:1 in **both** themes.
-- **Views bind theme brushes with `DynamicResource`** so a runtime swap re-resolves them;
-  invariant tokens (sizes, radii, spacing) stay `StaticResource`.
-- **Every window is a `FluentWindow`** — chrome follows the theme (dark title bars in dark,
-  light in light); Board, Settings, wizard, and all dialogs share one chrome.
-- **Brand accent is derived from the `Accent` token, not hard-coded.** On each theme change
-  `App` reads the theme's `Accent` brush and feeds it to `ApplicationAccentColorManager.Apply`
-  — one source of truth in XAML (fixes the old code/XAML accent duplication).
+- **Light + dark, following the OS** (unchanged). Colour tokens in
+  `Theme/Tokens.Dark.xaml` / `Tokens.Light.xaml` (identical keys); views bind colours
+  with `DynamicResource`, invariant tokens with `StaticResource`; every window is a
+  `FluentWindow`.
+- **`Accent` stays a `SolidColorBrush`** — `App.SyncBrandLayer` pattern-matches
+  `SolidColorBrush` before feeding `ApplicationAccentColorManager` (2026-07-18
+  architecture review). Gradient looks live in separate `*.Gradient` tokens; never
+  turn `Accent` itself into a gradient.
+- **WPF-UI semantic appearances cannot be re-pointed.** `ui:Button`'s `Appearance="Danger"/
+  "Success"/"Caution"` coloring is baked into a ControlTemplate trigger with a literal value
+  (confirmed 2026-07-18 via `DependencyPropertyHelper.GetValueSource` returning
+  `BaseValueSource=TemplateTrigger` at runtime) — it does not read WPF-UI's
+  `SystemFillColor*Brush` keys, so no resource-dictionary override can brand it (an earlier
+  version of this doc claimed otherwise; a `Theme/WpfUi.Overrides.xaml` was built and proven
+  to have zero effect on any real button). Every screen that needs a brand-red/green/amber
+  button skips `Appearance=` and sets `Background`/`Foreground`/`BorderBrush` directly via a
+  custom style against our own tokens (`Danger.Solid`, `Status.Live`, `Status.OffAir`).
+- **No colour literals outside `Theme/`** — including converters and code-behind
+  (the 2026-07-18 audit found two frozen hex brushes in `Converters.cs`; that class of
+  leak is now explicitly in scope for this rule).
 
 ## Tokens
 
-Canonical implementation: `src/AdaVoice.App/Theme/` — `Tokens.xaml` (theme-invariant: sizes,
-weights, spacing, radii) plus `Tokens.Dark.xaml` / `Tokens.Light.xaml` (colour brushes, same
-keys). No hex literals in view XAML — every colour, radius, and font size comes from a token.
-The table below shows the **dark** values; the light file mirrors every key (verified ≥ 4.5:1).
+Canonical implementation: `src/AdaVoice.App/Theme/`. The table shows **dark** values;
+the light file mirrors every key. All pairs below were script-verified ≥ 4.5:1
+(2026-07-18), including gradient stops.
 
-| Token | Value | Use |
-|---|---|---|
-| `Surface.Window` | `#161719` | Window background |
-| `Surface.Raised` | `#202226` | Panels, rail, cards |
-| `Surface.Overlay` | `#282B30` | Chips, elevated bits inside panels |
-| `Border.Subtle` | `#14FFFFFF` | Panel outlines (depth without shadows) |
-| `Border.Strong` | `#26FFFFFF` | Outlined ghost elements |
-| `Text.Primary` | `#F2F3F5` | Titles, body |
-| `Text.Secondary` | `#A7ACB4` | Labels, hints |
-| `Text.Muted` | `#8B919A` | Metadata, footnotes |
-| `Status.Live` / `.Tint` | `#54D262` / 14% wash | LIVE dot, label, pill wash |
-| `Status.OffAir` / `.Tint` | `#F2A33C` / 15% wash | OFF AIR pill |
-| `Status.Degraded` / `.Tint` | `#FF6B6B` / 15% wash | DEGRADED, errors, recording dot |
-| `Status.Stopped` / `.Tint` | `#8B919A` / 10% white | STOPPED pill |
-| `Accent` | `#4CC2FF` | Focus, playing ring, Primary buttons — sparingly |
-| `Overlay.Hover` / `.Pressed` | 9% / 5% white | Tile hover/press wash (pressed dimmer) |
-| `Scrim.Tag` | `#66000000` | Fixed dark scrim behind tag chips |
+| Token | Dark | Light | Use |
+|---|---|---|---|
+| `Surface.Window.*` | state gradients (below) | state washes (below) | Window background, per engine state |
+| `Surface.Raised` | `#1A241A` | `#FFFFFF` | Panels, tiles, cards |
+| `Surface.Overlay` | `#232F23` | `#F0EBDF` | Chips, inputs, elevated bits |
+| `Border.Subtle` | `#17F4F1EA` | `#21221E17` | Panel outlines |
+| `Border.Strong` | `#2EF4F1EA` | `#3D221E17` | Outlined ghost elements |
+| `Text.Primary` | `#F4F1EA` | `#221E17` | Titles, body (warm off-white / ink) |
+| `Text.Secondary` | `#ADB8A9` | `#55503F` | Labels, hints |
+| `Text.Muted` | `#8E9A8A` | `#6B6552` | Metadata, footnotes |
+| `Accent` (brand green) | `#7BC96A` | `#2E5D3A` | Focus, playing tile, accents — solid only |
+| `Brand.Deep` | `#2E7D4F` | `#2E5D3A` | Filled green buttons (white text, 5.1:1 / 7.7:1) |
+| `Brand.Gradient` | 135° `#2E7D4F→#1F6B41` | flat `#2E5D3A` | Primary CTA faces (Record when idle is NOT primary — see rules) |
+| `Status.Live` / `.Tint` | `#7BC96A` / 13% | `#2E5D3A` / 10% | LIVE pill, dot |
+| `Status.OffAir` / `.Tint` | `#E8B04B` / 14% | `#8A5A00` / 12% | OFF AIR pill, amber toggle |
+| `Status.Degraded` / `.Tint` | `#FF7A70` / 14% | `#B3362C` / 10% | DEGRADED pill, errors, broken-tile warning, recording dot |
+| `Status.Stopped` / `.Tint` | `#8E9A8A` / 10% | `#6B6552` / 8% | STOPPED pill |
+| `Danger.Solid` | `#C63C34` | `#B3362C` | STOP button, filled destructive (white text 5.1:1 / 6.0:1) |
+| `Overlay.Hover` / `.Pressed` | 8% / 5% white | 8% / 5% ink | Hover/press washes |
+| `Scrim.Tag` | `#6B000000` | `#C2000000` | Dark scrim behind tag chips; chip text is `#F4F1EA` in both themes, so the light scrim must be denser (76%) to hold AA over white tiles (verified 9.6:1) |
 
-All text/surface pairs must hold contrast ≥ 4.5:1. Status colors are verified against
-the dark surfaces.
+## Gradients
+
+Gradients appear in exactly three places: the window background, `Brand.Gradient`
+CTA faces, and the 2 px title-bar hairline (90° `#2E7D4F → #3E5D3A → #C63C34`).
+Never under body text without a panel on top.
+
+**State-lit window (the signature).** 165° two-stop linear gradient plus one soft
+radial bloom top-left (a decorative Border with a `RadialGradientBrush`, ~320 px,
+never behind unpaneled text). On state change the window cross-fades (two stacked
+gradient layers, `Opacity` crossfade, 500 ms — Storyboard-safe, no brush animation).
+
+| State | Dark gradient | Dark bloom | Light wash |
+|---|---|---|---|
+| LIVE | `#111C14 → #0C110E` | `rgba(47,191,113,0.16)` | `#F3F7EE → #FAF6EF` |
+| OFF AIR | `#1C170D → #12100A` | `rgba(232,176,75,0.14)` | `#FAF3E3 → #FAF6EF` |
+| DEGRADED | `#1D1210 → #120D0C` | `rgba(255,122,112,0.13)` | `#FAEFEC → #FAF6EF` |
+| STOPPED | `#141614 → #0F110F` | none | `#F7F5F0 → #FAF6EF` |
+
+All four are near-black (dark) / near-cream (light): `Text.Primary` holds ≥ 14.7:1 on
+every stop, and panels sit on `Surface.Raised` anyway. The tint is ambient, not a fill —
+if a screenshot reads "the app turned red", the tint is too strong.
 
 ## Typography
 
-Segoe UI Variable (platform convention). Sizes in DIPs:
+Segoe UI Variable (platform convention — no new fonts). Sizes in DIPs:
 
 | Role | Size / weight |
 |---|---|
 | Window / section titles | 20 / 16 semibold |
-| Phrase button title | 16 semibold, 2-line clamp + ellipsis, full title in tooltip |
-| Status bar | 14 ALL-CAPS |
-| Metadata / durations | 12, tabular numerals (`Typography.NumeralAlignment`) |
+| Phrase tile title | **15 semibold**, 2-line clamp + ellipsis, full title in tooltip |
+| Status pill | 12 bold, ALL-CAPS, +9% letter-spacing |
+| STOP button | 21 extra-bold, +14% letter-spacing |
+| Metadata / duration chips | 12, tabular numerals |
 
-Floor: nothing below 12; status elements never below 14.
+Floor: nothing below 12; status elements never below 14 (the pill's cap height +
+spacing reads larger than its point size — keep the pill ≥ 24 px tall).
 
 ## Spacing & shape
 
-- 4 px grid; panel padding via `Pad.Panel` (14,12).
-- Radius scale (one scale, no ad-hoc radii): `Radius.Small` 4 (chips, swatches),
-  `Radius.Control` 6 (buttons, inputs, tiles), `Radius.Panel` 8 (panels, banners),
-  `Radius.Pill` 12 (status pill, tag chips in dialogs).
-- Phrase buttons ≥ 96 px tall; all other interactive targets ≥ 32 px.
+- 4 px grid; panel padding via `Pad.Panel` (14,12) — unchanged.
+- Radius scale (chunkier than Studio Graphite): `Radius.Small` 4 (tag chips, swatches),
+  `Radius.Control` **10** (buttons, inputs, tiles), `Radius.Panel` **14** (panels),
+  `Radius.Pill` fully-round (status pill, duration chip).
+- Category marker is a **5 px ribbon** down the tile's left edge (was 2–3 px).
+- Phrase tiles are **fixed-size** (Pass 6 spec folds in here): constant `Width`/`Height`
+  regardless of tag count, title clamp, capped tags + "+N" overflow chip.
+- Interactive targets ≥ 32 px, mixed rows share one explicit `Height` (rule 5 of
+  [wpf-ux-design-rules.md](wpf-ux-design-rules.md)).
+
+## Elevation & glow
+
 - Depth = surface ramp + `Border.Subtle` outlines. No shadows on flat panels.
+- **Glows are state signals, never decoration** (`DropShadowEffect`, `ShadowDepth=0`,
+  animate only its `Opacity`): the LIVE pill dot, the recording dot, and the armed
+  STOP on hover. Maximum one glowing element per window at rest.
+
+## Motion
+
+Motion tokens live in `Theme/Tokens.xaml`; every animation uses them — no ad-hoc
+durations. Storyboard-safe rule (hard): animate only `Opacity`, `RenderTransform`
+sub-properties, inline-declared brush `Color`, and `Effect.Opacity`. Never a
+container's `Width`/`Height`/`Margin`; never a shared `{StaticResource}` brush.
+
+| Token | Value | Used for |
+|---|---|---|
+| `Motion.Fast` | 120 ms | Press feedback |
+| `Motion.Base` | 160 ms | Hover, focus, colour washes |
+| `Motion.State` | 500 ms | Window state-gradient crossfade |
+| Standard easing | KeySpline `0.2,0 0,1` (ease-out) | All enters |
+| State easing | ease-in-out | Window crossfade |
+
+| Element | Animation |
+|---|---|
+| Tile hover | Ribbon widens `ScaleX 1→1.6` (transform, origin left) + `Overlay.Hover` wash fades in, 160 ms |
+| Tile press | `Scale 0.975`, 120 ms |
+| Playing tile | `Accent` border + `Status.Live.Tint` fill — static; the tint is the signal |
+| LIVE pill dot | Opacity breathe 1 → 0.5, 1.8 s loop (stops when state ≠ Live) |
+| DEGRADED pill dot | Hard 2-step blink, 0.8 s (`DiscreteDoubleKeyFrame`) — "wrong", not "on air" |
+| Recording dot | Breathe, 1.2 s |
+| Glow in/out | `Effect.Opacity` 0→1, 200 ms |
+| Toast | Fade + 8 px rise (`TranslateTransform.Y`), 180 ms enter / ~120 ms exit |
+
+Every looping storyboard is stopped by its trigger's `ExitActions`
+(`StopStoryboard`) — state never sticks.
 
 ## Interaction states
 
-- **Phrase tiles** (Studio Graphite): a neutral `Surface.Raised` tile with a `Border.Subtle`
-  outline and a slim category-colour **edge marker** down the left (not a full fill). Title/
-  duration use theme text brushes, so no auto-contrast is needed. hover = `Overlay.Hover`
-  wash; pressed = `Overlay.Pressed` (dimmer); **playing** = the tile's 2 px border swaps to
-  `Accent` (`PhraseTileFillStyle`) — constant thickness, so the ring never shifts layout. The
-  button chrome border stays 0 so WPF-UI's hover border can't imitate the playing ring. The
-  Conversations current-step ring reuses the same brush-swap slot with `Text.Secondary`,
-  placed above `IsPlaying` so playing wins.
-- **Buttons**: WPF-UI appearances — one `Primary` per screen (Start when stopped, Save
-  when a take is pending); quiet window actions are `Transparent` icon buttons with
-  tooltips and `AutomationProperties.Name`.
-- **Toggles show their own state**: the OFF AIR button switches to the amber `Caution`
-  appearance while off air (owner decision 2026-07-06 — this replaced the full-width
-  OFF AIR banner; the amber status pill remains the second indicator).
-- **Notifications are toasts** (owner decision 2026-07-07 — replaced the inline notice
-  text): bottom-right of the board area, never over the STOP zone, colored by severity —
-  neutral `Secondary` (info), amber `Caution` (warning), red `Danger` (error). Errors stay
-  6 s, the rest 4 s. Raised via `BoardViewModel.Notified`; the "Saved ✓" / "Deleted"
-  toasts use the same presenter.
-- **Keyboard**: `Esc` = panic stop (window-level KeyBinding), `Ctrl+F` = focus search,
-  global `Pause` = stop from any app. Focus visuals come from WPF-UI (accent).
+- **Phrase tiles**: neutral `Surface.Raised`, 5 px category ribbon, title + duration
+  chip. Hover = ribbon widen + wash; pressed = scale; **playing** = `Accent` border +
+  `Status.Live.Tint` fill (constant border thickness — no layout shift). Conversation
+  current-step ring reuses the border slot with `Text.Secondary`; playing wins.
+  Broken tile = dimmed + inline `Status.Degraded` warning text, still clickable.
+- **Status pill** (new element, replaces the dot-in-button as the primary signal):
+  dot + ALL-CAPS state label + state tint, next to the Start/Stop toggle. LIVE adds
+  the glow. State is never colour-alone — the label is always visible.
+- **Buttons**: one `Primary` per screen. Filled green (`Brand.Deep`/`Brand.Gradient`)
+  = commit/ready (Start, Save, Done). Filled red (`Danger.Solid`) = hot or destructive
+  (Record while recording, STOP, Delete). Destructive actions always get a confirm
+  first (2026-07-18 audit findings 2–3). Quiet window actions stay `Transparent`
+  icon buttons with tooltips **and `AutomationProperties.Name`**.
+- **OFF AIR toggle** keeps the amber `Caution` treatment while off air.
+- **Toasts** unchanged (severity-coloured, bottom-right, 4/6 s) — plus the motion spec.
+- **Keyboard** unchanged: `Esc` panic stop, `Ctrl+F` search, global `Pause`. Focus
+  visuals come from WPF-UI accent (now brand green).
 
 ## Rules
 
-- Category colour is a **slim edge marker** down the left of the (neutral) phrase tile
-  (Studio Graphite, 2026-07-11 — this **replaced** the earlier "colour fills the whole
-  button" rule, whose saturated fills read as loud and forced an auto-contrast text brush).
-  Text now uses theme brushes and is always legible. The playing indicator is an Accent
-  **ring** on the tile border. Colours come from a curated palette
-  (`AdaVoice.Core.Domain.ColorPalette`), chosen via a colour dropdown — never a typed hex.
-  (The old `ContrastText` / `ColorContrast` auto-contrast helpers were removed 2026-07-18 —
-  nothing put text on a coloured fill anymore.)
-- Tags render as rounded chips on the phrase tile: the tag's **colour lives on the chip
-  border** (its identity); chip **text is `Text.Primary`** on the fixed dark scrim
-  (changed 2026-07-06 — colored text failed contrast for dark tag colours). Each tag's
-  colour comes from the library's tag registry (`Library.Tags`), assigned once from the
-  same palette, so a tag looks the same everywhere.
-- Engine state is shown as a **status pill** (dot + ALL-CAPS label + state tint) — the
-  dot + text pairing means state is never conveyed by color alone.
-- Utility copy only: orientation, status, action. No mood copy. Localized UA/PL/EN, sized
-  for the longest locale.
-- One accent color; decorative gradients, blobs, icon-circles, and emoji-as-design are
-  banned. Icons are Fluent Symbols (`ui:SymbolIcon`) — one icon language.
-- Two named window layouts (Full ≥ 720 px, Docked 420–719 px) remain a slice-3 open item;
-  the shipped Board uses one layout (search row + filter row) that holds at 420 px and
-  has room for the Conversations selector. Minimum 420 × 560; per-monitor DPI aware.
+- Category colour = the 5 px left ribbon on a neutral tile. Colours from the curated
+  palette (`ColorPalette`), picked via dropdown, never typed hex.
+- Tag chips: tag colour on the chip **border**, chip text `#F4F1EA` on the fixed
+  `Scrim.Tag` — identical in both themes.
+- Status is shown as the pill (dot + ALL-CAPS + tint) **and** the window tint — two
+  channels, neither colour-alone.
+- **Red budget:** red appears only on Record, STOP, DEGRADED/errors, and destructive
+  actions. Green and red never share a role and meet only in the title-bar hairline.
+  If a screen shows more than two filled-red elements at rest, the design is wrong
+  (audit finding 9).
+- Utility copy only; localized UA/PL/EN, sized for the longest locale.
+- Icons are Fluent Symbols (`ui:SymbolIcon`) — one icon language; no emoji-as-design.
+- Two named window layouts (Full ≥ 720 px, Docked 420–719 px) remain a slice-3 open
+  item; minimum 420 × 560; per-monitor DPI aware.

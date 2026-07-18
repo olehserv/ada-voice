@@ -19,17 +19,16 @@ internal static class BrushHelpers
 }
 
 /// <summary>Hex string (e.g. "#54D262") → a <see cref="SolidColorBrush"/>. Empty or invalid input falls
-/// back to the raised-surface colour, so an uncategorised or colourless phrase tile still looks normal.</summary>
+/// back to the current theme's Surface.Raised, so an uncategorised or colourless phrase tile still
+/// looks normal in both themes (a frozen literal here would go stale every time the palette changes,
+/// as the old #2B2B2B fallback did).</summary>
 public sealed class HexToBrushConverter : IValueConverter
 {
-    // Matches Theme/Tokens.xaml Surface.Raised — the neutral tile fill when no category colour applies.
-    private static readonly SolidColorBrush Fallback = BrushHelpers.Frozen(Color.FromRgb(0x2B, 0x2B, 0x2B));
-
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is string hex && TryParse(hex, out var color))
             return BrushHelpers.Frozen(color);
-        return Fallback;
+        return Application.Current.Resources["Surface.Raised"];
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
@@ -57,19 +56,6 @@ public sealed class CheckStatusToLabelConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         value is CheckStatus.Pass ? "✓ Pass" : "✗ Fail";
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        throw new NotSupportedException();
-}
-
-/// <summary>An environment check's pass/fail status → a green/red brush.</summary>
-public sealed class CheckStatusToBrushConverter : IValueConverter
-{
-    private static readonly SolidColorBrush Pass = BrushHelpers.Frozen(Color.FromRgb(0x54, 0xD2, 0x62)); // Status.Live
-    private static readonly SolidColorBrush Fail = BrushHelpers.Frozen(Color.FromRgb(0xFF, 0x6B, 0x6B)); // Status.Degraded
-
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        value is CheckStatus.Pass ? Pass : Fail;
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();

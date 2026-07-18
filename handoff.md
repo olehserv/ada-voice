@@ -9,7 +9,7 @@ back up. It answers one question: *where are we right now?*
 - Details of past work live in git history and in the dated docs under `docs/reviews/`.
   This file stays short on purpose.
 
-_Last updated: 2026-07-17._
+_Last updated: 2026-07-18._
 
 ## Status in one line
 
@@ -22,6 +22,41 @@ PostgreSQL 16. Monetization: Phases 0–2 shipped — the full 13-table EF Core 
 query filters and idempotent seeder (Phase 1), and the **auth API** (Phase 2): ES256-JWT
 login/refresh/logout/change-password/me, rotating refresh tokens with family-revocation reuse
 detection, account lockout, per-IP rate limiting, RFC 7807 errors, and audit logging.
+
+## Latest work (2026-07-18)
+
+- **"Pine Signal" brand redesign — Phase A (foundation) shipped.** A green+red brand
+  restyle was designed in three phases: **(1)** a UX audit (screenshots both themes +
+  wpf-code-auditor + wpf-architect agents) produced 10 findings — top ones: light-theme
+  wizard check colors fail WCAG AA (frozen dark-hex brushes in `Converters.cs`),
+  no confirm on version/conversation/category deletes, Recorder's destructive Discard
+  in the rightmost commit position, the unthemed conversation `ListBox`, and engine state
+  readable only as an 8 px dot. Architecture review: token layer is restyle-ready; the
+  leaks are WPF-UI `Danger`/`Success`/`Caution` appearances (~15 sites) and the two
+  converter brushes. **(2)** Three AA-verified HTML mockups in
+  [docs/design/mockups/](docs/design/mockups/README.md). **(3)** Owner picked a mix:
+  **variant 3 "Scarlet Pine" base + variant 2's gradient window & glows + a state-lit
+  window** (background gradient follows engine state: green LIVE / amber OFF AIR /
+  red DEGRADED / grey STOPPED; green stays "live", red stays reserved for
+  hot/destructive). [09-design-system.md](docs/design/09-design-system.md) specifies
+  the full target; implementation is planned in 4 review-gated phases in
+  [brand-redesign-implementation-plan.md](docs/design/plans/brand-redesign-implementation-plan.md).
+  **Phase A (tokens + key ownership) shipped**: new Pine Signal palette in
+  `Tokens.Dark/Light.xaml` (incl. unwired `Surface.Window.*` state gradients for Phase B);
+  `CheckStatusToBrushConverter`'s two frozen hex brushes replaced with `DynamicResource`
+  style triggers, `HexToBrushConverter`'s stale `#2B2B2B` fallback now resolves
+  `Surface.Raised` live; motion tokens (`Motion.Fast/Base/State`, easings) + chunkier
+  radii (`Radius.Control` 10, `Radius.Panel` 14) added to `Tokens.xaml`; MainWindow's
+  five inline styles extracted into `Controls.xaml`. **One item descoped with a real
+  finding**: a `Theme/WpfUi.Overrides.xaml` meant to re-point WPF-UI's `Danger`/`Success`/
+  `Caution` semantic keys at the brand was built, wired in, and *looked* right on an
+  eyeballed screenshot — but pixel-sampling the PNG and `DependencyPropertyHelper.
+  GetValueSource` on a live button proved `ui:Button`'s Appearance coloring is baked into
+  a ControlTemplate trigger with a literal value, never reading those keys. Deleted; 09
+  corrected. Brand-coloring Danger/Success/Caution buttons moves to Phase B/C via direct
+  `Background`/`Foreground` styles (skip `Appearance=`) — see the plan doc. Verified via
+  screenshot tests + pixel sampling in both themes; 258 App tests green (242 passed + 16
+  screenshot, skipped without `ADAVOICE_SCREENSHOTS=1`).
 
 ## Latest work (2026-07-17)
 
@@ -210,7 +245,15 @@ detection, account lockout, per-IP rate limiting, RFC 7807 errors, and audit log
 
 ## Next action
 
-**UI/UX pass + localization** — remaining slices (scope + rationale in
+**Pine Signal brand redesign implementation** — Phase A shipped (see above), fixing the
+audit's worst bug (light-theme wizard AA failure). **Phase B (MainWindow: state-lit
+window, status pill, tile rework, STOP zone)** of
+[the plan](docs/design/plans/brand-redesign-implementation-plan.md) is next, pending
+owner screenshot review of Phase A. Phases C–D follow, one owner review per phase.
+Pass 6 (tile sizing) is absorbed into Phase B; Pass 2b (`ContentDialog`) is best done
+before/with Phase C.
+
+Then **UI/UX pass + localization** — remaining slices (scope + rationale in
 [ui-ux-localization-scope.md](docs/plans/ui-ux-localization-scope.md)):
 
 1. ✅ Settings window — done, smoke-tested.
