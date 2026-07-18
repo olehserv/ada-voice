@@ -114,8 +114,8 @@ Floor: nothing below 12; status elements never below 14.
   Text now uses theme brushes and is always legible. The playing indicator is an Accent
   **ring** on the tile border. Colours come from a curated palette
   (`AdaVoice.Core.Domain.ColorPalette`), chosen via a colour dropdown — never a typed hex.
-  (`ContrastText` / `ColorContrast.PrefersDarkText` are still used for the colour-swatch
-  dropdowns and remain available if a future surface needs on-colour text.)
+  (The old `ContrastText` / `ColorContrast` auto-contrast helpers were removed 2026-07-18 —
+  nothing put text on a coloured fill anymore.)
 - Tags render as rounded chips on the phrase tile: the tag's **colour lives on the chip
   border** (its identity); chip **text is `Text.Primary`** on the fixed dark scrim
   (changed 2026-07-06 — colored text failed contrast for dark tag colours). Each tag's

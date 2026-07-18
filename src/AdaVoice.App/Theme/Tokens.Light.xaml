@@ -20,16 +20,12 @@
     <SolidColorBrush x:Key="Text.Secondary" Color="#4C555F" />
     <SolidColorBrush x:Key="Text.Muted" Color="#616872" />
 
-    <!-- Status: darkened vs dark theme so the LABEL holds >= 4.5:1 on its own light tint wash AND
+    <!-- Status: darkened vs dark theme so the LABEL holds >= 4.5:1 on light surfaces AND
          reads as a solid dot (verified 2026-07-11). -->
     <SolidColorBrush x:Key="Status.Live" Color="#0F6E31" />
     <SolidColorBrush x:Key="Status.OffAir" Color="#854B00" />
     <SolidColorBrush x:Key="Status.Degraded" Color="#A82817" />
-    <SolidColorBrush x:Key="Status.Live.Tint" Color="#260F6E31" />
-    <SolidColorBrush x:Key="Status.OffAir.Tint" Color="#26854B00" />
-    <SolidColorBrush x:Key="Status.Degraded.Tint" Color="#26A82817" />
     <SolidColorBrush x:Key="Status.Stopped" Color="#616872" />
-    <SolidColorBrush x:Key="Status.Stopped.Tint" Color="#14000000" />
 
     <!-- One accent, used sparingly: focus, playing ring, Primary buttons. Darker than the dark-theme
          azure so white button text (>= 4.5:1) and the focus ring hold contrast on light surfaces. -->

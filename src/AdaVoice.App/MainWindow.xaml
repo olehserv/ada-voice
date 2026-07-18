@@ -11,10 +11,6 @@
         TextElement.Foreground="{DynamicResource Text.Primary}"
         FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
 
-    <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis" />
-    </Window.Resources>
-
     <!-- Esc = panic stop from anywhere in the window (the global hotkey covers other apps).
          ComboBox/menu popups handle Esc themselves first, so this never fights them. -->
     <Window.InputBindings>

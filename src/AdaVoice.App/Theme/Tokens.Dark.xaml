@@ -19,15 +19,11 @@
     <SolidColorBrush x:Key="Text.Secondary" Color="#A7ACB4" />
     <SolidColorBrush x:Key="Text.Muted" Color="#8B919A" />
 
-    <!-- Status: verified against both dark surfaces. Tints are pill/banner washes. -->
+    <!-- Status: verified against both dark surfaces. -->
     <SolidColorBrush x:Key="Status.Live" Color="#54D262" />
     <SolidColorBrush x:Key="Status.OffAir" Color="#F2A33C" />
     <SolidColorBrush x:Key="Status.Degraded" Color="#FF6B6B" />
-    <SolidColorBrush x:Key="Status.Live.Tint" Color="#2354D262" />
-    <SolidColorBrush x:Key="Status.OffAir.Tint" Color="#26F2A33C" />
-    <SolidColorBrush x:Key="Status.Degraded.Tint" Color="#26FF6B6B" />
     <SolidColorBrush x:Key="Status.Stopped" Color="#8B919A" />
-    <SolidColorBrush x:Key="Status.Stopped.Tint" Color="#1AFFFFFF" />
 
     <!-- One accent, used sparingly: focus, playing ring, Primary buttons. -->
     <SolidColorBrush x:Key="Accent" Color="#58B0F0" />

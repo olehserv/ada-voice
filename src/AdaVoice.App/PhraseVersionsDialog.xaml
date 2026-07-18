@@ -11,9 +11,6 @@
         Background="{DynamicResource Surface.Window}"
         TextElement.Foreground="{DynamicResource Text.Primary}"
         FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
-    <ui:FluentWindow.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis" />
-    </ui:FluentWindow.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />

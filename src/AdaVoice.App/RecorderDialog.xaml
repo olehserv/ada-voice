@@ -14,9 +14,6 @@
     <!-- Fixed height on purpose: the content swaps between states of different sizes
          (idle / recording / processing / save form), and SizeToContent both mis-measures under
          FluentWindow's custom chrome and would make the window jump on every state change. -->
-    <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis" />
-    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />

@@ -14,7 +14,6 @@
     <sys:Double x:Key="FontSize.Label">12</sys:Double>
 
     <!-- Font weights (previously inline in views — now one place). -->
-    <FontWeight x:Key="Weight.Regular">Normal</FontWeight>
     <FontWeight x:Key="Weight.Strong">SemiBold</FontWeight>
 
     <!-- Spacing (4 px grid). Was scattered as literal margins across dialogs. -->

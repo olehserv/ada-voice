@@ -52,20 +52,6 @@ public sealed class HexToBrushConverter : IValueConverter
     }
 }
 
-/// <summary>Hex background colour → black or white text brush, whichever reads better (WCAG contrast).
-/// Drives every foreground mark on a filled phrase tile so nothing goes illegible on a saturated fill.</summary>
-public sealed class ContrastTextConverter : IValueConverter
-{
-    private static readonly SolidColorBrush Dark = BrushHelpers.Frozen(Colors.Black);
-    private static readonly SolidColorBrush Light = BrushHelpers.Frozen(Colors.White);
-
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        ColorContrast.PrefersDarkText(value as string) ? Dark : Light;
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        throw new NotSupportedException();
-}
-
 /// <summary>An environment check's pass/fail status → a "✓ Pass"/"✗ Fail" label.</summary>
 public sealed class CheckStatusToLabelConverter : IValueConverter
 {

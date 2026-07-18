@@ -17,9 +17,9 @@
                 <ResourceDictionary Source="Theme/Controls.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- Colour converters (category fill + readable text). -->
+            <!-- Shared converters (category fill + wizard checks + bool-to-visibility). -->
             <app:HexToBrushConverter x:Key="HexToBrush" />
-            <app:ContrastTextConverter x:Key="ContrastText" />
+            <BooleanToVisibilityConverter x:Key="BoolToVis" />
             <app:CheckStatusToLabelConverter x:Key="CheckStatusToLabel" />
             <app:CheckStatusToBrushConverter x:Key="CheckStatusToBrush" />
             <app:FailedCableCheckToVisibilityConverter x:Key="FailedCableCheckToLink" />

@@ -14,8 +14,6 @@
         TextElement.Foreground="{DynamicResource Text.Primary}"
         FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
     <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis" />
-
         <DataTemplate DataType="{x:Type vm:EnvironmentChecksStepViewModel}">
             <local:EnvironmentChecksStepView />
         </DataTemplate>
