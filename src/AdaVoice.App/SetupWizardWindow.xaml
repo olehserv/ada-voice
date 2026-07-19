@@ -49,6 +49,11 @@
             ShowMinimize="False" />
 
         <StackPanel Grid.Row="1" Margin="{StaticResource Space.DialogContent}">
+            <TextBlock
+                Margin="0,0,0,8"
+                FontSize="{StaticResource FontSize.Label}"
+                Foreground="{DynamicResource Text.Muted}"
+                Text="{Binding StepLabel}" />
             <ContentControl Content="{Binding CurrentStep}" />
 
             <StackPanel

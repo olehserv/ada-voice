@@ -19,6 +19,7 @@ public partial class SetupWizardViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(NextLabel))]
     [NotifyPropertyChangedFor(nameof(CanAdvance))]
     [NotifyPropertyChangedFor(nameof(ShowSkip))]
+    [NotifyPropertyChangedFor(nameof(StepLabel))]
     [NotifyCanExecuteChangedFor(nameof(BackCommand))]
     [NotifyCanExecuteChangedFor(nameof(NextCommand))]
     private int _currentStepIndex;
@@ -47,6 +48,10 @@ public partial class SetupWizardViewModel : ObservableObject
 
     public bool IsFirstStep => CurrentStepIndex == 0;
     public bool IsLastStep => CurrentStepIndex == Steps.Count - 1;
+
+    /// <summary>"Step n of N" progress text (finding 8) — 1-based for display, derived from
+    /// <see cref="Steps"/>'s actual count rather than a hardcoded number.</summary>
+    public string StepLabel => $"Step {CurrentStepIndex + 1} of {Steps.Count}";
 
     /// <summary>"Finish" on the last step, "Next" everywhere else.</summary>
     public string NextLabel => IsLastStep ? "Finish" : "Next";

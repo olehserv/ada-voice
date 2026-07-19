@@ -399,6 +399,22 @@ needs the subscription/tenant state Phase 3 introduces.
   session with the same pixel-sampling/zoomed-crop rigor used to find it, likely starting from
   `DependencyPropertyHelper.GetValueSource` on a live Title-bar element to see what's actually
   driving its Foreground, rather than guessing at another Style-level Setter.
+  **Refinement during Step 8, narrowing the lead further:** `RepairPhraseDialog` (a 5th small
+  dialog, similarly `ShowMaximize/ShowMinimize="False"`, `SizeToContent="Height"`) renders
+  **perfectly** in light theme — title, "Remove"/"Re-record"/"Cancel" all legible — breaking the
+  clean "small dialogs broken / flagship windows fine" split. And `SetupWizardWindow` itself
+  renders **both ways depending on which step is bound**: at `CurrentStepIndex=0`
+  (`EnvironmentChecksStepViewModel`) the title, section header, and footer buttons all wash out
+  (confirmed **deterministic**, not a timing race — identical result on a repeat run of the exact
+  same fixture); at `CurrentStepIndex=3` (`InstructionStepViewModel`, the `setup-wizard-next-
+  enabled` fixture) the *same window* renders perfectly, title included. So the split is not
+  simply "this window type" vs. "that window type" — something about the specific content bound
+  into the window (most likely `EnvironmentChecksStepView`, the one step with its own
+  `DispatcherTimer`-driven reveal animation, `_revealTimer` in `EnvironmentChecksStepView.xaml.cs`)
+  is implicated, not just `ShowMaximize`/`SizeToContent`. Whether this is a real bug a live user
+  would ever see, or purely an artifact of the screenshot harness's theme-reapplication timing
+  racing against that view's own animation, is the next thing to check — worth comparing against
+  a live FlaUI screenshot of the real running wizard at step 1, not just the test-harness capture.
 - ✅ **App-wide `CheckBox`/`TextBox`/`ui:TitleBar` text-colour bug — fixed (2026-07-19, during
   Phase C Step 4).** First reported as a `ManageConversationsDialog`-specific "near-illegible"
   light-theme bug; pixel-sampling the rendered PNGs (`System.Drawing`, not eyeballing) corrected

@@ -305,6 +305,27 @@
     </Style>
 
     <!--
+        Any standalone brand-red destructive button (not a small icon like Categories/Conversations/
+        Versions' Danger ✕ — those stay plain Appearance="Danger", fine for a small button among
+        siblings). Same workaround as StopButtonStyle above: skip Appearance= entirely (WPF-UI bakes
+        it into a ControlTemplate trigger, ignoring resource overrides) and set colors directly.
+    -->
+    <Style
+        x:Key="DangerButtonStyle"
+        BasedOn="{StaticResource {x:Type ui:Button}}"
+        TargetType="{x:Type ui:Button}">
+        <Setter Property="Background" Value="{DynamicResource Danger.Solid}" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{DynamicResource Surface.Overlay}" />
+                <Setter Property="Foreground" Value="{DynamicResource Text.Muted}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
         Hover/press wash painted over a phrase tile, over any category fill. Not hit-testable, so
         clicks and the context menu pass straight through it. RelativeSource is evaluated at the
         usage site, so this resolves correctly once keyed here instead of inline.

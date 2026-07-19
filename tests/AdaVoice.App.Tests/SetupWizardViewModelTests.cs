@@ -32,6 +32,18 @@ public class SetupWizardViewModelTests
     }
 
     [Fact]
+    public void Step_label_reflects_the_current_step_and_total()
+    {
+        var wizard = NewWizard();
+
+        Assert.Equal("Step 1 of 5", wizard.StepLabel);
+
+        wizard.CurrentStepIndex = 4;
+
+        Assert.Equal("Step 5 of 5", wizard.StepLabel);
+    }
+
+    [Fact]
     public void Next_advances_when_the_current_step_allows_it()
     {
         var wizard = NewWizard(); // checks pass by default

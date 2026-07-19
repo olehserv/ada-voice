@@ -56,9 +56,9 @@
                     IsCancel="True" />
                 <ui:Button
                     Margin="0,0,8,0"
-                    Appearance="Secondary"
                     Click="Remove_Click"
-                    Content="Remove" />
+                    Content="Remove"
+                    Style="{StaticResource DangerButtonStyle}" />
                 <ui:Button
                     Click="ReRecord_Click"
                     Content="Re-record"
