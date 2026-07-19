@@ -355,6 +355,37 @@
     </Style>
 
     <!--
+        Recorder dialog's recording-in-progress dot (09 "Recording dot: breathe, loop 1.2 s") —
+        same pattern as StateDotStyle's Live breathe above, just its own style since it's driven by
+        RecorderViewModel.IsRecording, not Status.State. The DataTrigger's Binding is the same path
+        RecorderDialog.xaml already uses for the row's own Visibility, so the Ellipse (a child of
+        that row) already inherits the right DataContext — no RelativeSource needed.
+    -->
+    <Style x:Key="RecordingDotStyle" TargetType="Ellipse">
+        <Setter Property="Fill" Value="{DynamicResource Status.Degraded}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsRecording}" Value="True">
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard x:Name="RecordingDotBreathe">
+                        <Storyboard>
+                            <DoubleAnimation
+                                AutoReverse="True"
+                                RepeatBehavior="Forever"
+                                Storyboard.TargetProperty="Opacity"
+                                From="1"
+                                To="0.5"
+                                Duration="0:0:0.6" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <StopStoryboard BeginStoryboardName="RecordingDotBreathe" />
+                </DataTrigger.ExitActions>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
         Status pill (09 "the second state channel, never colour alone"): dot + ALL-CAPS label +
         per-state tint background, next to the Start/Stop toggle. Its dot reuses StateDotStyle
         directly so both channels agree on the exact fill colour. LIVE gets a static green glow
@@ -461,6 +492,13 @@
         ControlTemplate trigger (Phase A finding — see Tokens.Dark.xaml's comment) and ignores any
         resource override, so this skips Appearance entirely and sets Background/Foreground directly
         against our own tokens. Disabled state falls back to a neutral surface (mockup ".stopbtn:disabled").
+        
+        Phase D "motion": a red glow (09 "STOP hover: glow in/out, Effect.Opacity, 200ms") fades in
+        while armed and hovered. Base Effect is present at Opacity="0" (same reason as
+        StatusPillStyle's LIVE glow above — animating Effect.Opacity against a null Effect
+        silently no-ops). A MultiTrigger (IsMouseOver AND IsEnabled), not a plain Trigger on
+        IsMouseOver alone, so a disabled STOP never glows even if the mouse happens to be over it
+        — "glow only while armed" is a correctness requirement here, not a style preference.
     -->
     <Style
         x:Key="StopButtonStyle"
@@ -471,11 +509,48 @@
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="FontSize" Value="{StaticResource FontSize.Stop}" />
         <Setter Property="FontWeight" Value="ExtraBold" />
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect
+                    BlurRadius="20"
+                    Opacity="0"
+                    ShadowDepth="0"
+                    Color="{DynamicResource Danger.Solid.Color}" />
+            </Setter.Value>
+        </Setter>
         <Style.Triggers>
             <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Background" Value="{DynamicResource Surface.Overlay}" />
                 <Setter Property="Foreground" Value="{DynamicResource Text.Muted}" />
             </Trigger>
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="IsMouseOver" Value="True" />
+                    <Condition Property="IsEnabled" Value="True" />
+                </MultiTrigger.Conditions>
+                <MultiTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
+                                To="0.6"
+                                Duration="0:0:0.2" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </MultiTrigger.EnterActions>
+                <MultiTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
+                                To="0"
+                                Duration="0:0:0.2" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </MultiTrigger.ExitActions>
+            </MultiTrigger>
         </Style.Triggers>
     </Style>
 

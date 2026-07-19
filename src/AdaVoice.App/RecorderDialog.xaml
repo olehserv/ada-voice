@@ -60,7 +60,7 @@
                     Width="8"
                     Height="8"
                     VerticalAlignment="Center"
-                    Fill="{DynamicResource Status.Degraded}" />
+                    Style="{StaticResource RecordingDotStyle}" />
                 <TextBlock
                     Margin="6,0,0,0"
                     VerticalAlignment="Center"

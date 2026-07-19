@@ -9,21 +9,54 @@ back up. It answers one question: *where are we right now?*
 - Details of past work live in git history and in the dated docs under `docs/reviews/`.
   This file stays short on purpose.
 
-_Last updated: 2026-07-19._
+_Last updated: 2026-07-20._
 
 ## Status in one line
 
 **The app is built and verified on the target machine** — engine, recorder, library, Board UI,
 setup wizard, Settings window, stop hotkey, backups, export/import, **Conversations** (ordered
 phrase scripts with a step-by-step highlight), **phrase versions** (alternate takes, randomized
-during a Conversation step); 508 tests passed + 16 skipped across 6 projects (107 Core + 98 Audio +
-8 Wasapi + 12 Host + 253 App + 30 Server DB-less) plus 30 server integration tests against
+during a Conversation step), and now the **Pine Signal brand redesign's motion pass** (state
+crossfades, breathing/blinking status dots, tile hover/press feedback, STOP glow); App suite:
+251 passed + 30 skipped across 3 configurations (default, both-theme screenshots — all green);
+107 Core + 98 Audio + 8 Wasapi + 12 Host, all green, plus 30 server integration tests against
 PostgreSQL 16. Monetization: Phases 0–2 shipped — the full 13-table EF Core schema, multi-tenant
 query filters and idempotent seeder (Phase 1), and the **auth API** (Phase 2): ES256-JWT
 login/refresh/logout/change-password/me, rotating refresh tokens with family-revocation reuse
 detection, account lockout, per-IP rate limiting, RFC 7807 errors (typed `ProblemDetails`), and
-**batched audit logging** (see 2026-07-19 below — audit writes are no longer synchronous with
-the request).
+**batched audit logging** (audit writes are no longer synchronous with the request).
+
+## Latest work (2026-07-20)
+
+- **Phase D (motion) — all 4 steps done. The "Pine Signal" brand redesign is now fully shipped
+  (Phases A–D).** Full per-step detail:
+  [brand-redesign-implementation-plan.md](docs/design/plans/brand-redesign-implementation-plan.md)
+  and `C:\Users\olehs\.claude\plans\check-what-is-planned-synthetic-gem.md`. Backdrop crossfade
+  on engine-state change (Step 1); status-pill dot breathe (Live)/hard blink (Degraded) + a
+  LIVE glow fade-in (Step 2); phrase-tile hover ribbon widen + a two-layer hover/press wash (fades
+  both ways, unlike the single-Border color-swap it replaced) + tile press-scale (Step 3); STOP
+  hover glow + Recorder's recording-dot breathe (Step 4). Toast motion stays WPF-UI's built-in
+  Snackbar — deliberately out of scope, not worth retemplating a third-party control for an 8px
+  detail. Two real findings, both confirmed empirically: **(1)** a `Storyboard`'s `Duration` (or
+  any timeline property) can't be `DynamicResource` inside a `Style.Trigger`'s `EnterActions`/
+  `ExitActions` — `Style.Seal()` freezes the Storyboard, and a `DynamicResource`'s deferred
+  reference can't be frozen, throwing a misleadingly-worded runtime exception mentioning
+  "threads" that has nothing to do with threads; every Motion token used this way is now
+  `StaticResource`. This also ruled out an earlier plan to let screenshot tests zero out
+  durations for determinism, so verification instead reads the animated property directly off
+  the live visual tree, both mid-loop (proves it started) and after the trigger exits (proves
+  `StopStoryboard` reverted it, not left it stuck) — 4 new permanent regression tests
+  (`BackdropCrossfadeTests`, `StateDotMotionTests` ×2, `RecordingDotMotionTests`) cover exactly
+  that bug class. **(2)** `KeySpline.Standard` (a Phase A token meant for exactly this) went
+  unused — `SplineDoubleKeyFrame.KeyTime` doesn't accept a `Duration`-typed resource, so honoring
+  it would mean hardcoding a `KeyTime` literal beside a tokenized `Duration`; `QuadraticEase
+  (EaseOut)` was used instead. Hover/press motion (real `IsMouseOver`/`IsPressed`, no fake-host
+  shortcut) was verified live instead, with explicit user approval to move the real OS mouse
+  cursor via a throwaway FlaUI test per step — each confirmed visually (ribbon widen, tile
+  shrink, wash layering, STOP glow via a precise pixel diff since it's subtle against WPF-UI's
+  own pre-existing hover-darken chrome) then deleted, not committed. 281 App tests green (251
+  passed + 30 screenshot, skipped without `ADAVOICE_SCREENSHOTS=1`, both themes verified) plus
+  Core/Audio/Wasapi/Host unaffected (107/98/8/12).
 
 ## Latest work (2026-07-19)
 
@@ -347,16 +380,15 @@ the request).
 
 ## Next action
 
-**Pine Signal brand redesign implementation** — Phases A and B shipped; **Phase C (dialogs +
-wizard) + Pass 2b (`ContentDialog`) is fully done — all 9 steps + the Manage Categories alignment
-side task**, each build/full-suite/both-theme-screenshot verified and committed (see "Latest work"
-above and the plan file for the full per-step writeup). **Phase D (motion — crossfades, dot
-breathe/blink, hover ribbon, STOP glow) is next.** Two things carried forward, not blocking Phase
-D: the ongoing light-theme legibility investigation (see "Open follow-ups" — a real, reproducible,
+**Pine Signal brand redesign implementation is fully done — Phases A, B, C, and D all shipped.**
+Every phase build/full-suite/both-theme-screenshot verified and committed (see "Latest work"
+above and the plan file for the full per-step writeup). Two things carried forward from Phase C,
+still not fixed, needing their own dedicated session (not blocking anything else): the ongoing
+light-theme legibility investigation (see "Open follow-ups" — a real, reproducible,
 not-yet-root-caused bug affecting several small dialogs to varying degrees) and the Manage
 Categories "Add category" panel dark-background bug (same section).
 
-Then **UI/UX pass + localization** — remaining slices (scope + rationale in
+**Next: UI/UX pass + localization** — remaining slices (scope + rationale in
 [ui-ux-localization-scope.md](docs/plans/ui-ux-localization-scope.md)):
 
 1. ✅ Settings window — done, smoke-tested.

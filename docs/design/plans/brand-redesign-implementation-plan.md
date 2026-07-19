@@ -131,10 +131,45 @@ Put stress data on a test-local addition instead.
 
 ## Phase D — motion + polish
 
-1. Animations per 09's motion table (hover/press/breathe/blink/glow/toast), every loop
-   with `StopStoryboard` exit actions.
-2. Full screenshot pass both themes; visual review vs mockups; contrast spot-check on
-   the rendered PNGs; full test suite.
+**Status: done (2026-07-20).** All 4 steps shipped, each build/full-suite/both-theme-screenshot
+verified and committed (per-step detail: `handoff.md` and
+`C:\Users\olehs\.claude\plans\check-what-is-planned-synthetic-gem.md`). Backdrop crossfade
+(Step 1); status-pill dot breathe (Live)/hard blink (Degraded) + LIVE glow fade-in (Step 2);
+phrase-tile hover ribbon widen + two-layer hover/press wash + press-scale (Step 3); STOP hover
+glow + Recorder's recording-dot breathe (Step 4). Toast motion stays WPF-UI's built-in
+Snackbar, deliberately out of scope (retemplating a third-party control for an 8px-rise detail
+was judged not worth it).
+
+Two real findings that shaped the implementation, both confirmed empirically rather than
+assumed:
+1. **A `Storyboard`'s `Duration` (or any timeline property) can't be `DynamicResource`** when
+   that Storyboard lives inside a `Style.Trigger`'s `EnterActions`/`ExitActions` — `Style.Seal()`
+   freezes the Storyboard, and freezing requires every property to already be a concrete value,
+   which a `DynamicResource` (a deferred reference) can't satisfy. Throws a misleadingly-worded
+   `InvalidOperationException` ("...for use across threads") that has nothing to do with
+   threads. Every Motion token used by a triggered Storyboard in this phase is `StaticResource`.
+   This also killed an early idea to let screenshot tests zero out durations for determinism —
+   impossible for this pattern, so verification instead reads the animated property (`Opacity`,
+   effect opacity) directly off the live visual tree after a real state change, both mid-loop
+   (proves it started) and after the trigger exits (proves `StopStoryboard` reverted it, not
+   left it stuck) — see the 4 new permanent tests below.
+2. **`KeySpline.Standard` (Phase A's ease-out token) went unused** — `SplineDoubleKeyFrame.
+   KeyTime` doesn't accept a `Duration`-typed resource, so honoring it correctly would mean
+   hardcoding a `KeyTime` literal beside a tokenized `Duration`, the exact drift the token system
+   exists to prevent. `QuadraticEase(EaseOut)` was used instead everywhere an "ease-out enter"
+   was called for — same visual intent, no type mismatch.
+
+New permanent regression tests (the loop/crossfade "stuck mid-animation" bug class this phase
+specifically introduces, which no screenshot can catch): `BackdropCrossfadeTests` (rapid state
+cycling → exactly one backdrop layer settles visible), `StateDotMotionTests` ×2 (Live breathe /
+Degraded blink, both dots — the toggle's and the pill's — since one `Style` drives both
+simultaneously), `RecordingDotMotionTests` (Recorder's dot). Two additional checks were
+deliberately *not* made permanent: hover/press motion (tile ribbon/wash/scale, STOP glow) needs
+a real OS-driven mouse (`IsMouseOver`/`IsPressed` have no fake-host shortcut), so those were
+verified live once via a user-approved throwaway FlaUI test that physically moved the cursor
+and screenshotted each phase, then deleted — not committed, since only one element can be
+hovered by one real cursor at a time (no shared-instance risk to guard against, unlike the
+loop tests above).
 
 ## Explicitly out of scope
 
