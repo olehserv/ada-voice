@@ -380,14 +380,27 @@ needs the subscription/tenant state Phase 3 introduces.
   tapping the engine's capture. Watch for it on hardware.
 - **Cold-start auto-retry into Degraded:** a failed `Start` currently stays Stopped with the
   error surfaced.
-- **`ManageConversationsDialog` light-theme legibility bug (found 2026-07-19, during Phase C
-  Step 4).** Most of the dialog's text (title, row labels, checkbox label) renders as
-  near-illegible pale text against the light-theme background — everywhere except the ListBox's
-  own item text and the explicitly White-foreground buttons (Delete/Done/✓), which render fine.
-  Confirmed pre-existing (via `git stash` to the exact pre-Phase-C committed file, re-screenshotted
-  — the washout was already there) and confirmed not systemic (`main-board.png`/
-  `phrase-versions.png` light-theme both render correctly). Root cause not yet diagnosed. Owner
-  decision 2026-07-19: track here, don't fix as part of Phase C — pick up in a dedicated pass.
+- ✅ **App-wide `CheckBox`/`TextBox`/`ui:TitleBar` text-colour bug — fixed (2026-07-19, during
+  Phase C Step 4).** First reported as a `ManageConversationsDialog`-specific "near-illegible"
+  light-theme bug; pixel-sampling the rendered PNGs (`System.Drawing`, not eyeballing) corrected
+  that diagnosis on both counts. The text was never illegible — it rendered at a legitimate, solid
+  dark gray (`#323232`/`#333333`), just a shade lighter than the app's usual near-black
+  `Text.Primary` (`#221E17`), which read as "washed out" only by side-by-side comparison. And it
+  wasn't dialog-specific: the identical `#323232` showed up in `SettingsWindow`'s and
+  `ManageCategoriesDialog`'s `CheckBox`/`TextBox` too, confirmed via the same pixel-sampling —
+  it had simply gone unnoticed everywhere, since both shades are dark enough to look "fine" at a
+  glance. Root cause: WPF-UI's own default styles for `CheckBox`/`TextBox`/`ui:TitleBar` each set
+  an explicit `Foreground` Setter (a *local* value), which wins over the window's *inherited*
+  `TextElement.Foreground="Text.Primary"` regardless of both being `DynamicResource` — plain
+  `TextBlock` has no such override, so it already rendered correctly everywhere. Fix: three
+  implicit `BasedOn` styles in `Theme/Controls.xaml` (`CheckBox`, `TextBox`, `ui:TitleBar`), each
+  adding one `Setter Property="Foreground" Value="{DynamicResource Text.Primary}"` — a derived
+  style's own Setter always overrides its `BasedOn` parent's Setter for the same property (unlike
+  `ListBoxItem`'s selection fill two paragraphs up, which was baked into a `ControlTemplate`
+  trigger no external `Style.Setter` could reach at all). Verified via pixel-sampling after the
+  fix: every previously-`#323232` location now reads `#221E17`, across `ManageConversationsDialog`,
+  `ManageCategoriesDialog`, and `SettingsWindow`, both themes, with no regression on dark theme or
+  on placeholder/disabled-state text (`phrase-edit.png` spot-checked).
 - ✅ **Screenshot harness `after-light/` dark-theme bug — fixed (2026-07-12, commit `adda0a7`).**
   Root cause: closing a WPF-UI `FluentWindow` resets `ApplicationThemeManager` back to the OS
   theme as a side effect, so the fixture's one-time theme apply at startup only held for the

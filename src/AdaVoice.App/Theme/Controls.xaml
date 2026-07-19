@@ -9,6 +9,31 @@
     -->
 
     <!--
+        App-wide text-colour consistency fix (found during Phase C, confirmed via pixel-sampling
+        rendered PNGs — the same discipline as Phase A's Appearance="Danger"/"Success" finding).
+        WPF-UI's own default styles for CheckBox/TextBox/TitleBar each set an explicit Foreground
+        Setter (reading a WPF-UI-internal token, ~#323232 in light theme) — a Style Setter is a
+        LOCAL value, so it wins over the window's INHERITED TextElement.Foreground="Text.Primary"
+        (#221E17) regardless of DynamicResource. Plain TextBlock has no such override and already
+        renders correctly. Confirmed app-wide (SettingsWindow, ManageCategoriesDialog,
+        ManageConversationsDialog all showed the same #323232/#333333, not #221E17) via
+        System.Drawing pixel-sampling of the rendered PNGs, not eyeballing — the difference reads
+        as "fine" at a glance since both tones are dark enough to be legible, which is why it went
+        unnoticed until now. A derived Style's own Setter always overrides its BasedOn parent's
+        Setter for the same property (unlike ListBoxItem's baked-in ControlTemplate selection
+        trigger below, which no external Style.Setter could reach at all).
+    -->
+    <Style BasedOn="{StaticResource {x:Type CheckBox}}" TargetType="CheckBox">
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+    </Style>
+    <Style BasedOn="{StaticResource {x:Type TextBox}}" TargetType="TextBox">
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+    </Style>
+    <Style BasedOn="{StaticResource {x:Type ui:TitleBar}}" TargetType="{x:Type ui:TitleBar}">
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+    </Style>
+
+    <!--
         Grouping panel: the raised surface every functional zone sits on (status, record bar,
         settings groups). Border gives the depth; no shadows on flat panels.
     -->
