@@ -60,6 +60,13 @@ public interface ISettingsHost
     /// call <see cref="SaveSettings"/> to persist.</summary>
     void SetLanguage(string code);
 
+    /// <summary>Theme preference: "system" (follow the OS), "light", or "dark".</summary>
+    string Theme { get; }
+
+    /// <summary>Set the theme preference and remember it in memory. Does not write to disk —
+    /// call <see cref="SaveSettings"/> to persist.</summary>
+    void SetTheme(string value);
+
     /// <summary>Export the library (metadata + active phrase WAVs) to a zip. Returns the number of
     /// version recordings that were not included (v1 limitation) — 0 if the export was complete.</summary>
     int Export(string destinationZipPath);

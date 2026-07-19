@@ -278,6 +278,12 @@ public partial class MainWindow : FluentWindow
                 Topmost = vm.Behavior.AlwaysOnTop;
         };
 
+        vm.Appearance.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(AppearanceSettingsViewModel.Theme))
+                App.ApplyThemePreference(vm.Appearance.Theme, this);
+        };
+
         window.DataContext = vm;
         window.ShowDialog();
     }

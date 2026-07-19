@@ -37,6 +37,7 @@ erDiagram
         bool replaceOnRetrigger "default true — new trigger replaces the playing phrase"
         bool alwaysOnTop "default true"
         string language "en | uk | pl — applies on restart; English-only today"
+        string theme "system | light | dark — default system, applies live"
         bool wizardCompleted "drives wizard auto-show on startup"
         float windowWidthHeightLeftTop "4 nullable fields — last window placement"
     }

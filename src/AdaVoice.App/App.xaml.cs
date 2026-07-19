@@ -49,20 +49,21 @@ public partial class App : Application
 
         RegisterGlobalExceptionHandlers();
 
-        // Follow the OS light/dark theme, and keep following it while running (design 10 redesign
-        // 2026-07-11 — the app was dark-only before). Read the OS "apps" theme straight from the
-        // registry: it's unambiguous and works here, before the message loop runs. ApplyTheme swaps
-        // WPF-UI's Fluent brushes AND our brand token dictionary + accent to match. (Runtime changes
-        // are handled by SystemThemeWatcher below, which uses WPF-UI's own detection.)
-        var osTheme = OsPrefersLightTheme()
-            ? Wpf.Ui.Appearance.ApplicationTheme.Light
-            : Wpf.Ui.Appearance.ApplicationTheme.Dark;
-        ApplyTheme(osTheme);
         // Re-sync (swap tokens + accent) whenever the theme changes, using the theme the event hands
-        // us — never re-apply the system theme here, or it would raise Changed and recurse.
+        // us — never re-apply the system theme here, or it would raise Changed and recurse. Wired
+        // before the host loads so it's ready the moment ApplyThemePreference (below) applies anything.
         Wpf.Ui.Appearance.ApplicationThemeManager.Changed += (theme, _) => SyncBrandLayer(theme);
 
         _host = new EngineHost(new WasapiAudioOptions(), msg => Log.Information("{Event}", msg));
+
+        // Apply the persisted theme preference (design: manual theme setting). Default "system"
+        // reproduces the app's original OS-follow behavior (design 10 redesign, 2026-07-11) for
+        // anyone whose settings.json predates this field. Read here — before the window exists —
+        // for the theme-only half (ApplyTheme); the window-dependent half (Watch/UnWatch) waits
+        // until the window is built below.
+        var themePreference = _host.Theme;
+        var initialTheme = ResolveTheme(themePreference);
+        ApplyTheme(initialTheme);
 
         // BeginInvoke (async) so a state change raised on the engine control thread never blocks it on the UI.
         var status = new StatusViewModel(_host, action => Dispatcher.BeginInvoke(action));
@@ -89,11 +90,9 @@ public partial class App : Application
 
         // WPF-UI's theme swap silently no-ops when it runs before the dispatcher is pumping (as the
         // ApplyTheme above did, inside OnStartup). Re-apply once the loop is live to guarantee the
-        // Fluent chrome matches the OS at launch; then follow OS changes. None = keep the window's own
-        // backdrop (design 09 flat surfaces); updateAccents:false = keep our brand accent.
-        Dispatcher.BeginInvoke(new Action(() => ApplyTheme(osTheme)));
-        Wpf.Ui.Appearance.SystemThemeWatcher.Watch(
-            window, Wpf.Ui.Controls.WindowBackdropType.None, updateAccents: false);
+        // Fluent chrome matches the preference at launch, and (only for "system") start following the
+        // OS from here on — ApplyThemePreference does both, keyed off the same preference read above.
+        Dispatcher.BeginInvoke(new Action(() => ApplyThemePreference(themePreference, window)));
 
         // First run: window.ActiveHotkey is only valid after Show() (OnLoaded already ran).
         if (!settings.WizardCompleted)
@@ -139,6 +138,43 @@ public partial class App : Application
         Wpf.Ui.Appearance.ApplicationThemeManager.Apply(
             theme, Wpf.Ui.Controls.WindowBackdropType.None, updateAccent: false);
         SyncBrandLayer(theme);
+    }
+
+    /// <summary>
+    /// Maps a persisted theme preference ("system"/"light"/"dark") to the concrete WPF-UI theme to
+    /// apply right now. "system" (and anything unrecognized, so a future bad value degrades safely)
+    /// resolves via the OS registry read, matching the app's original OS-follow behavior.
+    /// </summary>
+    private static Wpf.Ui.Appearance.ApplicationTheme ResolveTheme(string preference) => preference switch
+    {
+        "light" => Wpf.Ui.Appearance.ApplicationTheme.Light,
+        "dark" => Wpf.Ui.Appearance.ApplicationTheme.Dark,
+        _ => OsPrefersLightTheme()
+            ? Wpf.Ui.Appearance.ApplicationTheme.Light
+            : Wpf.Ui.Appearance.ApplicationTheme.Dark,
+    };
+
+    /// <summary>
+    /// Applies a theme preference end to end: resolves it to a concrete theme, applies it, and starts
+    /// or stops following OS changes to match. Only a fixed Light/Dark choice skips watching — it must
+    /// NOT silently flip when the operator changes their Windows theme. Everything else (including
+    /// "system" and any unrecognized value — see <see cref="ResolveTheme"/>) watches, so the two stay
+    /// consistent. <see cref="Wpf.Ui.Appearance.SystemThemeWatcher"/>'s <c>Watch</c> only reacts to
+    /// <i>future</i> OS changes, not the current one, so switching back to "system" always resolves
+    /// and applies first — otherwise the app would look stuck on the last fixed theme until the OS
+    /// setting happens to change again. <c>UnWatch</c> runs unconditionally first (it's a safe no-op
+    /// on a window that isn't watched) because <c>Watch</c> itself does not dedupe: calling it twice
+    /// on the same window stacks a second WndProc hook rather than replacing the first, which
+    /// re-selecting "system" more than once in a session would otherwise trigger.
+    /// </summary>
+    public static void ApplyThemePreference(string preference, Window window)
+    {
+        ApplyTheme(ResolveTheme(preference));
+
+        Wpf.Ui.Appearance.SystemThemeWatcher.UnWatch(window);
+        if (preference is not ("light" or "dark"))
+            Wpf.Ui.Appearance.SystemThemeWatcher.Watch(
+                window, Wpf.Ui.Controls.WindowBackdropType.None, updateAccents: false);
     }
 
     /// <summary>

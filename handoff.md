@@ -14,13 +14,14 @@ _Last updated: 2026-07-20._
 ## Status in one line
 
 **The app is built and verified on the target machine** — engine, recorder, library, Board UI,
-setup wizard, Settings window, stop hotkey, backups, export/import, **Conversations** (ordered
-phrase scripts with a step-by-step highlight), **phrase versions** (alternate takes, randomized
-during a Conversation step), and now the **Pine Signal brand redesign's motion pass** (state
-crossfades, breathing/blinking status dots, tile hover/press feedback, STOP glow); App suite:
-251 passed + 30 skipped across 3 configurations (default, both-theme screenshots — all green);
-107 Core + 98 Audio + 8 Wasapi + 12 Host, all green, plus 30 server integration tests against
-PostgreSQL 16. Monetization: Phases 0–2 shipped — the full 13-table EF Core schema, multi-tenant
+setup wizard, Settings window (now with a manual **theme picker** — Follow system/Light/Dark),
+stop hotkey, backups, export/import, **Conversations** (ordered phrase scripts with a
+step-by-step highlight), **phrase versions** (alternate takes, randomized during a Conversation
+step), and the **Pine Signal brand redesign's motion pass** (state crossfades, breathing/
+blinking status dots, tile hover/press feedback, STOP glow); App suite: 253 passed + 30 skipped
+across 3 configurations (default, both-theme screenshots — all green); 107 Core + 98 Audio +
+8 Wasapi + 12 Host, all green, plus 60 server tests (30 DB-less + 30 integration against
+PostgreSQL 16). Monetization: Phases 0–2 shipped — the full 13-table EF Core schema, multi-tenant
 query filters and idempotent seeder (Phase 1), and the **auth API** (Phase 2): ES256-JWT
 login/refresh/logout/change-password/me, rotating refresh tokens with family-revocation reuse
 detection, account lockout, per-IP rate limiting, RFC 7807 errors (typed `ProblemDetails`), and
@@ -28,6 +29,24 @@ detection, account lockout, per-IP rate limiting, RFC 7807 errors (typed `Proble
 
 ## Latest work (2026-07-20)
 
+- **Manual theme setting shipped** — Settings window gained an "Appearance" panel with a
+  Follow system/Light/Dark picker (`AppearanceSettingsViewModel`, a new `Theme` field on
+  `Settings`/`ISettingsHost` mirroring `Language`). Default `"system"` reproduces the existing
+  OS-follow behavior exactly, so an old `settings.json` (no `theme` field) is unaffected. Two
+  real bugs found by reading WPF-UI's `SystemThemeWatcher` source (not assumed): **(1)** `Watch`
+  doesn't dedupe — calling it twice on the same window stacks a second WndProc hook, so
+  re-selecting "system" more than once in a session would otherwise leak hooks; fixed by an
+  unconditional `UnWatch` (confirmed a safe no-op when unwatched) before any conditional
+  `Watch`. **(2)** `Watch` only reacts to *future* OS changes, not the current one, so switching
+  back to "system" must resolve-and-apply the OS theme itself, or the app would look stuck on
+  the last fixed theme. `App.OnStartup` was also reordered — the theme preference is now read
+  from the loaded `EngineHost` before the first `ApplyTheme` call, since it previously ran
+  before settings were loaded at all. Verified beyond the unit/screenshot suite: a throwaway
+  FlaUI driver launched the real app (after backing up the real `settings.json`, restored after)
+  and proved live re-theming (luminance flips 66→231→67 across Dark→Light→Follow system,
+  confirming the System→Dark→System edge specifically), on-disk persistence, and that a fresh
+  relaunch renders the persisted theme immediately (proving the startup-order fix). 253 App
+  tests green (was 251; +2 for `AppearanceSettingsViewModelTests`).
 - **Phase D (motion) — all 4 steps done. The "Pine Signal" brand redesign is now fully shipped
   (Phases A–D).** Full per-step detail:
   [brand-redesign-implementation-plan.md](docs/design/plans/brand-redesign-implementation-plan.md)

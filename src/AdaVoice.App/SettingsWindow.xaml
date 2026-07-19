@@ -42,6 +42,29 @@
                 VerticalScrollBarVisibility="Auto">
                 <StackPanel>
 
+                    <!--  Appearance  -->
+                    <Border Margin="0,0,0,12" Style="{StaticResource PanelStyle}">
+                        <StackPanel DataContext="{Binding Appearance}">
+                            <TextBlock Style="{StaticResource SectionTitleStyle}" Text="Appearance" />
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock
+                                    MinWidth="70"
+                                    VerticalAlignment="Center"
+                                    Foreground="{DynamicResource Text.Secondary}"
+                                    Text="Theme" />
+                                <ComboBox
+                                    Width="160"
+                                    Margin="8,0,0,0"
+                                    SelectedValue="{Binding Theme}"
+                                    SelectedValuePath="Tag">
+                                    <ComboBoxItem Content="Follow system" Tag="system" />
+                                    <ComboBoxItem Content="Light" Tag="light" />
+                                    <ComboBoxItem Content="Dark" Tag="dark" />
+                                </ComboBox>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
                     <!--  Levels: the group she touches most often — top of the page (design 05 §4)  -->
                     <Border Margin="0,0,0,12" Style="{StaticResource PanelStyle}">
                         <StackPanel>

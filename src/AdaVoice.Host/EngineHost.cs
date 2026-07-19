@@ -507,6 +507,12 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     /// <summary>Remember the language preference in memory. Does not persist.</summary>
     public void SetLanguage(string code) => _settings = _settings with { Language = code };
 
+    /// <summary>Theme preference: "system" (follow the OS), "light", or "dark".</summary>
+    public string Theme => _settings.Theme;
+
+    /// <summary>Remember the theme preference in memory. Does not persist.</summary>
+    public void SetTheme(string value) => _settings = _settings with { Theme = value };
+
     /// <summary>Export the library to a zip — thin delegation to the already-existing
     /// <see cref="ExportLibrary"/> (used today by the console host). Returns the number of version
     /// recordings that were not included (0 if none).</summary>

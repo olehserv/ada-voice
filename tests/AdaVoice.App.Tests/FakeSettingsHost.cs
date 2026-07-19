@@ -56,6 +56,15 @@ internal class FakeSettingsHost : ISettingsHost
 
     public void SetLanguage(string code) => Language = code;
 
+    public string Theme { get; set; } = "system";
+    public int SetThemeCount { get; private set; }
+
+    public void SetTheme(string value)
+    {
+        Theme = value;
+        SetThemeCount++;
+    }
+
     public string? ExportedPath { get; private set; }
     public int NextExportDroppedVersions { get; set; }
     public virtual int Export(string destinationZipPath)

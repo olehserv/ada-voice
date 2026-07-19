@@ -56,4 +56,8 @@ public sealed record Settings
     /// app is English-only until the localization retrofit lands; choosing another language
     /// persists the choice but does not yet change any displayed text.</summary>
     public string Language { get; init; } = "en";
+
+    /// <summary>Theme preference: "system" (follow the OS, default), "light", or "dark". Absent in
+    /// an existing settings.json ⇒ "system", i.e. the app's original OS-follow behavior.</summary>
+    public string Theme { get; init; } = "system";
 }

@@ -19,11 +19,13 @@ public sealed class SettingsWindowViewModel
         Func<string, Task> showError,
         Func<string, Task> showInfo)
     {
+        Appearance = new AppearanceSettingsViewModel(settings);
         Levels = new LevelsSettingsViewModel(settings, setup);
         Behavior = new BehaviorSettingsViewModel(settings, activeHotkey);
         Backup = new BackupSettingsViewModel(settings, pickExportPath, pickImportFile, confirmAndRestart, showError, showInfo);
     }
 
+    public AppearanceSettingsViewModel Appearance { get; }
     public LevelsSettingsViewModel Levels { get; }
     public BehaviorSettingsViewModel Behavior { get; }
     public BackupSettingsViewModel Backup { get; }
