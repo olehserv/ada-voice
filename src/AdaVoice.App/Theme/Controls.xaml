@@ -132,12 +132,114 @@
     <!--
         Thin category edge marker for a phrase tile (Direction A). The colour is set per-tile via
         a bound Background in the view; this only fixes geometry/shape.
+        
+        Phase D "motion": widens on hover (09 "ribbon ScaleX 1->1.6"). RenderTransformOrigin="0,0.5"
+        keeps the left edge pinned while it grows right, so it reads as the marker widening rather
+        than sliding. IsMouseOver comes from the ancestor ui:Button (this Border isn't itself
+        hit-testable/clickable) — same RelativeSource pattern the wash styles below already use.
+        Uses an inline QuadraticEase (EaseOut), not KeySpline.Standard: SplineDoubleKeyFrame's
+        KeyTime property doesn't accept a Duration-typed resource (KeyTime and Duration are
+        unrelated CLR types), so honoring that token here would mean hardcoding a KeyTime literal
+        next to a StaticResource Duration — exactly the "ad-hoc duration" drift Tokens.xaml exists
+        to prevent. QuadraticEase EaseOut is visually equivalent to 09's "ease-out" intent while
+        keeping Duration cleanly tokenized.
     -->
     <Style x:Key="CategoryEdgeMarkerStyle" TargetType="Border">
         <Setter Property="Width" Value="5" />
         <Setter Property="CornerRadius" Value="2" />
         <Setter Property="HorizontalAlignment" Value="Left" />
         <Setter Property="Margin" Value="0,2,0,2" />
+        <Setter Property="RenderTransformOrigin" Value="0,0.5" />
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" />
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="True">
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                To="1.6"
+                                Duration="{StaticResource Motion.Base}">
+                                <DoubleAnimation.EasingFunction>
+                                    <QuadraticEase EasingMode="EaseOut" />
+                                </DoubleAnimation.EasingFunction>
+                            </DoubleAnimation>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                To="1"
+                                Duration="{StaticResource Motion.Base}">
+                                <DoubleAnimation.EasingFunction>
+                                    <QuadraticEase EasingMode="EaseOut" />
+                                </DoubleAnimation.EasingFunction>
+                            </DoubleAnimation>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
+        Uniform press-scale on a phrase tile's whole content Grid (09 "Tile press: Scale 0.975,
+        120ms" — the tile inner grid transform, distinct from the ribbon's own hover-only widen
+        above). RenderTransformOrigin stays the default 0.5,0.5 (center) so the tile shrinks toward
+        its own middle. IsPressed also comes from the ancestor ui:Button, same pattern as the wash
+        styles below.
+    -->
+    <Style x:Key="TilePressScaleStyle" TargetType="Grid">
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1" />
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsPressed, RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="True">
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                To="0.975"
+                                Duration="{StaticResource Motion.Fast}" />
+                            <DoubleAnimation
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                To="0.975"
+                                Duration="{StaticResource Motion.Fast}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                To="1"
+                                Duration="{StaticResource Motion.Fast}" />
+                            <DoubleAnimation
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                To="1"
+                                Duration="{StaticResource Motion.Fast}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
+            </DataTrigger>
+        </Style.Triggers>
     </Style>
 
     <!--
@@ -399,18 +501,83 @@
     </Style>
 
     <!--
-        Hover/press wash painted over a phrase tile, over any category fill. Not hit-testable, so
-        clicks and the context menu pass straight through it. RelativeSource is evaluated at the
-        usage site, so this resolves correctly once keyed here instead of inline.
+        Hover/press wash over a phrase tile, over any category fill. Not hit-testable, so clicks and
+        the context menu pass straight through. RelativeSource is evaluated at the usage site, so
+        this resolves correctly once keyed here instead of inline.
+
+        Phase D "motion": TWO stacked Borders (used together at the usage site — MainWindow.xaml's
+        tile template), not the one this replaced. A single Border whose Background Setter swapped
+        color faded IN on hover (a Setter applies instantly) but SNAPPED out just as instantly the
+        moment IsMouseOver went false — nothing was left to animate on exit. Each layer here has a
+        FIXED tint and animates its OWN Opacity 0<->1 instead, so both directions fade. Order at the
+        usage site matters for z-stacking: Hover first, Press second, so if both are true (pressed
+        normally implies hovered) the Press wash paints over the Hover wash.
     -->
-    <Style x:Key="TileHoverOverlayStyle" TargetType="Border">
-        <Setter Property="Background" Value="Transparent" />
+    <Style x:Key="TileHoverWashStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Overlay.Hover}" />
+        <Setter Property="Opacity" Value="0" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="True">
-                <Setter Property="Background" Value="{DynamicResource Overlay.Hover}" />
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="1"
+                                Duration="{StaticResource Motion.Base}">
+                                <DoubleAnimation.EasingFunction>
+                                    <QuadraticEase EasingMode="EaseOut" />
+                                </DoubleAnimation.EasingFunction>
+                            </DoubleAnimation>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="0"
+                                Duration="{StaticResource Motion.Base}">
+                                <DoubleAnimation.EasingFunction>
+                                    <QuadraticEase EasingMode="EaseOut" />
+                                </DoubleAnimation.EasingFunction>
+                            </DoubleAnimation>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
             </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="TilePressWashStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Overlay.Pressed}" />
+        <Setter Property="Opacity" Value="0" />
+        <Style.Triggers>
             <DataTrigger Binding="{Binding IsPressed, RelativeSource={RelativeSource AncestorType=ui:Button}}" Value="True">
-                <Setter Property="Background" Value="{DynamicResource Overlay.Pressed}" />
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="1"
+                                Duration="{StaticResource Motion.Fast}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="0"
+                                Duration="{StaticResource Motion.Fast}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
             </DataTrigger>
         </Style.Triggers>
     </Style>

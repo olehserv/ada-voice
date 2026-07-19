@@ -338,7 +338,15 @@
                                             and title length, silently reintroducing the exact F1 bug Pass 6 fixed.
                                             Confirmed by live visual-tree measurement during the Pass 6 doc-review pass.
                                         -->
-                                        <Grid Width="148" Height="128">
+                                        <!--
+                                            Style adds the press-scale transform (09 "Tile press: Scale
+                                            0.975") — Phase D "motion". Local Width/Height above still win
+                                            over any Style Setter (there are none for those here).
+                                        -->
+                                        <Grid
+                                            Width="148"
+                                            Height="128"
+                                            Style="{StaticResource TilePressScaleStyle}">
                                             <Border Style="{StaticResource PhraseTileFillStyle}">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
@@ -457,12 +465,19 @@
                                             </Border>
                                             <!--
                                                 Hover/press feedback over any category fill. Not hit-testable, so
-                                                clicks and the context menu pass straight through it.
+                                                clicks and the context menu pass straight through. Two stacked
+                                                Borders (Phase D "motion") — Hover first, Press second, so Press
+                                                paints over Hover if both are true — see TileHoverWashStyle's
+                                                comment (Controls.xaml) for why this replaced a single Border.
                                             -->
                                             <Border
                                                 CornerRadius="{StaticResource Radius.Control}"
                                                 IsHitTestVisible="False"
-                                                Style="{StaticResource TileHoverOverlayStyle}" />
+                                                Style="{StaticResource TileHoverWashStyle}" />
+                                            <Border
+                                                CornerRadius="{StaticResource Radius.Control}"
+                                                IsHitTestVisible="False"
+                                                Style="{StaticResource TilePressWashStyle}" />
                                         </Grid>
                                     </ui:Button>
                                 </DataTemplate>
