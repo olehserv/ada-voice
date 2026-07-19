@@ -45,6 +45,14 @@
                 Icon="{ui:SymbolIcon Mic24}"
                 Style="{StaticResource BrandCtaButtonStyle}"
                 Visibility="{Binding ShowRecordButton, Converter={StaticResource BoolToVis}}" />
+            <!--  Idle-state guidance (finding 10) — ties directly to why Discard/Preview/Save exist.  -->
+            <TextBlock
+                Margin="0,8,0,0"
+                FontSize="{StaticResource FontSize.Label}"
+                Foreground="{DynamicResource Text.Muted}"
+                Text="Nothing is saved until you say so — you can preview or discard the take first."
+                TextWrapping="Wrap"
+                Visibility="{Binding ShowRecordButton, Converter={StaticResource BoolToVis}}" />
 
             <!--  Recording  -->
             <StackPanel Orientation="Horizontal" Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}">
@@ -58,6 +66,12 @@
                     VerticalAlignment="Center"
                     FontWeight="SemiBold"
                     Text="Recording… speak now" />
+                <TextBlock
+                    x:Name="RecordingElapsedText"
+                    Margin="10,0,0,0"
+                    VerticalAlignment="Center"
+                    Foreground="{DynamicResource Text.Secondary}"
+                    Typography.NumeralAlignment="Tabular" />
                 <ui:Button
                     Margin="16,0,0,0"
                     Appearance="Secondary"
@@ -89,8 +103,17 @@
                         Text="{Binding PendingTakeDurationLabel}"
                         Typography.NumeralAlignment="Tabular" />
                 </Grid>
+                <!--
+                    Discard (Danger) first, farthest from Save — the original audit flagged
+                    Discard sitting in the rightmost, easiest-to-misclick-after-Save position.
+                -->
                 <StackPanel Margin="0,12,0,0" Orientation="Horizontal">
                     <ui:Button
+                        Appearance="Danger"
+                        Command="{Binding DiscardTakeCommand}"
+                        Content="Discard" />
+                    <ui:Button
+                        Margin="8,0,0,0"
                         Appearance="Secondary"
                         Command="{Binding PreviewTakeCommand}"
                         Content="Preview" />
@@ -100,11 +123,6 @@
                         Content="Save"
                         IsDefault="True"
                         Style="{StaticResource BrandCtaButtonStyle}" />
-                    <ui:Button
-                        Margin="8,0,0,0"
-                        Appearance="Secondary"
-                        Command="{Binding DiscardTakeCommand}"
-                        Content="Discard" />
                 </StackPanel>
             </StackPanel>
 
@@ -135,5 +153,12 @@
                 Content="Close"
                 IsCancel="True" />
         </Grid>
+
+        <!--
+            Same pattern as ManageCategoriesDialog's RootDialogHost: last child = top z-order,
+            spans all rows so it dims the title bar too. This window needs its own host — a
+            dialog hosted in MainWindow would render behind this modal window.
+        -->
+        <ui:ContentDialogHost x:Name="RootDialogHost" Grid.RowSpan="3" />
     </Grid>
 </ui:FluentWindow>

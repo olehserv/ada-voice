@@ -37,6 +37,7 @@ public partial class BoardViewModel : ObservableObject
     private readonly Action _showRecorder;
     private readonly Action<Action> _onUiThread;
     private readonly Random _rng;
+    private Func<Task<bool>> _confirmDiscard = () => Task.FromResult(true); // default: confirm (unit tests)
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowRecordButton))]
@@ -979,9 +980,19 @@ public partial class BoardViewModel : ObservableObject
         Saved?.Invoke(this, "New version saved");
     }
 
+    /// <summary>Wires the Recorder dialog's own <c>ConfirmDiscardAsync</c> in — called every time
+    /// <c>MainWindow.ShowRecorder</c> opens a fresh <c>RecorderDialog</c> (not just once): unlike a
+    /// per-dialog view-model, this board VM outlives any single dialog instance, so a new dialog's
+    /// confirm must be re-pointed at its own host each time the old one is gone. Unset,
+    /// <see cref="DiscardTake"/> auto-confirms (unit tests / screenshot fixtures).</summary>
+    public void SetConfirmDiscard(Func<Task<bool>> confirm) => _confirmDiscard = confirm;
+
     [RelayCommand]
-    private void DiscardTake()
+    private async Task DiscardTake()
     {
+        if (!await _confirmDiscard())
+            return;
+
         PendingTake = null;
         ClearPendingRecording();
         Notify("Take discarded.", NoticeSeverity.Info);

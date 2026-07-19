@@ -235,6 +235,10 @@ public partial class MainWindow : FluentWindow
             return;
 
         _recorder = new RecorderDialog { DataContext = DataContext, Owner = this };
+        // The board VM outlives this dialog, so its discard-confirm must be re-pointed at this
+        // fresh dialog's own host every time — the previous dialog's host (if any) is already gone.
+        if (DataContext is BoardViewModel board)
+            board.SetConfirmDiscard(_recorder.ConfirmDiscardAsync);
         try
         {
             _recorder.ShowDialog();

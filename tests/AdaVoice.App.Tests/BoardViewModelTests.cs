@@ -808,6 +808,19 @@ public class BoardViewModelTests
     }
 
     [Fact]
+    public async Task Declining_the_discard_confirm_leaves_the_pending_take_untouched()
+    {
+        var host = new FakePlaybackHost { NextStopResult = Take() };
+        var board = NewBoard(host);
+        await board.StopRecordingCommand.ExecuteAsync(null);
+        board.SetConfirmDiscard(() => Task.FromResult(false));
+
+        board.DiscardTakeCommand.Execute(null);
+
+        Assert.True(board.HasPendingTake);
+    }
+
+    [Fact]
     public async Task Preview_take_plays_the_pending_samples_to_the_monitor()
     {
         var take = Take();

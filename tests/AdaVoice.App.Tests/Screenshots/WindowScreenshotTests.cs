@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using AdaVoice.App.ViewModels;
 using AdaVoice.Audio.Engine;
+using AdaVoice.Audio.Recording;
 using AdaVoice.Audio.Setup;
 using AdaVoice.Core.Domain;
 using AdaVoice.Core.Storage;
@@ -116,6 +117,28 @@ public sealed class WindowScreenshotTests(WpfAppFixture app)
     [ScreenshotFact]
     public void RecorderDialog() =>
         Save(() => new RecorderDialog { DataContext = NewBoard() }, "recorder");
+
+    /// <summary>Phase C Step 6: the elapsed-time text next to "Recording… speak now" — no fixture
+    /// ever rendered the recording state before this. The exact elapsed value is nondeterministic
+    /// (a few tenths of a second by the time the harness captures) — expected, this is a visual
+    /// sanity check, not a pixel-exact baseline.</summary>
+    [ScreenshotFact]
+    public void RecorderDialog_recording()
+    {
+        var board = NewBoard();
+        board.IsRecording = true;
+        Save(() => new RecorderDialog { DataContext = board }, "recorder-recording");
+    }
+
+    /// <summary>Phase C Step 6: the pending-take save form with the reordered Discard/Preview/Save
+    /// row (Discard now first and Danger-red) — no fixture ever rendered this state before.</summary>
+    [ScreenshotFact]
+    public void RecorderDialog_pendingTake()
+    {
+        var board = NewBoard();
+        board.PendingTake = new RecordingResult(new float[10], GainDb: -3, DurationMs: 2400, PeakDbfs: -6);
+        Save(() => new RecorderDialog { DataContext = board }, "recorder-pending-take");
+    }
 
     [ScreenshotFact]
     public void ManageCategoriesDialog() =>

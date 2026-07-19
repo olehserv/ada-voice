@@ -372,6 +372,21 @@ needs the subscription/tenant state Phase 3 introduces.
   tapping the engine's capture. Watch for it on hardware.
 - **Cold-start auto-retry into Degraded:** a failed `Start` currently stays Stopped with the
   error surfaced.
+- **`ui:TitleBar`'s own Title text (and some `Appearance="Secondary"` button text) still washes
+  out in light theme — not fixed by the app-wide fix below.** Found during Phase C Step 6
+  (Recorder dialog), while reviewing the new light-theme screenshots: zoomed crops (not just
+  eyeballing) showed "Recorder"'s title-bar text and the "Close" button's text both render
+  near-invisible pale-on-white. Confirmed pre-existing and NOT introduced by Step 6: the identical
+  washed title text is already present in the already-shipped `manage-categories.png` (Step 3),
+  confirmed via the same zoomed-crop comparison, and Step 6's diff never touches the Close
+  button's XAML. This is a **different** symptom from the `CheckBox`/`TextBox`/`ui:TitleBar`
+  bug fixed just below — that fix added a `Foreground` Setter to a `BasedOn` style targeting
+  `{x:Type ui:TitleBar}` (the control itself), but apparently the Title text WPF-UI actually
+  renders is not driven by that property at all (likely baked into the control's own template,
+  the same class of bug as `ListBoxItem`'s selection fill and `Appearance="Danger"` — a
+  Style-level Setter can't reach it — but this is a hypothesis, not yet confirmed via
+  `DependencyPropertyHelper.GetValueSource` on a live control). Not fixed here — out of scope for
+  Step 6; needs its own investigation with the same rigor as the two bugs below.
 - ✅ **App-wide `CheckBox`/`TextBox`/`ui:TitleBar` text-colour bug — fixed (2026-07-19, during
   Phase C Step 4).** First reported as a `ManageConversationsDialog`-specific "near-illegible"
   light-theme bug; pixel-sampling the rendered PNGs (`System.Drawing`, not eyeballing) corrected
