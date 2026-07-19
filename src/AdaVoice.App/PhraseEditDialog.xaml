@@ -82,8 +82,11 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock VerticalAlignment="Center" Text="{Binding}" />
                                 <Button
+                                    MinWidth="24"
+                                    MinHeight="24"
                                     Margin="6,0,0,0"
                                     Padding="0"
+                                    VerticalAlignment="Center"
                                     Background="Transparent"
                                     BorderThickness="0"
                                     Command="{Binding DataContext.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"

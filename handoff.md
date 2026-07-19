@@ -372,21 +372,33 @@ needs the subscription/tenant state Phase 3 introduces.
   tapping the engine's capture. Watch for it on hardware.
 - **Cold-start auto-retry into Degraded:** a failed `Start` currently stays Stopped with the
   error surfaced.
-- **`ui:TitleBar`'s own Title text (and some `Appearance="Secondary"` button text) still washes
-  out in light theme — not fixed by the app-wide fix below.** Found during Phase C Step 6
-  (Recorder dialog), while reviewing the new light-theme screenshots: zoomed crops (not just
-  eyeballing) showed "Recorder"'s title-bar text and the "Close" button's text both render
-  near-invisible pale-on-white. Confirmed pre-existing and NOT introduced by Step 6: the identical
-  washed title text is already present in the already-shipped `manage-categories.png` (Step 3),
-  confirmed via the same zoomed-crop comparison, and Step 6's diff never touches the Close
-  button's XAML. This is a **different** symptom from the `CheckBox`/`TextBox`/`ui:TitleBar`
-  bug fixed just below — that fix added a `Foreground` Setter to a `BasedOn` style targeting
-  `{x:Type ui:TitleBar}` (the control itself), but apparently the Title text WPF-UI actually
-  renders is not driven by that property at all (likely baked into the control's own template,
-  the same class of bug as `ListBoxItem`'s selection fill and `Appearance="Danger"` — a
-  Style-level Setter can't reach it — but this is a hypothesis, not yet confirmed via
-  `DependencyPropertyHelper.GetValueSource` on a live control). Not fixed here — out of scope for
-  Step 6; needs its own investigation with the same rigor as the two bugs below.
+- 🔴 **Light-theme legibility is broken across several dialogs, escalating in severity, unlike
+  the two flagship windows — needs its own dedicated investigation, not another one-line fix.**
+  Three separate findings during Phase C, each initially looking like an isolated one-off:
+  (1) Step 4 (`ManageConversationsDialog`) — most text washed, "fixed" via an app-wide
+  `CheckBox`/`TextBox`/`ui:TitleBar` `Foreground` Setter (see the ✅ entry below); (2) the Manage
+  Categories side task — the "Add category" panel's `Border` renders with a near-black
+  *background* in light theme (a different bug — background, not foreground); (3) Step 6
+  (`RecorderDialog`) — despite the Step 4 "fix," `ui:TitleBar`'s own Title text and the "Close"
+  button's text still wash out, confirmed via zoomed-crop comparison, and confirmed already present
+  in the already-shipped `manage-categories.png` too — meaning the Step 4 fix did not actually
+  reach the Title text it claimed to. **Escalated during Step 7** (`PhraseEditDialog`): its
+  light-theme screenshot is severely broken — title, the Title `TextBox`'s content, the Category
+  `ComboBox`'s text, the "Add a tag…" placeholder, and the Cancel button are *all* near-invisible,
+  confirmed pre-existing via `git stash` (identical in the untouched committed file, unrelated to
+  Step 7's one-line hit-target change). **The critical clue:** `settings.png` and `main-board.png`
+  — the two most-worked-on, most-reviewed windows — render **perfectly** in light theme, title bar
+  included. Three small dialogs are broken to varying degrees; the two flagship windows are not.
+  That contrast points to a real, findable structural difference (candidates worth checking first:
+  `ShowMaximize="False"`/`ShowMinimize="False"` on the small dialogs' `ui:TitleBar` vs. the
+  flagship windows having both `True`, possibly selecting a different internal template branch;
+  or something in how `SizeToContent="Height"` dialogs differ from fixed-size ones) — not random
+  noise, and not something another single-line `Foreground` Setter is likely to fix given the
+  Step 4 "fix" already tried that and didn't reach the actual problem. Deliberately **not**
+  investigated further mid-step (owner's explicit call, Step 7) — needs its own dedicated
+  session with the same pixel-sampling/zoomed-crop rigor used to find it, likely starting from
+  `DependencyPropertyHelper.GetValueSource` on a live Title-bar element to see what's actually
+  driving its Foreground, rather than guessing at another Style-level Setter.
 - ✅ **App-wide `CheckBox`/`TextBox`/`ui:TitleBar` text-colour bug — fixed (2026-07-19, during
   Phase C Step 4).** First reported as a `ManageConversationsDialog`-specific "near-illegible"
   light-theme bug; pixel-sampling the rendered PNGs (`System.Drawing`, not eyeballing) corrected
