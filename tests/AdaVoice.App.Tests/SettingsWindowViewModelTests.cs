@@ -14,10 +14,10 @@ public class SettingsWindowViewModelTests
         var vm = new SettingsWindowViewModel(
             settings, setup, "Pause",
             pickExportPath: () => null,
-            pickImportFile: () => null,
-            confirmAndRestart: () => { },
-            showError: _ => { },
-            showInfo: _ => { });
+            pickImportFile: () => Task.FromResult<(string Path, ImportMode Mode)?>(null),
+            confirmAndRestart: () => Task.CompletedTask,
+            showError: _ => Task.CompletedTask,
+            showInfo: _ => Task.CompletedTask);
 
         Assert.Equal(-9, vm.Levels.MicDuckDb);
         Assert.False(vm.Behavior.AlwaysOnTop);

@@ -17,7 +17,7 @@ public class BoardViewModelTests
         Action<ConversationsViewModel>? showManageConversations = null,
         Action<SetupWizardViewModel>? showSetupWizard = null,
         ISettingsHost? settingsHost = null,
-        Action<SettingsWindowViewModel>? showSettings = null,
+        Action<ISettingsHost, ISetupHost, string?, Func<string?>>? showSettings = null,
         Func<RepairPhraseViewModel, bool>? showRepairDialog = null,
         Action? showRecorder = null,
         Random? rng = null) =>
@@ -1677,17 +1677,32 @@ public class BoardViewModelTests
         Assert.Equal("Global stop hotkey registered: Pause", hotkeyStep.StatusLabel);
     }
 
+    /// <summary>RunSettings no longer builds the SettingsWindowViewModel itself (Pass 2b) — the
+    /// window does, once it exists, since its dialog-prompt delegates are the window's own async
+    /// methods. This asserts the raw ingredients BoardViewModel hands over are correct.</summary>
     [Fact]
-    public void Run_settings_builds_a_window_view_model_from_the_hosts_and_shows_it()
+    public void Run_settings_hands_the_hosts_hotkey_and_export_picker_to_the_window()
     {
         var host = new FakePlaybackHost();
-        SettingsWindowViewModel? shown = null;
-        var board = NewBoard(host, settingsHost: new FakeSettingsHost(), showSettings: vm => shown = vm);
+        var settingsHost = new FakeSettingsHost();
+        ISettingsHost? shownSettingsHost = null;
+        ISetupHost? shownSetup = null;
+        string? shownHotkey = null;
+        Func<string?>? shownPickExportPath = null;
+        var board = NewBoard(host, settingsHost: settingsHost, showSettings: (s, setup, hotkey, pick) =>
+        {
+            shownSettingsHost = s;
+            shownSetup = setup;
+            shownHotkey = hotkey;
+            shownPickExportPath = pick;
+        });
 
         board.RunSettingsCommand.Execute(null);
 
-        Assert.NotNull(shown);
-        Assert.Equal("Pause", shown!.Behavior.HotkeyStatus.Split(": ")[1]);
+        Assert.Same(settingsHost, shownSettingsHost);
+        Assert.Same(host, shownSetup);
+        Assert.Equal("Pause", shownHotkey);
+        Assert.NotNull(shownPickExportPath);
     }
 
     // ---- Conversations -------------------------------------------------------------------------

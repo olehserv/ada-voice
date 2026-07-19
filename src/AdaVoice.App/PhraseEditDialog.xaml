@@ -1,107 +1,167 @@
-<ui:FluentWindow x:Class="AdaVoice.App.PhraseEditDialog"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        Title="Edit phrase"
-        Width="380" SizeToContent="Height"
-        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
-        ExtendsContentIntoTitleBar="True"
-        WindowBackdropType="None"
-        WindowCornerPreference="Round"
-        Background="{DynamicResource Surface.Window}"
-        TextElement.Foreground="{DynamicResource Text.Primary}"
-        FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
+﻿<ui:FluentWindow
+    x:Class="AdaVoice.App.PhraseEditDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="Edit phrase"
+    Width="380"
+    Background="{DynamicResource Surface.Window}"
+    ExtendsContentIntoTitleBar="True"
+    FontFamily="Segoe UI Variable, Segoe UI"
+    FontSize="{StaticResource FontSize.Body}"
+    ResizeMode="NoResize"
+    ShowInTaskbar="False"
+    SizeToContent="Height"
+    TextElement.Foreground="{DynamicResource Text.Primary}"
+    WindowBackdropType="None"
+    WindowCornerPreference="Round"
+    WindowStartupLocation="CenterOwner">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <ui:TitleBar Grid.Row="0" Title="Edit phrase" ShowMinimize="False" ShowMaximize="False" CanMaximize="False" />
+        <ui:TitleBar
+            Title="Edit phrase"
+            Grid.Row="0"
+            CanMaximize="False"
+            ShowMaximize="False"
+            ShowMinimize="False" />
 
         <StackPanel Grid.Row="1" Margin="{StaticResource Space.DialogContent}">
-        <TextBlock Text="Title" Style="{StaticResource FieldLabelStyle}" />
-        <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock Style="{StaticResource FieldLabelStyle}" Text="Title" />
+            <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" />
 
-        <TextBlock Text="Category" Style="{StaticResource FieldLabelStyle}" Margin="0,12,0,4" />
-        <ComboBox ItemsSource="{Binding Categories}"
-                  SelectedValue="{Binding SelectedCategoryId}"
-                  SelectedValuePath="Id">
-            <ComboBox.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel Orientation="Horizontal">
-                        <Border Width="16" Height="16" CornerRadius="{StaticResource Radius.Small}" VerticalAlignment="Center"
-                                Background="{Binding Color, Converter={StaticResource HexToBrush}}" />
-                        <TextBlock Text="{Binding Name}" Margin="8,0,0,0" VerticalAlignment="Center" />
-                    </StackPanel>
-                </DataTemplate>
-            </ComboBox.ItemTemplate>
-        </ComboBox>
-
-        <TextBlock Text="Tags" Style="{StaticResource FieldLabelStyle}" Margin="0,12,0,4" />
-
-        <!-- Current tags as removable chips -->
-        <ItemsControl ItemsSource="{Binding Tags}">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Border Background="{DynamicResource Surface.Overlay}"
-                            BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="1"
-                            CornerRadius="{StaticResource Radius.Pill}"
-                            Padding="8,3" Margin="0,0,6,6">
+            <TextBlock
+                Margin="0,12,0,4"
+                Style="{StaticResource FieldLabelStyle}"
+                Text="Category" />
+            <ComboBox
+                ItemsSource="{Binding Categories}"
+                SelectedValue="{Binding SelectedCategoryId}"
+                SelectedValuePath="Id">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
-                            <Button Content="✕" Margin="6,0,0,0" Padding="0" BorderThickness="0"
-                                    Background="Transparent" Foreground="{DynamicResource Text.Secondary}"
-                                    Cursor="Hand" ToolTip="Remove tag"
-                                    Command="{Binding DataContext.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                    CommandParameter="{Binding}" />
+                            <Border
+                                Width="16"
+                                Height="16"
+                                VerticalAlignment="Center"
+                                Background="{Binding Color, Converter={StaticResource HexToBrush}}"
+                                CornerRadius="{StaticResource Radius.Small}" />
+                            <TextBlock
+                                Margin="8,0,0,0"
+                                VerticalAlignment="Center"
+                                Text="{Binding Name}" />
                         </StackPanel>
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
 
-        <!-- Add a new tag -->
-        <Grid Margin="0,4,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <ui:TextBox Grid.Column="0" PlaceholderText="Add a tag…"
-                        Text="{Binding NewTag, UpdateSourceTrigger=PropertyChanged}">
-                <ui:TextBox.InputBindings>
-                    <KeyBinding Key="Return" Command="{Binding AddTagCommand}" />
-                </ui:TextBox.InputBindings>
-            </ui:TextBox>
-            <ui:Button Grid.Column="1" Content="Add" Appearance="Secondary" Margin="8,0,0,0"
-                       Command="{Binding AddTagCommand}" />
-        </Grid>
+            <TextBlock
+                Margin="0,12,0,4"
+                Style="{StaticResource FieldLabelStyle}"
+                Text="Tags" />
 
-        <!-- Reuse an existing tag -->
-        <ItemsControl ItemsSource="{Binding Suggestions}" Margin="0,8,0,0">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Button Content="{Binding}" Margin="0,0,6,6" Padding="8,3" Cursor="Hand"
-                            BorderThickness="1" BorderBrush="{DynamicResource Border.Strong}"
-                            Background="Transparent" Foreground="{DynamicResource Text.Secondary}"
-                            ToolTip="Add this existing tag"
+            <!--  Current tags as removable chips  -->
+            <ItemsControl ItemsSource="{Binding Tags}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border
+                            Margin="0,0,6,6"
+                            Padding="8,3"
+                            Background="{DynamicResource Surface.Overlay}"
+                            BorderBrush="{DynamicResource Border.Subtle}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource Radius.Pill}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock VerticalAlignment="Center" Text="{Binding}" />
+                                <Button
+                                    Margin="6,0,0,0"
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Command="{Binding DataContext.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}"
+                                    Content="✕"
+                                    Cursor="Hand"
+                                    Foreground="{DynamicResource Text.Secondary}"
+                                    ToolTip="Remove tag" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!--  Add a new tag  -->
+            <Grid Margin="0,4,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBox
+                    Grid.Column="0"
+                    PlaceholderText="Add a tag…"
+                    Text="{Binding NewTag, UpdateSourceTrigger=PropertyChanged}">
+                    <ui:TextBox.InputBindings>
+                        <KeyBinding Key="Return" Command="{Binding AddTagCommand}" />
+                    </ui:TextBox.InputBindings>
+                </ui:TextBox>
+                <ui:Button
+                    Grid.Column="1"
+                    Margin="8,0,0,0"
+                    Appearance="Secondary"
+                    Command="{Binding AddTagCommand}"
+                    Content="Add" />
+            </Grid>
+
+            <!--  Reuse an existing tag  -->
+            <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding Suggestions}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button
+                            Margin="0,0,6,6"
+                            Padding="8,3"
+                            Background="Transparent"
+                            BorderBrush="{DynamicResource Border.Strong}"
+                            BorderThickness="1"
                             Command="{Binding DataContext.AddSuggestionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                            CommandParameter="{Binding}" />
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+                            CommandParameter="{Binding}"
+                            Content="{Binding}"
+                            Cursor="Hand"
+                            Foreground="{DynamicResource Text.Secondary}"
+                            ToolTip="Add this existing tag" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="{StaticResource Space.ButtonRow}">
-            <ui:Button Content="Cancel" Appearance="Secondary" IsCancel="True" Margin="0,0,8,0" />
-            <ui:Button x:Name="SaveButton" Content="Save" Appearance="Primary"
-                       IsDefault="True" Click="Save_Click"
-                       IsEnabled="{Binding HasValidTitle}" />
-        </StackPanel>
+            <StackPanel
+                Margin="{StaticResource Space.ButtonRow}"
+                HorizontalAlignment="Right"
+                Orientation="Horizontal">
+                <ui:Button
+                    Margin="0,0,8,0"
+                    Appearance="Secondary"
+                    Content="Cancel"
+                    IsCancel="True" />
+                <ui:Button
+                    x:Name="SaveButton"
+                    Click="Save_Click"
+                    Content="Save"
+                    IsDefault="True"
+                    IsEnabled="{Binding HasValidTitle}"
+                    Style="{StaticResource BrandCtaButtonStyle}" />
+            </StackPanel>
         </StackPanel>
     </Grid>
 </ui:FluentWindow>

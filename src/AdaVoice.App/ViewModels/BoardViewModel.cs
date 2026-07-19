@@ -4,7 +4,6 @@ using System.Windows.Data;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Recording;
 using AdaVoice.Core.Domain;
-using AdaVoice.Core.Storage;
 using AdaVoice.Host;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -27,12 +26,8 @@ public partial class BoardViewModel : ObservableObject
     private readonly ISettingsHost _settingsHost;
     private readonly Func<string?> _getActiveHotkey;
     private readonly Action<SetupWizardViewModel> _showSetupWizard;
-    private readonly Action<SettingsWindowViewModel> _showSettings;
+    private readonly Action<ISettingsHost, ISetupHost, string?, Func<string?>> _showSettings;
     private readonly Func<string?> _pickExportPath;
-    private readonly Func<(string Path, ImportMode Mode)?> _pickImportFile;
-    private readonly Action _confirmAndRestart;
-    private readonly Action<string> _showError;
-    private readonly Action<string> _showSettingsInfo;
     private readonly Func<PhraseItemViewModel, Task<bool>> _confirmDelete;
     private readonly Func<PhraseEditViewModel, bool> _showEditDialog;
     private readonly Action<PhraseVersionsViewModel> _showVersionsDialog;
@@ -119,12 +114,8 @@ public partial class BoardViewModel : ObservableObject
         Action<CategoriesViewModel>? showManageCategories = null,
         Action<ConversationsViewModel>? showManageConversations = null,
         Action<SetupWizardViewModel>? showSetupWizard = null,
-        Action<SettingsWindowViewModel>? showSettings = null,
+        Action<ISettingsHost, ISetupHost, string?, Func<string?>>? showSettings = null,
         Func<string?>? pickExportPath = null,
-        Func<(string Path, ImportMode Mode)?>? pickImportFile = null,
-        Action? confirmAndRestart = null,
-        Action<string>? showError = null,
-        Action<string>? showSettingsInfo = null,
         Action? showRecorder = null,
         Random? rng = null)
     {
@@ -143,12 +134,8 @@ public partial class BoardViewModel : ObservableObject
         _showManageCategories = showManageCategories ?? (_ => { }); // default: no-op (unit tests)
         _showManageConversations = showManageConversations ?? (_ => { }); // default: no-op (unit tests)
         _showSetupWizard = showSetupWizard ?? (_ => { });  // default: no-op (unit tests)
-        _showSettings = showSettings ?? (_ => { });        // default: no-op (unit tests)
+        _showSettings = showSettings ?? ((_, _, _, _) => { }); // default: no-op (unit tests)
         _pickExportPath = pickExportPath ?? (() => null);  // default: cancelled (unit tests)
-        _pickImportFile = pickImportFile ?? (() => null);  // default: cancelled (unit tests)
-        _confirmAndRestart = confirmAndRestart ?? (() => { }); // default: no-op (unit tests)
-        _showError = showError ?? (_ => { });              // default: no-op (unit tests)
-        _showSettingsInfo = showSettingsInfo ?? (_ => { }); // default: no-op (unit tests)
         _showRecorder = showRecorder ?? (() => { });       // default: no-op (unit tests)
         Status = status;
         Settings = settings;
@@ -432,12 +419,11 @@ public partial class BoardViewModel : ObservableObject
     [RelayCommand]
     private void RunSetup() => _showSetupWizard(new SetupWizardViewModel(_setup, _getActiveHotkey()));
 
-    /// <summary>Open the Settings window on demand. Always builds a fresh view-model so a re-open
-    /// never shows a stale hotkey status or backup date from a previous open.</summary>
+    /// <summary>Open the Settings window on demand. The window itself builds the
+    /// <see cref="SettingsWindowViewModel"/> once it exists — its 4 dialog prompts (Pass 2b) are
+    /// hosted by that window's own ContentDialog host, so they can't be built before the window is.</summary>
     [RelayCommand]
-    private void RunSettings() => _showSettings(new SettingsWindowViewModel(
-        _settingsHost, _setup, _getActiveHotkey(), _pickExportPath, _pickImportFile,
-        _confirmAndRestart, _showError, _showSettingsInfo));
+    private void RunSettings() => _showSettings(_settingsHost, _setup, _getActiveHotkey(), _pickExportPath);
 
     partial void OnSearchTextChanged(string value) => RefreshFilter();
 

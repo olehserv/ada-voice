@@ -16,10 +16,22 @@ public class BackupSettingsViewModelTests
         List<string>? infos = null) =>
         new(host,
             pickExportPath ?? (() => null),
-            pickImportFile ?? (() => null),
-            confirmAndRestart ?? (() => { }),
-            errors is null ? (_ => { }) : errors.Add,
-            infos is null ? (_ => { }) : infos.Add);
+            () => Task.FromResult(pickImportFile is null ? null : pickImportFile()),
+            () =>
+            {
+                confirmAndRestart?.Invoke();
+                return Task.CompletedTask;
+            },
+            message =>
+            {
+                errors?.Add(message);
+                return Task.CompletedTask;
+            },
+            message =>
+            {
+                infos?.Add(message);
+                return Task.CompletedTask;
+            });
 
     [Fact]
     public void Initializes_language_and_last_backup_date_from_the_host()

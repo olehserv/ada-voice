@@ -6,6 +6,7 @@ using AdaVoice.App.ViewModels;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Setup;
 using AdaVoice.Core.Domain;
+using AdaVoice.Core.Storage;
 
 namespace AdaVoice.App.Tests.Screenshots;
 
@@ -98,6 +99,19 @@ public sealed class WindowScreenshotTests(WpfAppFixture app)
     public void SetupWizardWindow() =>
         Save(() => new SetupWizardWindow { DataContext = new SetupWizardViewModel(SampleHost(), "Pause") },
             "setup-wizard");
+
+    /// <summary>The default fixture's Environment-checks step never finishes its async check run in
+    /// time for the screenshot, so Next stays disabled — no fixture ever rendered Next in its real
+    /// enabled state (Phase C's Appearance="Primary" -> BrandCtaButtonStyle fix on this button).
+    /// InstructionStepViewModel.CanAdvance is unconditionally true, so jumping straight to it is the
+    /// simplest way to exercise an enabled Next.</summary>
+    [ScreenshotFact]
+    public void SetupWizardWindow_nextEnabled() =>
+        Save(() =>
+        {
+            var vm = new SetupWizardViewModel(SampleHost(), "Pause") { CurrentStepIndex = 3 };
+            return new SetupWizardWindow { DataContext = vm };
+        }, "setup-wizard-next-enabled");
 
     [ScreenshotFact]
     public void RecorderDialog() =>
@@ -228,10 +242,10 @@ public sealed class WindowScreenshotTests(WpfAppFixture app)
     private static SettingsWindowViewModel NewSettings() =>
         new(new FakeSettingsHost { Language = "en" }, SampleHost(), "Pause",
             pickExportPath: () => null,
-            pickImportFile: () => null,
-            confirmAndRestart: () => { },
-            showError: _ => { },
-            showInfo: _ => { });
+            pickImportFile: () => Task.FromResult<(string Path, ImportMode Mode)?>(null),
+            confirmAndRestart: () => Task.CompletedTask,
+            showError: _ => Task.CompletedTask,
+            showInfo: _ => Task.CompletedTask);
 
     /// <summary>A host pre-loaded with representative categories, tags, phrases, and one conversation
     /// so the screenshots show a populated UI rather than empty states.</summary>

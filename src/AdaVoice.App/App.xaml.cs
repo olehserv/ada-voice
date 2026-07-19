@@ -82,10 +82,6 @@ public partial class App : Application
             showSetupWizard: window.ShowSetupWizard,
             showSettings: window.ShowSettings,
             pickExportPath: window.PickExportPath,
-            pickImportFile: window.PickImportFile,
-            confirmAndRestart: window.ConfirmAndRestart,
-            showError: window.ShowError,
-            showSettingsInfo: window.ShowInfo,
             showRepairDialog: window.ShowRepairDialog);
 
         window.DataContext = board;

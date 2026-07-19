@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using AdaVoice.Core.Storage;
 using AdaVoice.Host;
@@ -14,10 +13,10 @@ public partial class BackupSettingsViewModel : ObservableObject
 {
     private readonly ISettingsHost _settings;
     private readonly Func<string?> _pickExportPath;
-    private readonly Func<(string Path, ImportMode Mode)?> _pickImportFile;
-    private readonly Action _confirmAndRestart;
-    private readonly Action<string> _showError;
-    private readonly Action<string> _showInfo;
+    private readonly Func<Task<(string Path, ImportMode Mode)?>> _pickImportFile;
+    private readonly Func<Task> _confirmAndRestart;
+    private readonly Func<string, Task> _showError;
+    private readonly Func<string, Task> _showInfo;
 
     [ObservableProperty]
     private string _language;
@@ -25,10 +24,10 @@ public partial class BackupSettingsViewModel : ObservableObject
     public BackupSettingsViewModel(
         ISettingsHost settings,
         Func<string?> pickExportPath,
-        Func<(string Path, ImportMode Mode)?> pickImportFile,
-        Action confirmAndRestart,
-        Action<string> showError,
-        Action<string> showInfo)
+        Func<Task<(string Path, ImportMode Mode)?>> pickImportFile,
+        Func<Task> confirmAndRestart,
+        Func<string, Task> showError,
+        Func<string, Task> showInfo)
     {
         _settings = settings;
         _pickExportPath = pickExportPath;
@@ -45,7 +44,7 @@ public partial class BackupSettingsViewModel : ObservableObject
     public DateOnly? LastBackupDate { get; }
 
     [RelayCommand]
-    private void Export()
+    private async Task Export()
     {
         var path = _pickExportPath();
         if (path is null)
@@ -57,19 +56,19 @@ public partial class BackupSettingsViewModel : ObservableObject
             // Export never includes version recordings (v1 limitation) — say so when it happened, so
             // the operator doesn't assume the export was complete (review finding 2).
             if (droppedVersions > 0)
-                _showInfo($"Exported. {droppedVersions} alternate take(s) were not included — " +
+                await _showInfo($"Exported. {droppedVersions} alternate take(s) were not included — " +
                     "phrase versions aren't included in exports yet.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _showError($"Could not export: {ex.Message}");
+            await _showError($"Could not export: {ex.Message}");
         }
     }
 
     [RelayCommand]
-    private void Import()
+    private async Task Import()
     {
-        var picked = _pickImportFile();
+        var picked = await _pickImportFile();
         if (picked is not { } choice)
             return; // cancelled
 
@@ -80,14 +79,14 @@ public partial class BackupSettingsViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
         {
-            _showError($"Could not import: {ex.Message}");
+            await _showError($"Could not import: {ex.Message}");
             return;
         }
 
         if (!result.Success)
-            _showError($"Could not import: {result.Error}");
+            await _showError($"Could not import: {result.Error}");
         else
-            _showInfo($"Imported {result.Added} phrase(s) ({result.Skipped} skipped). " +
+            await _showInfo($"Imported {result.Added} phrase(s) ({result.Skipped} skipped). " +
                 "Restart AdaVoice to see them on your board.");
     }
 
@@ -98,6 +97,6 @@ public partial class BackupSettingsViewModel : ObservableObject
     {
         _settings.SetLanguage(value);
         _settings.SaveSettings();
-        _confirmAndRestart();
+        _ = _confirmAndRestart(); // OnLanguageChanged is a generated partial void — cannot be async
     }
 }

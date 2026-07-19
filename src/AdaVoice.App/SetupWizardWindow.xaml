@@ -1,18 +1,24 @@
-<ui:FluentWindow x:Class="AdaVoice.App.SetupWizardWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        xmlns:vm="clr-namespace:AdaVoice.App.ViewModels"
-        xmlns:local="clr-namespace:AdaVoice.App"
-        Title="AdaVoice setup"
-        Width="480" SizeToContent="Height" MinHeight="320"
-        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
-        ExtendsContentIntoTitleBar="True"
-        WindowBackdropType="None"
-        WindowCornerPreference="Round"
-        Background="{DynamicResource Surface.Window}"
-        TextElement.Foreground="{DynamicResource Text.Primary}"
-        FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
+﻿<ui:FluentWindow
+    x:Class="AdaVoice.App.SetupWizardWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:AdaVoice.App"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:vm="clr-namespace:AdaVoice.App.ViewModels"
+    Title="AdaVoice setup"
+    Width="480"
+    MinHeight="320"
+    Background="{DynamicResource Surface.Window}"
+    ExtendsContentIntoTitleBar="True"
+    FontFamily="Segoe UI Variable, Segoe UI"
+    FontSize="{StaticResource FontSize.Body}"
+    ResizeMode="NoResize"
+    ShowInTaskbar="False"
+    SizeToContent="Height"
+    TextElement.Foreground="{DynamicResource Text.Primary}"
+    WindowBackdropType="None"
+    WindowCornerPreference="Round"
+    WindowStartupLocation="CenterOwner">
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:EnvironmentChecksStepViewModel}">
             <local:EnvironmentChecksStepView />
@@ -35,17 +41,40 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <ui:TitleBar Grid.Row="0" Title="AdaVoice setup" ShowMinimize="False" ShowMaximize="False" CanMaximize="False" />
+        <ui:TitleBar
+            Title="AdaVoice setup"
+            Grid.Row="0"
+            CanMaximize="False"
+            ShowMaximize="False"
+            ShowMinimize="False" />
 
         <StackPanel Grid.Row="1" Margin="{StaticResource Space.DialogContent}">
             <ContentControl Content="{Binding CurrentStep}" />
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="{StaticResource Space.ButtonRow}">
-                <ui:Button Content="Cancel" Appearance="Secondary" IsCancel="True" Margin="0,0,8,0" />
-                <ui:Button Content="Back" Appearance="Secondary" Command="{Binding BackCommand}" Margin="0,0,8,0" />
-                <ui:Button Content="Skip anyway" Appearance="Secondary" Command="{Binding SkipAnywayCommand}"
-                           Visibility="{Binding ShowSkip, Converter={StaticResource BoolToVis}}" Margin="0,0,8,0" />
-                <ui:Button Content="{Binding NextLabel}" Appearance="Primary" Command="{Binding NextCommand}" />
+            <StackPanel
+                Margin="{StaticResource Space.ButtonRow}"
+                HorizontalAlignment="Right"
+                Orientation="Horizontal">
+                <ui:Button
+                    Margin="0,0,8,0"
+                    Appearance="Secondary"
+                    Content="Cancel"
+                    IsCancel="True" />
+                <ui:Button
+                    Margin="0,0,8,0"
+                    Appearance="Secondary"
+                    Command="{Binding BackCommand}"
+                    Content="Back" />
+                <ui:Button
+                    Margin="0,0,8,0"
+                    Appearance="Secondary"
+                    Command="{Binding SkipAnywayCommand}"
+                    Content="Skip anyway"
+                    Visibility="{Binding ShowSkip, Converter={StaticResource BoolToVis}}" />
+                <ui:Button
+                    Command="{Binding NextCommand}"
+                    Content="{Binding NextLabel}"
+                    Style="{StaticResource BrandCtaButtonStyle}" />
             </StackPanel>
         </StackPanel>
     </Grid>

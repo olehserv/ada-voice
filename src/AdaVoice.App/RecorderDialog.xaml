@@ -1,82 +1,139 @@
-<ui:FluentWindow x:Class="AdaVoice.App.RecorderDialog"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        Title="Recorder"
-        Width="420" Height="330"
-        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
-        ExtendsContentIntoTitleBar="True"
-        WindowBackdropType="None"
-        WindowCornerPreference="Round"
-        Background="{DynamicResource Surface.Window}"
-        TextElement.Foreground="{DynamicResource Text.Primary}"
-        FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
-    <!-- Fixed height on purpose: the content swaps between states of different sizes
-         (idle / recording / processing / save form), and SizeToContent both mis-measures under
-         FluentWindow's custom chrome and would make the window jump on every state change. -->
+﻿<ui:FluentWindow
+    x:Class="AdaVoice.App.RecorderDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="Recorder"
+    Width="420"
+    Height="330"
+    Background="{DynamicResource Surface.Window}"
+    ExtendsContentIntoTitleBar="True"
+    FontFamily="Segoe UI Variable, Segoe UI"
+    FontSize="{StaticResource FontSize.Body}"
+    ResizeMode="NoResize"
+    ShowInTaskbar="False"
+    TextElement.Foreground="{DynamicResource Text.Primary}"
+    WindowBackdropType="None"
+    WindowCornerPreference="Round"
+    WindowStartupLocation="CenterOwner">
+    <!--
+        Fixed height on purpose: the content swaps between states of different sizes
+        (idle / recording / processing / save form), and SizeToContent both mis-measures under
+        FluentWindow's custom chrome and would make the window jump on every state change.
+    -->
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <ui:TitleBar Grid.Row="0" Title="Recorder" ShowMinimize="False" ShowMaximize="False" CanMaximize="False" />
+        <ui:TitleBar
+            Title="Recorder"
+            Grid.Row="0"
+            CanMaximize="False"
+            ShowMaximize="False"
+            ShowMinimize="False" />
 
-        <!-- The recording states (exactly one is visible at a time) -->
+        <!--  The recording states (exactly one is visible at a time)  -->
         <StackPanel Grid.Row="1" Margin="16,8,16,0">
 
-            <!-- Idle: ready for the next take (also the state after a save/discard) -->
-            <ui:Button Content="Record" Appearance="Primary" Icon="{ui:SymbolIcon Mic24}"
-                       Command="{Binding StartRecordingCommand}" HorizontalAlignment="Left"
-                       Visibility="{Binding ShowRecordButton, Converter={StaticResource BoolToVis}}" />
+            <!--  Idle: ready for the next take (also the state after a save/discard)  -->
+            <ui:Button
+                HorizontalAlignment="Left"
+                Command="{Binding StartRecordingCommand}"
+                Content="Record"
+                Icon="{ui:SymbolIcon Mic24}"
+                Style="{StaticResource BrandCtaButtonStyle}"
+                Visibility="{Binding ShowRecordButton, Converter={StaticResource BoolToVis}}" />
 
-            <!-- Recording -->
-            <StackPanel Orientation="Horizontal"
-                        Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}">
-                <Ellipse Width="8" Height="8" Fill="{DynamicResource Status.Degraded}" VerticalAlignment="Center" />
-                <TextBlock Text="Recording… speak now" FontWeight="SemiBold" Margin="6,0,0,0" VerticalAlignment="Center" />
-                <ui:Button Content="Stop" Appearance="Primary" Command="{Binding StopRecordingCommand}" Margin="16,0,0,0" />
+            <!--  Recording  -->
+            <StackPanel Orientation="Horizontal" Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}">
+                <Ellipse
+                    Width="8"
+                    Height="8"
+                    VerticalAlignment="Center"
+                    Fill="{DynamicResource Status.Degraded}" />
+                <TextBlock
+                    Margin="6,0,0,0"
+                    VerticalAlignment="Center"
+                    FontWeight="SemiBold"
+                    Text="Recording… speak now" />
+                <ui:Button
+                    Margin="16,0,0,0"
+                    Appearance="Secondary"
+                    Command="{Binding StopRecordingCommand}"
+                    Content="Stop" />
             </StackPanel>
 
-            <!-- Bridges the gap between Stop and the save form appearing -->
-            <TextBlock Text="Processing…" FontWeight="SemiBold" Foreground="{DynamicResource Text.Secondary}"
-                       Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}}" />
+            <!--  Bridges the gap between Stop and the save form appearing  -->
+            <TextBlock
+                FontWeight="SemiBold"
+                Foreground="{DynamicResource Text.Secondary}"
+                Text="Processing…"
+                Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}}" />
 
-            <!-- A take is waiting to be saved -->
+            <!--  A take is waiting to be saved  -->
             <StackPanel Visibility="{Binding HasPendingTake, Converter={StaticResource BoolToVis}}">
-                <TextBlock Text="Title" Style="{StaticResource FieldLabelStyle}" />
+                <TextBlock Style="{StaticResource FieldLabelStyle}" Text="Title" />
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBox Grid.Column="0" Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" />
-                    <TextBlock Grid.Column="1" Text="{Binding PendingTakeDurationLabel}"
-                               Typography.NumeralAlignment="Tabular" Margin="8,0,0,0"
-                               VerticalAlignment="Center" Foreground="{DynamicResource Text.Secondary}" />
+                    <TextBlock
+                        Grid.Column="1"
+                        Margin="8,0,0,0"
+                        VerticalAlignment="Center"
+                        Foreground="{DynamicResource Text.Secondary}"
+                        Text="{Binding PendingTakeDurationLabel}"
+                        Typography.NumeralAlignment="Tabular" />
                 </Grid>
-                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                    <ui:Button Content="Preview" Appearance="Secondary" Command="{Binding PreviewTakeCommand}" />
-                    <ui:Button Content="Save" Appearance="Primary" IsDefault="True" Command="{Binding SaveTakeCommand}" Margin="8,0,0,0" />
-                    <ui:Button Content="Discard" Appearance="Secondary" Command="{Binding DiscardTakeCommand}" Margin="8,0,0,0" />
+                <StackPanel Margin="0,12,0,0" Orientation="Horizontal">
+                    <ui:Button
+                        Appearance="Secondary"
+                        Command="{Binding PreviewTakeCommand}"
+                        Content="Preview" />
+                    <ui:Button
+                        Margin="8,0,0,0"
+                        Command="{Binding SaveTakeCommand}"
+                        Content="Save"
+                        IsDefault="True"
+                        Style="{StaticResource BrandCtaButtonStyle}" />
+                    <ui:Button
+                        Margin="8,0,0,0"
+                        Appearance="Secondary"
+                        Command="{Binding DiscardTakeCommand}"
+                        Content="Discard" />
                 </StackPanel>
             </StackPanel>
 
-            <!-- Recording errors / hints ("No signal", "Take discarded.", …) arrive as toasts
-                 in the main window's bottom-right corner, like every other notification. -->
+            <!--
+                Recording errors / hints ("No signal", "Take discarded.", …) arrive as toasts
+                in the main window's bottom-right corner, like every other notification.
+            -->
         </StackPanel>
 
-        <!-- Footer pinned to the bottom -->
+        <!--  Footer pinned to the bottom  -->
         <Grid Grid.Row="2" Margin="16,0,16,16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="While recording, the call cannot hear you (OFF AIR)."
-                       Foreground="{DynamicResource Text.Muted}" FontSize="{StaticResource FontSize.Label}"
-                       TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />
-            <ui:Button Grid.Column="1" Content="Close" Appearance="Secondary" IsCancel="True"
-                       VerticalAlignment="Bottom" />
+            <TextBlock
+                Grid.Column="0"
+                Margin="0,0,12,0"
+                VerticalAlignment="Center"
+                FontSize="{StaticResource FontSize.Label}"
+                Foreground="{DynamicResource Text.Muted}"
+                Text="While recording, the call cannot hear you (OFF AIR)."
+                TextWrapping="Wrap" />
+            <ui:Button
+                Grid.Column="1"
+                VerticalAlignment="Bottom"
+                Appearance="Secondary"
+                Content="Close"
+                IsCancel="True" />
         </Grid>
     </Grid>
 </ui:FluentWindow>

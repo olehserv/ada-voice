@@ -14,10 +14,10 @@ public sealed class SettingsWindowViewModel
         ISetupHost setup,
         string? activeHotkey,
         Func<string?> pickExportPath,
-        Func<(string Path, ImportMode Mode)?> pickImportFile,
-        Action confirmAndRestart,
-        Action<string> showError,
-        Action<string> showInfo)
+        Func<Task<(string Path, ImportMode Mode)?>> pickImportFile,
+        Func<Task> confirmAndRestart,
+        Func<string, Task> showError,
+        Func<string, Task> showInfo)
     {
         Levels = new LevelsSettingsViewModel(settings, setup);
         Behavior = new BehaviorSettingsViewModel(settings, activeHotkey);
