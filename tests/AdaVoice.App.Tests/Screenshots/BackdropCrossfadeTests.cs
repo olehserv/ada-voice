@@ -94,7 +94,7 @@ public sealed class BackdropCrossfadeTests(WpfAppFixture app)
             "StateLayerStoppedStyle", "BloomLiveStyle", "BloomOffAirStyle", "BloomDegradedStyle",
         ];
 
-        var borders = FindDescendants<Border>(window)
+        var borders = VisualTreeSearch.FindDescendants<Border>(window)
             .Where(b => b.Style is not null)
             .ToList();
 
@@ -107,19 +107,5 @@ public sealed class BackdropCrossfadeTests(WpfAppFixture app)
         }
 
         return result;
-    }
-
-    private static IEnumerable<T> FindDescendants<T>(DependencyObject root) where T : DependencyObject
-    {
-        var count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(root);
-        for (var i = 0; i < count; i++)
-        {
-            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
-            if (child is T match)
-                yield return match;
-
-            foreach (var descendant in FindDescendants<T>(child))
-                yield return descendant;
-        }
     }
 }
