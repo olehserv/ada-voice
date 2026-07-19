@@ -27,30 +27,24 @@ the request).
 
 ## Latest work (2026-07-19)
 
-- **Pass 2b — scoped to the board's delete-confirm dialog: `MessageBox` → `ui:ContentDialog`.**
-  Exploration found the plan's "inject one service into `MainWindow`" assumption broke on a real
-  structural fact: 4 of the audit's 5 `MessageBox` prompts are raised from `BackupSettingsViewModel`,
-  which lives inside the *modal* `SettingsWindow` (`ShowDialog()`, `Owner = MainWindow`) — a
-  `ContentDialog` hosted in `MainWindow` would render behind that modal child and be unreachable.
-  Owner chose the low-risk cut: migrate only `ConfirmDelete` (the board's own prompt, the only one
-  raised from the non-modal window) now; leave the 4 SettingsWindow prompts and the 2 `App.xaml.cs`
-  system prompts (`MessageBox`, by design) for Phase C, which reworks those dialogs anyway. Added a
-  `ui:ContentDialogHost` overlay to `MainWindow.xaml`, a `ContentDialogService` wired in the
-  constructor, and made `ConfirmDelete` `async Task<bool>` via `ShowSimpleDialogAsync` (CTRL-008:
-  Primary button says "Delete", not "Yes"). That forced `BoardViewModel`'s `_confirmDelete` delegate
-  and `Delete` command async (`IAsyncRelayCommand`) — the ripple the plan warned about, but scoped
-  to one command. Verified two ways: build + full test suite green (271 App tests, 2 Delete tests
-  updated to `await ExecuteAsync`), and a live smoke test against the running app (FlaUI driver,
-  since the dialog isn't a standalone `Window` and the existing screenshot harness can't render it)
-  confirmed the dialog is a true in-window overlay (top-level window count stayed at 1, unlike the
-  old `MessageBox`), Escape closes it without deleting the phrase, and the Delete button removes it
-  end-to-end. One thing to watch, not yet conclusively verified: whether Escape *also* silently
-  fires `MainWindow`'s window-level `Escape → StopCommand` panic-stop binding (a `MessageBox` was a
-  separate top-level window so its Escape never reached that binding; a same-window `ContentDialog`
-  overlay might bubble unhandled key events up to it) — harmless today since `StopCommand` no-ops
-  when nothing is playing, but worth a closer look if Phase C adds a dialog that opens *during*
-  playback. See [ux-structural-fix-plan.md](docs/design/plans/ux-structural-fix-plan.md) (Pass 2b)
-  for the full writeup.
+- **Phase C (dialogs) + Pass 2b (`ContentDialog` migration), Steps 0–5 — done.** Full plan +
+  per-step writeups: `C:\Users\olehs\.claude\plans\check-what-is-planned-temporal-kahn.md`.
+  De-risked the shared host pattern once (Step 0: `ContentDialog` consumes Escape before it
+  reaches a window's own `Escape` keybinding — confirmed live, not just by framework semantics),
+  then replicated it per window: `Appearance="Primary"` sweep to `BrandCtaButtonStyle` (Step 1);
+  `SettingsWindow`'s remaining 4 `MessageBox` prompts (Step 2, new shared
+  `Services/DialogPrompts.cs` helper); `ManageCategoriesDialog` (Step 3) and
+  `ManageConversationsDialog` (Step 4) delete-confirms, the latter also fixing `ListBoxItem`
+  selection theming (a `ControlTemplate` override was required — a plain `Style.Setter` had zero
+  effect, same class of bug as Phase A's `Appearance="Danger"` finding) and surfacing the
+  app-wide `CheckBox`/`TextBox`/`ui:TitleBar` text-colour bug below; `PhraseVersionsDialog`
+  version delete-confirm (Step 5) — the one dialog where the VM is built by `BoardViewModel`
+  (needs `RecordVersionForPhrase`) rather than the window, so the confirm is wired via a
+  post-construction `SetConfirmDelete` setter instead of the constructor-injection pattern the
+  other three use. Every step verified the same way: build + full suite green, both-theme
+  screenshots, and a live FlaUI probe against the running app proving Escape closes only the
+  confirm (never the whole window) and the action button completes end-to-end. **Next: Step 6
+  (Recorder dialog — host, discard confirm, timer, button order).**
 - **Server Phase-2 review comments resolved: typed `ProblemDetails`, an `AuditEntry` DTO, and
   batched audit persistence.** Three follow-ups on the just-shipped auth API. **(1)**
   `GlobalExceptionHandler`/`AuthRateLimit` now build a real `ProblemDetails` instead of an
@@ -342,13 +336,11 @@ the request).
 
 ## Next action
 
-**Pine Signal brand redesign implementation** — Phases A and B shipped (see above).
-**Phase C (dialogs + wizard)** of
-[the plan](docs/design/plans/brand-redesign-implementation-plan.md) is next, pending
-owner screenshot review of Phase B. Phase C must also apply Phase B's `Appearance="Primary"`
-fix to the 5 screens it touches that still use it (Calibration, Recorder, Setup wizard,
-Repair dialog, Phrase edit). Phase D (motion) follows. Pass 6 (tile sizing) was absorbed
-into Phase B; Pass 2b (`ContentDialog`) is best done before/with Phase C.
+**Pine Signal brand redesign implementation** — Phases A and B shipped; **Phase C (dialogs +
+wizard) + Pass 2b (`ContentDialog`), Steps 0–5 of 9, done** (see "Latest work" above). Remaining:
+Step 6 (Recorder — host, discard confirm, timer, button order), Step 7 (Phrase Edit — tag chip
+hit targets), Step 8 (Repair dialog brand-red Remove + wizard step counter), Step 9
+(accessibility sweep — glyph button tooltips/`AutomationProperties`). Phase D (motion) follows.
 
 Then **UI/UX pass + localization** — remaining slices (scope + rationale in
 [ui-ux-localization-scope.md](docs/plans/ui-ux-localization-scope.md)):

@@ -1,5 +1,6 @@
-using System.Windows;
+using AdaVoice.App.Services;
 using AdaVoice.App.ViewModels;
+using Wpf.Ui;
 using Wpf.Ui.Controls;
 
 namespace AdaVoice.App;
@@ -12,11 +13,14 @@ namespace AdaVoice.App;
 /// happens entirely inside <see cref="PhraseVersionsViewModel.RecordVersionCommand"/>.</summary>
 public partial class PhraseVersionsDialog : Wpf.Ui.Controls.FluentWindow
 {
+    private readonly ContentDialogService _dialogService = new();
+
     /// <summary>Stop any tile still previewing when the window closes, whatever triggered the close
     /// (Close button, title-bar X, Escape/IsCancel) — otherwise headphone audio outlives the window.</summary>
     public PhraseVersionsDialog()
     {
         InitializeComponent();
+        _dialogService.SetDialogHost(RootDialogHost);
         Closed += (_, _) => ((PhraseVersionsViewModel)DataContext).StopPreview();
         // DataContext is set by the caller after the constructor runs (object-initializer syntax),
         // so subscribe once it's actually there — mirrors MainWindow.OnLoaded.
@@ -26,6 +30,14 @@ public partial class PhraseVersionsDialog : Wpf.Ui.Controls.FluentWindow
                 versions.Notified += OnNotified;
         };
     }
+
+    /// <summary>Confirm before orphaning a version's WAV (irreversible from here) — wired into the
+    /// view-model post-construction via <see cref="PhraseVersionsViewModel.SetConfirmDelete"/>, the
+    /// same reasoning as <c>ManageCategoriesDialog.ConfirmDeleteAsync</c>: this dialog's own confirm
+    /// can't exist before the window does.</summary>
+    public Task<bool> ConfirmDeleteAsync(PhraseVersionRowViewModel row) => DialogPrompts.ConfirmAsync(
+        _dialogService, "Delete version",
+        $"Delete the \"{row.Label}\" version?\n\nIts recording will be removed.", "Delete");
 
     /// <summary>A preview failure (missing file, bad device) as a toast — this window previously had
     /// no toast channel and swallowed the failure entirely (review finding 4).</summary>

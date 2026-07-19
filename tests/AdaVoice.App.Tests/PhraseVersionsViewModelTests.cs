@@ -341,4 +341,23 @@ public class PhraseVersionsViewModelTests
 
         Assert.Single(vm.Tiles); // still there — nothing to delete
     }
+
+    [Fact]
+    public void Declining_the_confirm_leaves_the_version_untouched()
+    {
+        var entry = new PhraseEntry
+        {
+            Id = "p-1",
+            Title = "T",
+            Versions = [new PhraseVersion { Id = "pv-1", Label = "A" }],
+        };
+        var host = HostWith(entry);
+        var vm = new PhraseVersionsViewModel(host, host, entry);
+        vm.SetConfirmDelete(_ => Task.FromResult(false));
+
+        vm.DeleteVersionCommand.Execute(vm.Tiles[1]); // "A"
+
+        Assert.Equal(2, vm.Tiles.Count); // primary + "A" — nothing removed
+        Assert.Single(host.Phrases[0].Versions); // not orphaned
+    }
 }

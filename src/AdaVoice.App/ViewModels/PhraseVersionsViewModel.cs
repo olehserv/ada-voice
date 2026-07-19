@@ -21,6 +21,7 @@ public partial class PhraseVersionsViewModel : ObservableObject
     private readonly IPlaybackHost _playback;
     private readonly string _phraseId;
     private readonly Func<string, Task<PhraseEntry?>> _recordVersion;
+    private Func<PhraseVersionRowViewModel, Task<bool>> _confirmDelete = _ => Task.FromResult(true);
 
     public PhraseVersionsViewModel(
         ILibraryHost library,
@@ -120,13 +121,22 @@ public partial class PhraseVersionsViewModel : ObservableObject
     /// so audio never keeps playing after the window is gone.</summary>
     public void StopPreview() => _playback.StopPreview();
 
+    /// <summary>Wires the dialog's own <c>ConfirmDeleteAsync</c> in once the window exists — the
+    /// same chicken-and-egg as <c>CategoriesViewModel</c>'s <c>confirmDelete</c>, but via a
+    /// post-construction setter instead of a constructor param, since this VM is built by
+    /// <c>BoardViewModel.ShowVersions</c> (before the dialog exists) rather than by the window
+    /// itself. Unset, <see cref="DeleteVersion"/> auto-confirms (unit tests / screenshot fixtures).</summary>
+    public void SetConfirmDelete(Func<PhraseVersionRowViewModel, Task<bool>> confirm) => _confirmDelete = confirm;
+
     /// <summary>Delete a version by orphaning its WAV (never destroyed), mirroring
     /// <c>BoardViewModel.Delete</c>'s eager phrase delete. A no-op for the primary tile — it has
-    /// nothing to delete here.</summary>
+    /// nothing to delete here. CTRL-008: confirm first, before anything else runs.</summary>
     [RelayCommand]
-    private void DeleteVersion(PhraseVersionRowViewModel? row)
+    private async Task DeleteVersion(PhraseVersionRowViewModel? row)
     {
         if (row?.Version is not { } version)
+            return;
+        if (!await _confirmDelete(row))
             return;
 
         if (_library.DeletePhraseVersion(_phraseId, version.Id) is not null)

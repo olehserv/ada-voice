@@ -118,9 +118,18 @@ public partial class MainWindow : FluentWindow
         new PhraseEditDialog { DataContext = edit, Owner = this }.ShowDialog() == true;
 
     /// <summary>Show the modal Versions window (every edit inside it persists immediately, so nothing
-    /// is returned — the caller re-reads the phrase from the library after this returns).</summary>
-    public void ShowVersionsDialog(PhraseVersionsViewModel versions) =>
-        new PhraseVersionsDialog { DataContext = versions, Owner = this }.ShowDialog();
+    /// is returned — the caller re-reads the phrase from the library after this returns). Wires the
+    /// dialog's own <see cref="PhraseVersionsDialog.ConfirmDeleteAsync"/> into the already-built
+    /// view-model once the window exists — it can't exist before (same reasoning as
+    /// <see cref="ShowManageCategories"/>), but here as a post-construction setter rather than a
+    /// constructor param, since <c>versions</c> arrives pre-built (it needs
+    /// <c>BoardViewModel.RecordVersionForPhrase</c>, not available to this window).</summary>
+    public void ShowVersionsDialog(PhraseVersionsViewModel versions)
+    {
+        var window = new PhraseVersionsDialog { DataContext = versions, Owner = this };
+        versions.SetConfirmDelete(window.ConfirmDeleteAsync);
+        window.ShowDialog();
+    }
 
     /// <summary>Show the modal repair-phrase prompt; returns true if the operator chose an action
     /// (Re-record or Remove), false if they cancelled.</summary>
