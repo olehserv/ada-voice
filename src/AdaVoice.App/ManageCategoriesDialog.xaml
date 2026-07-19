@@ -75,6 +75,7 @@
                                     Height="36"
                                     Margin="8,0,0,0"
                                     Appearance="Danger"
+                                    AutomationProperties.Name="Delete"
                                     Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                     CommandParameter="{Binding}"
                                     Content="✕"
@@ -130,8 +131,10 @@
                         Height="36"
                         Margin="8,0,0,0"
                         Appearance="Success"
+                        AutomationProperties.Name="Add category"
                         Command="{Binding AddCommand}"
-                        Content="✓" />
+                        Content="✓"
+                        ToolTip="Add category" />
                 </Grid>
             </Border>
 

@@ -102,10 +102,12 @@
                                                     <Style BasedOn="{StaticResource {x:Type ui:Button}}" TargetType="ui:Button">
                                                         <Setter Property="Content" Value="▶" />
                                                         <Setter Property="ToolTip" Value="Play" />
+                                                        <Setter Property="AutomationProperties.Name" Value="Play" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsPlaying}" Value="True">
                                                                 <Setter Property="Content" Value="■" />
                                                                 <Setter Property="ToolTip" Value="Stop" />
+                                                                <Setter Property="AutomationProperties.Name" Value="Stop" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -118,6 +120,7 @@
                                             <ui:Button
                                                 Margin="6,0,0,0"
                                                 Appearance="Danger"
+                                                AutomationProperties.Name="Delete"
                                                 Command="{Binding DataContext.DeleteVersionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                 CommandParameter="{Binding}"
                                                 Content="✕"

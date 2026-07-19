@@ -14,7 +14,7 @@ approval after each), per the workflow's critical rules.
 | 4 | Button/action consistency (D1, D2) | ✅ **Shipped** — commit `c47167c`. Review: [button-consistency-review.md](../screenshots/review/button-consistency-review.md) |
 | 3 | `MainWindow` resize verification (C1) | ✅ **Verified, no fix needed** — see Pass 3 below |
 | 6 | Phrase tile fixed size + tag overflow (F1, expanded) | ✅ **Shipped** — absorbed into commit `41e3a6f` (Phase B, 2026-07-18); one layout bug found + fixed 2026-07-19, see below |
-| 2b | `MessageBox` → `ContentDialog` (E2) | 🟡 **Partially shipped** — board `ConfirmDelete` only; 4 SettingsWindow prompts deferred to Phase C (see below) |
+| 2b | `MessageBox` → `ContentDialog` (E2) | ✅ **Shipped** — board `ConfirmDelete` 2026-07-19, remaining 4 SettingsWindow prompts + every other dialog's confirm via Phase C Steps 2–5 (see below) |
 | 5 | Form layout cleanup | ✅ No work needed (verified in audit) |
 
 **A separate, larger batch of ad-hoc owner UX feedback** (not audit findings — direct feedback
@@ -30,10 +30,10 @@ buttons, matched row heights, auto-persist pattern) are now documented in
 [wpf-ux-design-rules.md](../wpf-ux-design-rules.md) rule 5 — follow them for any further work
 on these dialogs or new ones like them.
 
-**Pass 2b landed partially, 2026-07-19: board delete-confirm only.** Exploration found the plan
-below under-specified the modal-`SettingsWindow` host problem (see the updated Pass 2b section) —
-owner chose to ship the low-risk half (`ConfirmDelete`) now and defer the other 4 prompts to
-Phase C, which reworks the settings/wizard dialogs anyway. Pass 6 was added 2026-07-12 from direct
+**Pass 2b landed in two parts, both now shipped (2026-07-19).** Exploration found the plan below
+under-specified the modal-`SettingsWindow` host problem (see the updated Pass 2b section) — owner
+shipped the low-risk half (`ConfirmDelete`) first, then the remaining 4 prompts + every other
+dialog's own confirm via Phase C Steps 2–5 the same day. Pass 6 was added 2026-07-12 from direct
 owner feedback, absorbed into the Phase B board rebuild (commit `41e3a6f`, 2026-07-18), and
 confirmed correctly shipped 2026-07-19 after fixing a real layout bug found during that
 verification (see the Pass 6 section below).
@@ -82,9 +82,13 @@ actually happened (a stray whole-file `xstyler` reformat, then a margin regressi
 automated reviewer missed but a screenshot caught). Also received the separate green-Done /
 row-height owner feedback afterward (see the Status table above).
 
-## Pass 2b — Replace `MessageBox` with `ui:ContentDialog` (audit E2) — 🟡 PARTIALLY SHIPPED
+## Pass 2b — Replace `MessageBox` with `ui:ContentDialog` (audit E2) — ✅ SHIPPED
 
-**Status: board delete-confirm shipped 2026-07-19; the other 4 prompts deferred to Phase C.**
+**Status: board delete-confirm shipped 2026-07-19; the other 4 prompts (and every other dialog's
+own confirm) shipped via Phase C Steps 2–5, also 2026-07-19** — see
+`C:\Users\olehs\.claude\plans\check-what-is-planned-temporal-kahn.md` for the full per-step
+writeup. The 2 `App.xaml.cs` system-level `MessageBox` calls stay as-is by design (rule 9
+exception — single-instance notice, global crash handler).
 Exploration ahead of implementation found the plan below (as originally written) under-specified
 a real structural problem: **4 of the 5 `MainWindow.xaml.cs` prompts are raised from
 `BackupSettingsViewModel`, which lives inside `SettingsWindow` — a *modal* `ui:FluentWindow` shown
@@ -252,9 +256,7 @@ per `handoff.md`'s open follow-ups) is added without following the rules in
 3. ✅ Pass 3 (MainWindow verification) — done, verified no fix needed.
 4. ✅ Pass 6 (phrase tile fixed size + tag overflow) — done, shipped in Phase B, layout bug
    found and fixed 2026-07-19.
-5. 🟡 Pass 2b (`ContentDialog` migration) — **board delete-confirm shipped 2026-07-19**; the
-   4 SettingsWindow prompts deferred to Phase C (needs a second dialog host — see the Pass 2b
-   section above).
+5. ✅ Pass 2b (`ContentDialog` migration) — **fully shipped 2026-07-19**: board delete-confirm
+   first, then the 4 SettingsWindow prompts + every other dialog's own confirm via Phase C
+   Steps 2–5 (see the Pass 2b section above).
 6. Pass 1 and 5 — already done; no implementation turn needed, just recorded here.
-
-**Remaining open item: the 4 deferred Pass 2b prompts, to be picked up with Phase C.**

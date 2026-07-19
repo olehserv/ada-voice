@@ -53,9 +53,9 @@ meet in exactly one decorative place: the 2 px title-bar hairline.
   our brand green (`#7BC96A`) is already light, so the generated "default fill" washes to
   near-white (`#F0F4EF`) in both themes. Same fix as above: skip `Appearance="Primary"`, set
   `Background="{DynamicResource Brand.Gradient}"` directly. Fixed on MainWindow's Start
-  toggle; still open on 5 other screens (`CalibrationStepView`, `RecorderDialog`,
-  `SetupWizardWindow`, `RepairPhraseDialog`, `PhraseEditDialog`) — fix each when Phase C
-  reworks it.
+  toggle, then on the other 5 screens (`CalibrationStepView`, `RecorderDialog`,
+  `SetupWizardWindow`, `RepairPhraseDialog`, `PhraseEditDialog`) in Phase C Step 1 —
+  no more `Appearance="Primary"` CTAs anywhere in the app.
 - **No colour literals outside `Theme/`** — including converters and code-behind
   (the 2026-07-18 audit found two frozen hex brushes in `Converters.cs`; that class of
   leak is now explicitly in scope for this rule).

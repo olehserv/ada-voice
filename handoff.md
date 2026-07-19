@@ -27,10 +27,10 @@ the request).
 
 ## Latest work (2026-07-19)
 
-- **Phase C (dialogs) + Pass 2b (`ContentDialog` migration), Steps 0–5 — done.** Full plan +
-  per-step writeups: `C:\Users\olehs\.claude\plans\check-what-is-planned-temporal-kahn.md`.
-  De-risked the shared host pattern once (Step 0: `ContentDialog` consumes Escape before it
-  reaches a window's own `Escape` keybinding — confirmed live, not just by framework semantics),
+- **Phase C (dialogs) + Pass 2b (`ContentDialog` migration) — all 9 steps done, fully shipped.**
+  Full plan + per-step writeups: `C:\Users\olehs\.claude\plans\check-what-is-planned-temporal-
+  kahn.md`. De-risked the shared host pattern once (Step 0: `ContentDialog` consumes Escape before
+  it reaches a window's own `Escape` keybinding — confirmed live, not just by framework semantics),
   then replicated it per window: `Appearance="Primary"` sweep to `BrandCtaButtonStyle` (Step 1);
   `SettingsWindow`'s remaining 4 `MessageBox` prompts (Step 2, new shared
   `Services/DialogPrompts.cs` helper); `ManageCategoriesDialog` (Step 3) and
@@ -41,10 +41,21 @@ the request).
   version delete-confirm (Step 5) — the one dialog where the VM is built by `BoardViewModel`
   (needs `RecordVersionForPhrase`) rather than the window, so the confirm is wired via a
   post-construction `SetConfirmDelete` setter instead of the constructor-injection pattern the
-  other three use. Every step verified the same way: build + full suite green, both-theme
-  screenshots, and a live FlaUI probe against the running app proving Escape closes only the
-  confirm (never the whole window) and the action button completes end-to-end. **Next: Step 6
-  (Recorder dialog — host, discard confirm, timer, button order).**
+  other three use; `RecorderDialog` (Step 6) — discard confirm, recording-elapsed timer, idle
+  guidance, button reorder (`Discard`/Danger now first, not last) — here the board VM *outlives*
+  the dialog (the reverse of Steps 3–5), so the confirm is re-wired fresh every time the dialog
+  reopens, and its `PropertyChanged` subscription is explicitly torn down on close to avoid
+  leaking; `PhraseEditDialog` tag-chip hit target (Step 7, `MinWidth`/`MinHeight="24"` on the
+  transparent ✕ — invisible padding, not a bigger glyph); `RepairPhraseDialog`'s Remove button to
+  brand red via a new `DangerButtonStyle` + the setup wizard's "Step n of 5" indicator (Step 8,
+  two unrelated changes bundled into one review stop); an accessibility sweep pairing `ToolTip`
+  with `AutomationProperties.Name` on every glyph-only button across the touched dialogs (Step 9,
+  9 gaps across 4 files, matching the pairing convention MainWindow's Setup/Settings buttons
+  already established). Every `ContentDialog` step verified the same way: build + full suite
+  green, both-theme screenshots, and (through Step 5) a live FlaUI probe against the running app
+  proving Escape closes only the confirm and the action button completes end-to-end — Steps 6–9
+  had no live-audio/no new-dialog risk to re-prove, so screenshot + unit tests carried them.
+  **Next: Phase D (motion).**
 - **Server Phase-2 review comments resolved: typed `ProblemDetails`, an `AuditEntry` DTO, and
   batched audit persistence.** Three follow-ups on the just-shipped auth API. **(1)**
   `GlobalExceptionHandler`/`AuthRateLimit` now build a real `ProblemDetails` instead of an
@@ -337,10 +348,13 @@ the request).
 ## Next action
 
 **Pine Signal brand redesign implementation** — Phases A and B shipped; **Phase C (dialogs +
-wizard) + Pass 2b (`ContentDialog`), Steps 0–5 of 9, done** (see "Latest work" above). Remaining:
-Step 6 (Recorder — host, discard confirm, timer, button order), Step 7 (Phrase Edit — tag chip
-hit targets), Step 8 (Repair dialog brand-red Remove + wizard step counter), Step 9
-(accessibility sweep — glyph button tooltips/`AutomationProperties`). Phase D (motion) follows.
+wizard) + Pass 2b (`ContentDialog`) is fully done — all 9 steps + the Manage Categories alignment
+side task**, each build/full-suite/both-theme-screenshot verified and committed (see "Latest work"
+above and the plan file for the full per-step writeup). **Phase D (motion — crossfades, dot
+breathe/blink, hover ribbon, STOP glow) is next.** Two things carried forward, not blocking Phase
+D: the ongoing light-theme legibility investigation (see "Open follow-ups" — a real, reproducible,
+not-yet-root-caused bug affecting several small dialogs to varying degrees) and the Manage
+Categories "Add category" panel dark-background bug (same section).
 
 Then **UI/UX pass + localization** — remaining slices (scope + rationale in
 [ui-ux-localization-scope.md](docs/plans/ui-ux-localization-scope.md)):

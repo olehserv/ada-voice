@@ -87,6 +87,7 @@
                                     Margin="6,0,0,0"
                                     Padding="0"
                                     VerticalAlignment="Center"
+                                    AutomationProperties.Name="Remove tag"
                                     Background="Transparent"
                                     BorderThickness="0"
                                     Command="{Binding DataContext.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"

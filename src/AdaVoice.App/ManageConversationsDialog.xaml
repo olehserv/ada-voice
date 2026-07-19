@@ -75,8 +75,10 @@
                     Height="36"
                     Margin="8,0,0,0"
                     Appearance="Success"
+                    AutomationProperties.Name="Add conversation"
                     Command="{Binding AddCommand}"
-                    Content="✓" />
+                    Content="✓"
+                    ToolTip="Add conversation" />
             </Grid>
 
             <!--  Right: the selected conversation's steps  -->
@@ -131,20 +133,25 @@
                                             Grid.Column="1"
                                             Margin="4,0,0,0"
                                             Appearance="Secondary"
+                                            AutomationProperties.Name="Move up"
                                             Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}"
-                                            Content="↑" />
+                                            Content="↑"
+                                            ToolTip="Move up" />
                                         <ui:Button
                                             Grid.Column="2"
                                             Margin="4,0,0,0"
                                             Appearance="Secondary"
+                                            AutomationProperties.Name="Move down"
                                             Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}"
-                                            Content="↓" />
+                                            Content="↓"
+                                            ToolTip="Move down" />
                                         <ui:Button
                                             Grid.Column="3"
                                             Margin="4,0,0,0"
                                             Appearance="Transparent"
+                                            AutomationProperties.Name="Remove"
                                             Command="{Binding DataContext.RemovePhraseCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}"
                                             Content="✕"

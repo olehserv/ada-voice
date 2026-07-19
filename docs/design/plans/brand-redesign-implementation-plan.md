@@ -93,6 +93,14 @@ add `EnterActions`/`ExitActions` Storyboards to the same triggers with no struct
 
 ## Phase C — dialogs + wizard (folds in the remaining audit findings)
 
+**Status: done (2026-07-19).** All 9 items below shipped, one review-gated step at a time; full
+per-step writeup (including 3 items found beyond this plan — a real, still-open light-theme
+legibility bug in several dialogs; a `ListBoxItem` selection-theming fix needing a full
+`ControlTemplate` override; a color-dropdown alignment fix) in
+`C:\Users\olehs\.claude\plans\check-what-is-planned-temporal-kahn.md` and `handoff.md`. Recorder's
+live level-meter (item 1 below) stayed deferred — no live-metering capability exists yet; only the
+timer + idle guidance shipped for that item.
+
 1. Recorder: level-meter + timer in recording state, idle-state guidance (finding 10),
    button order `Discard (Danger) … Preview … Save` + discard confirm (finding 3). Save
    (currently `Appearance="Primary"`) needs Phase B's fix too — see Phase B item 1.
