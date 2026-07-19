@@ -389,4 +389,49 @@
         </Style.Triggers>
     </Style>
 
+    <!--
+        Manage Conversations' ListBox selection (audit finding 4 — "the unthemed conversation
+        ListBox" rendered with WPF's default system highlight, breaking the Fluent look). A subtle
+        overlay fill + accent left-edge, echoing CategoryEdgeMarkerStyle's slim-edge convention
+        rather than a full-color fill.
+    -->
+    <Style x:Key="ConversationListBoxItemStyle" TargetType="ListBoxItem">
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="Margin" Value="0,0,0,2" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="3,0,0,0" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <!--
+            A full ControlTemplate override, not BasedOn WPF-UI's own ListBoxItem style — a plain
+            Style.Setter on Background/BorderBrush had zero visible effect against the stock
+            template (same class of issue as Phase A's Appearance="Danger"/"Success"/"Caution"
+            finding: the selection fill is baked into the control's own template, not read from
+            a Style-level Setter). Verified empirically via screenshot: the Setter-only version
+            rendered identically to the unthemed "before" state in dark theme.
+        -->
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border
+                        Padding="{TemplateBinding Padding}"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{StaticResource Radius.Small}">
+                        <ContentPresenter />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Surface.Overlay}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
 </ResourceDictionary>

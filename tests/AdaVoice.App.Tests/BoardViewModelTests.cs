@@ -14,7 +14,7 @@ public class BoardViewModelTests
         Func<PhraseEditViewModel, bool>? showEditDialog = null,
         Action<PhraseVersionsViewModel>? showVersionsDialog = null,
         Action<ILibraryHost>? showManageCategories = null,
-        Action<ConversationsViewModel>? showManageConversations = null,
+        Action<ILibraryHost>? showManageConversations = null,
         Action<SetupWizardViewModel>? showSetupWizard = null,
         ISettingsHost? settingsHost = null,
         Action<ISettingsHost, ISetupHost, string?, Func<string?>>? showSettings = null,
@@ -1960,13 +1960,13 @@ public class BoardViewModelTests
     public void ManageConversations_shows_the_dialog_and_refreshes_the_filter_options()
     {
         var host = new FakePlaybackHost();
-        ConversationsViewModel? shown = null;
-        var board = NewBoard(host, showManageConversations: vm => shown = vm);
+        ILibraryHost? shown = null;
+        var board = NewBoard(host, showManageConversations: library => shown = library);
 
         host.Conversations = [new Conversation { Id = "v-new", Name = "Added mid-dialog" }];
         board.ManageConversationsCommand.Execute(null);
 
-        Assert.NotNull(shown);
+        Assert.Same(host, shown);
         Assert.Contains(board.ConversationFilterOptions, c => c.Id == "v-new");
         Assert.Equal(BoardViewModel.NoneConversation.Id, board.SelectedConversationFilter.Id);
     }

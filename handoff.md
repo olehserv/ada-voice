@@ -380,6 +380,14 @@ needs the subscription/tenant state Phase 3 introduces.
   tapping the engine's capture. Watch for it on hardware.
 - **Cold-start auto-retry into Degraded:** a failed `Start` currently stays Stopped with the
   error surfaced.
+- **`ManageConversationsDialog` light-theme legibility bug (found 2026-07-19, during Phase C
+  Step 4).** Most of the dialog's text (title, row labels, checkbox label) renders as
+  near-illegible pale text against the light-theme background — everywhere except the ListBox's
+  own item text and the explicitly White-foreground buttons (Delete/Done/✓), which render fine.
+  Confirmed pre-existing (via `git stash` to the exact pre-Phase-C committed file, re-screenshotted
+  — the washout was already there) and confirmed not systemic (`main-board.png`/
+  `phrase-versions.png` light-theme both render correctly). Root cause not yet diagnosed. Owner
+  decision 2026-07-19: track here, don't fix as part of Phase C — pick up in a dedicated pass.
 - ✅ **Screenshot harness `after-light/` dark-theme bug — fixed (2026-07-12, commit `adda0a7`).**
   Root cause: closing a WPF-UI `FluentWindow` resets `ApplicationThemeManager` back to the OS
   theme as a side effect, so the fixture's one-time theme apply at startup only held for the

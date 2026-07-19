@@ -138,9 +138,15 @@ public partial class MainWindow : FluentWindow
         window.ShowDialog();
     }
 
-    /// <summary>Show the modal conversation manager (changes persist live, so nothing is returned).</summary>
-    public void ShowManageConversations(ConversationsViewModel conversations) =>
-        new ManageConversationsDialog { DataContext = conversations, Owner = this }.ShowDialog();
+    /// <summary>Show the modal conversation manager (changes persist live, so nothing is returned).
+    /// Builds the view-model here for the same reason as <see cref="ShowManageCategories"/> — its
+    /// delete-confirm delegate is the new dialog's own async method.</summary>
+    public void ShowManageConversations(ILibraryHost library)
+    {
+        var window = new ManageConversationsDialog { Owner = this };
+        window.DataContext = new ConversationsViewModel(library, window.ConfirmDeleteAsync);
+        window.ShowDialog();
+    }
 
     /// <summary>Open the Categories filter menu: "Manage categories…", then one checkable row per
     /// category. Built fresh on every click (cheap for a handful of rows) so it never shows stale

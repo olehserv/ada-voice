@@ -33,7 +33,7 @@ public partial class BoardViewModel : ObservableObject
     private readonly Action<PhraseVersionsViewModel> _showVersionsDialog;
     private readonly Func<RepairPhraseViewModel, bool> _showRepairDialog;
     private readonly Action<ILibraryHost> _showManageCategories;
-    private readonly Action<ConversationsViewModel> _showManageConversations;
+    private readonly Action<ILibraryHost> _showManageConversations;
     private readonly Action _showRecorder;
     private readonly Action<Action> _onUiThread;
     private readonly Random _rng;
@@ -112,7 +112,7 @@ public partial class BoardViewModel : ObservableObject
         Action<PhraseVersionsViewModel>? showVersionsDialog = null,
         Func<RepairPhraseViewModel, bool>? showRepairDialog = null,
         Action<ILibraryHost>? showManageCategories = null,
-        Action<ConversationsViewModel>? showManageConversations = null,
+        Action<ILibraryHost>? showManageConversations = null,
         Action<SetupWizardViewModel>? showSetupWizard = null,
         Action<ISettingsHost, ISetupHost, string?, Func<string?>>? showSettings = null,
         Func<string?>? pickExportPath = null,
@@ -402,7 +402,7 @@ public partial class BoardViewModel : ObservableObject
     [RelayCommand]
     private void ManageConversations()
     {
-        _showManageConversations(new ConversationsViewModel(_library));
+        _showManageConversations(_library);
 
         ConversationFilterOptions = [NoneConversation, .. _library.Conversations];
         OnPropertyChanged(nameof(ConversationFilterOptions));

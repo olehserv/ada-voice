@@ -15,6 +15,7 @@ namespace AdaVoice.App.ViewModels;
 public partial class ConversationsViewModel : ObservableObject
 {
     private readonly ILibraryHost _library;
+    private readonly Func<ConversationRowViewModel, Task<bool>> _confirmDelete;
 
     [ObservableProperty]
     private string _newName = "";
@@ -23,9 +24,10 @@ public partial class ConversationsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasSelection))]
     private ConversationRowViewModel? _selectedRow;
 
-    public ConversationsViewModel(ILibraryHost library)
+    public ConversationsViewModel(ILibraryHost library, Func<ConversationRowViewModel, Task<bool>>? confirmDelete = null)
     {
         _library = library;
+        _confirmDelete = confirmDelete ?? (_ => Task.FromResult(true)); // default: confirm (unit tests)
         Rows = new ObservableCollection<ConversationRowViewModel>(
             library.Conversations.Select(c => new ConversationRowViewModel(c, library)));
         _selectedRow = Rows.FirstOrDefault();
@@ -36,6 +38,10 @@ public partial class ConversationsViewModel : ObservableObject
 
     /// <summary>True once a conversation is selected — the step editor panel shows only then.</summary>
     public bool HasSelection => SelectedRow is not null;
+
+    /// <summary>True when there are no conversations yet — the list panel shows a hint instead of
+    /// an empty box (finding 10).</summary>
+    public bool HasNoConversations => Rows.Count == 0;
 
     [RelayCommand]
     private void Add()
@@ -48,6 +54,7 @@ public partial class ConversationsViewModel : ObservableObject
         Rows.Add(row);
         SelectedRow = row;
         NewName = "";
+        OnPropertyChanged(nameof(HasNoConversations));
     }
 
     /// <summary>Persist a row's edited name. A blank name is refused (like the library layer itself
@@ -69,9 +76,12 @@ public partial class ConversationsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Delete(ConversationRowViewModel? row)
+    private async Task Delete(ConversationRowViewModel? row)
     {
         if (row is null)
+            return;
+
+        if (!await _confirmDelete(row))
             return;
 
         if (_library.DeleteConversation(row.Id))
@@ -79,6 +89,7 @@ public partial class ConversationsViewModel : ObservableObject
             Rows.Remove(row);
             if (SelectedRow == row)
                 SelectedRow = Rows.FirstOrDefault();
+            OnPropertyChanged(nameof(HasNoConversations));
         }
     }
 }
