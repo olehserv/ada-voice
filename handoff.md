@@ -401,6 +401,18 @@ needs the subscription/tenant state Phase 3 introduces.
   fix: every previously-`#323232` location now reads `#221E17`, across `ManageConversationsDialog`,
   `ManageCategoriesDialog`, and `SettingsWindow`, both themes, with no regression on dark theme or
   on placeholder/disabled-state text (`phrase-edit.png` spot-checked).
+- **`ManageCategoriesDialog` light-theme "Add category" panel renders dark — not yet diagnosed.**
+  Found while shortening/aligning the colour dropdowns (2026-07-19, before Phase C Step 5): in the
+  light-theme screenshot, the "Add a new category" `Border` (`Style="{StaticResource PanelStyle}"`)
+  and its `TextBox`/`ComboBox` render with a near-black background, while the surrounding window
+  and list rows are correctly light. Confirmed pre-existing and unrelated to the dropdown-width
+  change — isolated via `git stash` on just `ManageCategoriesDialog.xaml`, re-rendered the
+  untouched committed file, and the same dark panel appeared. Row name/title text also still
+  renders faint against the light background (a different, lighter shade than the already-fixed
+  `#323232` bug above — not yet pixel-sampled). Root cause not yet diagnosed (likely `PanelStyle`
+  or a resource it references resolving to a dark-theme brush regardless of the active theme, but
+  unconfirmed). Not fixed here — out of scope for the alignment change; needs its own
+  investigation, same pixel-sampling discipline as the fix above.
 - ✅ **Screenshot harness `after-light/` dark-theme bug — fixed (2026-07-12, commit `adda0a7`).**
   Root cause: closing a WPF-UI `FluentWindow` resets `ApplicationThemeManager` back to the OS
   theme as a side effect, so the fixture's one-time theme apply at startup only held for the

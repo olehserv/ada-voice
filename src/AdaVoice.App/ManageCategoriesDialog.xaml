@@ -62,7 +62,7 @@
                                     Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
                                 <ComboBox
                                     Grid.Column="1"
-                                    Width="130"
+                                    Width="76"
                                     Height="36"
                                     Margin="8,0,0,0"
                                     VerticalAlignment="Center"
@@ -82,12 +82,15 @@
                                     <ui:Button.Style>
                                         <!--
                                             BasedOn keeps the Fluent chrome — a bare Style would strip it,
-                                            leaving a raw grey button (only this one lacked it).
+                                            leaving a raw grey button (only this one lacked it). Hidden (not
+                                            Collapsed) on the default row so this column keeps its width —
+                                            otherwise the Auto column shrinks to 0 and every other row's
+                                            colour dropdown shifts right to compensate.
                                         -->
                                         <Style BasedOn="{StaticResource {x:Type ui:Button}}" TargetType="ui:Button">
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsDefault}" Value="True">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Setter Property="Visibility" Value="Hidden" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -115,7 +118,7 @@
                         Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}" />
                     <ComboBox
                         Grid.Column="1"
-                        Width="130"
+                        Width="76"
                         Height="36"
                         Margin="8,0,0,0"
                         VerticalAlignment="Center"
