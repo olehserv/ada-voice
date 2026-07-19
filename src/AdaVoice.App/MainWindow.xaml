@@ -34,8 +34,9 @@
             State-lit backdrop (09's signature): behind the title bar AND the content, so it reads
             as the window itself, not a panel. Four gradient layers + three blooms, each Opacity="0"
             by default with one DataTrigger per layer (Controls.xaml) — exactly one is visible at
-            rest per Status.State. MainWindow.Background above stays the STOPPED-equivalent solid
-            fallback for any instant before the first layout pass.
+            rest per Status.State, crossfading via EnterActions/ExitActions (Phase D "motion",
+            BackdropFadeIn/Out, 500 ms). MainWindow.Background above stays the STOPPED-equivalent
+            solid fallback for any instant before the first layout pass.
         -->
         <Grid Grid.RowSpan="2" IsHitTestVisible="False">
             <Border Style="{StaticResource StateLayerLiveStyle}" />

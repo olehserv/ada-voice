@@ -44,9 +44,19 @@ public sealed class ScreenshotHarness(WpfAppFixture app)
         if (!rendered.Wait(TimeSpan.FromSeconds(15)))
             throw new TimeoutException($"'{name}' never raised ContentRendered.");
 
-        // Let the layout settle and the Fluent compositor paint before grabbing pixels.
+        // Let the layout settle and the Fluent compositor paint before grabbing pixels. 700 ms, not
+        // 400 — Phase D's backdrop crossfade (Motion.State, 500 ms) fires its EnterActions as soon as
+        // the state DataTrigger evaluates true (which happens before ContentRendered, on the initial
+        // style application), so a shorter wait could capture mid-fade instead of settled.
+        // Looping Storyboards (breathe/blink, Phase D steps 2/4) can't be made deterministic this way —
+        // a resource-swap "run once for tests" override was tried and doesn't work (WPF can't freeze a
+        // DynamicResource-valued timeline property inside a sealed Style.Trigger; see Controls.xaml's
+        // backdrop-crossfade comment for the full story). Those loops are verified differently: a
+        // stop/revert-after-exit check (does Opacity return to its rest value once the trigger exits,
+        // not stay stuck mid-loop — see BackdropCrossfadeTests for the one-shot version of this idea),
+        // not a screenshot.
         app.Dispatcher.Invoke(() => { }, DispatcherPriority.ContextIdle);
-        Thread.Sleep(400);
+        Thread.Sleep(700);
 
         var dir = TestPaths.ScreenshotDirectory(group);
         var path = Path.Combine(dir, name + ".png");

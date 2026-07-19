@@ -345,18 +345,57 @@
     <!--
         State-lit window backdrop (the redesign's signature, 09 "Gradients"). Four gradient layers +
         three bloom layers sit behind the title bar and content (MainWindow's backdrop Grid), each
-        defaulting to Opacity="0" with one DataTrigger flipping it to "1" for its own Status.State —
-        deliberately four/three separate styles, not one BasedOn chain, so each layer only reacts to
-        its own state (a shared base Style's trigger would leak into every derived layer). Phase B
-        switches instantly (screenshot-correct at rest); Phase D adds EnterActions/ExitActions
-        Storyboards to these same triggers for the 500 ms crossfade — no structural change then.
+        defaulting to Opacity="0" — deliberately four/three separate styles, not one BasedOn chain, so
+        each layer only reacts to its own state (a shared base Style's trigger would leak into every
+        derived layer). Phase D "motion": the trigger's own Opacity Setter is gone — EnterActions/
+        ExitActions crossfade it instead (Motion.State, 500 ms, ease-in-out), each inline per style
+        rather than a single shared keyed Storyboard resource. Two things forced that, both confirmed
+        empirically, not by build (which stays green either way):
+        1. Keeping the Setter alongside the animation applies the end value instantly on trigger
+        entry, pre-empting the animation's "from" state and collapsing the crossfade into a jump
+        — so the Setter had to go, not just gain a Storyboard alongside it.
+        2. A Storyboard IS shareable-looking (BeginStoryboard.Storyboard="{StaticResource ...}") but
+        is NOT safely shareable across more than one Style's trigger in practice: the first
+        Style.Seal() to reference it freezes the Storyboard, and a second, different Style
+        referencing that same instance then throws "Cannot freeze this Storyboard timeline tree
+        for use across threads" at runtime — a real crash a clean build and even a green screenshot
+        smoke test do not catch, only building the actual window did. x:Shared="False" on the
+        resource did not fix it either (verified). Each layer therefore gets its own inline
+        Storyboard; only leaf VALUES (Motion.State's Duration, Easing.State's curve) are shared
+        via Dynamic/StaticResource — those are fine to share, since it's the Style-owned Storyboard
+        object itself that Seal() cannot share, not its property values.
+        Motion.State stays DynamicResource so the App test project's ScreenshotHarness can override it
+        for a deterministic capture.
     -->
     <Style x:Key="StateLayerLiveStyle" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource Surface.Window.Live}" />
         <Setter Property="Opacity" Value="0" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding Status.State}" Value="Live">
-                <Setter Property="Opacity" Value="1" />
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                EasingFunction="{StaticResource Easing.State}"
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="1"
+                                Duration="{StaticResource Motion.State}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                EasingFunction="{StaticResource Easing.State}"
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="0"
+                                Duration="{StaticResource Motion.State}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
             </DataTrigger>
         </Style.Triggers>
     </Style>
@@ -365,7 +404,30 @@
         <Setter Property="Opacity" Value="0" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding Status.State}" Value="OffAir">
-                <Setter Property="Opacity" Value="1" />
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                EasingFunction="{StaticResource Easing.State}"
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="1"
+                                Duration="{StaticResource Motion.State}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                EasingFunction="{StaticResource Easing.State}"
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="0"
+                                Duration="{StaticResource Motion.State}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
             </DataTrigger>
         </Style.Triggers>
     </Style>
@@ -374,7 +436,30 @@
         <Setter Property="Opacity" Value="0" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding Status.State}" Value="Degraded">
-                <Setter Property="Opacity" Value="1" />
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                EasingFunction="{StaticResource Easing.State}"
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="1"
+                                Duration="{StaticResource Motion.State}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                EasingFunction="{StaticResource Easing.State}"
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="0"
+                                Duration="{StaticResource Motion.State}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
             </DataTrigger>
         </Style.Triggers>
     </Style>
@@ -383,14 +468,38 @@
         <Setter Property="Opacity" Value="0" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding Status.State}" Value="Stopped">
-                <Setter Property="Opacity" Value="1" />
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                EasingFunction="{StaticResource Easing.State}"
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="1"
+                                Duration="{StaticResource Motion.State}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                EasingFunction="{StaticResource Easing.State}"
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="0"
+                                Duration="{StaticResource Motion.State}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
             </DataTrigger>
         </Style.Triggers>
     </Style>
 
     <!--
         Radial bloom, top-left (mockup: 340x340, offset -90,-110 — kept as literal Setters here, the
-        one place these sizes live). STOPPED has no bloom layer at all (09's gradient table).
+        one place these sizes live). STOPPED has no bloom layer at all (09's gradient table). Same
+        inline-per-style crossfade as the state layers above (see that comment for why it's inline).
     -->
     <Style x:Key="BloomLiveStyle" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource Bloom.Live}" />
@@ -402,7 +511,30 @@
         <Setter Property="VerticalAlignment" Value="Top" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding Status.State}" Value="Live">
-                <Setter Property="Opacity" Value="1" />
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                EasingFunction="{StaticResource Easing.State}"
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="1"
+                                Duration="{StaticResource Motion.State}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                EasingFunction="{StaticResource Easing.State}"
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="0"
+                                Duration="{StaticResource Motion.State}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
             </DataTrigger>
         </Style.Triggers>
     </Style>
@@ -416,7 +548,30 @@
         <Setter Property="VerticalAlignment" Value="Top" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding Status.State}" Value="OffAir">
-                <Setter Property="Opacity" Value="1" />
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                EasingFunction="{StaticResource Easing.State}"
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="1"
+                                Duration="{StaticResource Motion.State}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                EasingFunction="{StaticResource Easing.State}"
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="0"
+                                Duration="{StaticResource Motion.State}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
             </DataTrigger>
         </Style.Triggers>
     </Style>
@@ -430,7 +585,30 @@
         <Setter Property="VerticalAlignment" Value="Top" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding Status.State}" Value="Degraded">
-                <Setter Property="Opacity" Value="1" />
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                EasingFunction="{StaticResource Easing.State}"
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="1"
+                                Duration="{StaticResource Motion.State}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation
+                                EasingFunction="{StaticResource Easing.State}"
+                                FillBehavior="HoldEnd"
+                                Storyboard.TargetProperty="Opacity"
+                                To="0"
+                                Duration="{StaticResource Motion.State}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
             </DataTrigger>
         </Style.Triggers>
     </Style>
