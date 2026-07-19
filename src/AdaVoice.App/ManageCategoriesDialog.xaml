@@ -1,22 +1,32 @@
-<ui:FluentWindow x:Class="AdaVoice.App.ManageCategoriesDialog"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        Title="Manage categories"
-        Width="440" SizeToContent="Height" MaxHeight="600"
-        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
-        ExtendsContentIntoTitleBar="True"
-        WindowBackdropType="None"
-        WindowCornerPreference="Round"
-        Background="{DynamicResource Surface.Window}"
-        TextElement.Foreground="{DynamicResource Text.Primary}"
-        FontFamily="Segoe UI Variable, Segoe UI" FontSize="{StaticResource FontSize.Body}">
+﻿<ui:FluentWindow
+    x:Class="AdaVoice.App.ManageCategoriesDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="Manage categories"
+    Width="440"
+    MaxHeight="600"
+    Background="{DynamicResource Surface.Window}"
+    ExtendsContentIntoTitleBar="True"
+    FontFamily="Segoe UI Variable, Segoe UI"
+    FontSize="{StaticResource FontSize.Body}"
+    ResizeMode="NoResize"
+    ShowInTaskbar="False"
+    SizeToContent="Height"
+    TextElement.Foreground="{DynamicResource Text.Primary}"
+    WindowBackdropType="None"
+    WindowCornerPreference="Round"
+    WindowStartupLocation="CenterOwner">
     <Window.Resources>
-        <!-- One dropdown row: a colour square only (swatch-only, no hex text). The item's DataContext is the hex string. -->
+        <!--  One dropdown row: a colour square only (swatch-only, no hex text). The item's DataContext is the hex string.  -->
         <DataTemplate x:Key="ColorItemTemplate">
             <StackPanel Orientation="Horizontal">
-                <Border Width="20" Height="20" CornerRadius="{StaticResource Radius.Small}" VerticalAlignment="Center"
-                        Background="{Binding Converter={StaticResource HexToBrush}}" />
+                <Border
+                    Width="20"
+                    Height="20"
+                    VerticalAlignment="Center"
+                    Background="{Binding Converter={StaticResource HexToBrush}}"
+                    CornerRadius="{StaticResource Radius.Small}" />
             </StackPanel>
         </DataTemplate>
     </Window.Resources>
@@ -25,70 +35,116 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <ui:TitleBar Grid.Row="0" Title="Manage categories" ShowMinimize="False" ShowMaximize="False" CanMaximize="False" />
+        <ui:TitleBar
+            Title="Manage categories"
+            Grid.Row="0"
+            CanMaximize="False"
+            ShowMaximize="False"
+            ShowMinimize="False" />
 
         <StackPanel Grid.Row="1" Margin="{StaticResource Space.DialogContent}">
-        <!-- Existing categories: edit name/colour inline; the default is protected (no Delete) -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="360">
-            <ItemsControl ItemsSource="{Binding Rows}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Grid Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" Height="36" VerticalAlignment="Center"
-                                     Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                                     LostFocus="RowField_Committed" />
-                            <ComboBox Grid.Column="1" Width="130" Height="36" Margin="8,0,0,0" VerticalAlignment="Center"
-                                      ItemsSource="{Binding ColorOptions}"
-                                      SelectedItem="{Binding Color, Mode=TwoWay}"
-                                      ItemTemplate="{StaticResource ColorItemTemplate}"
-                                      SelectionChanged="RowField_Committed" />
-                            <ui:Button Grid.Column="2" Content="✕" ToolTip="Delete" Height="36" Appearance="Danger" Margin="8,0,0,0"
-                                       Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                       CommandParameter="{Binding}">
-                                <ui:Button.Style>
-                                    <!-- BasedOn keeps the Fluent chrome — a bare Style would strip it,
-                                         leaving a raw grey button (only this one lacked it). -->
-                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsDefault}" Value="True">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ui:Button.Style>
-                            </ui:Button>
-                        </Grid>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+            <!--  Existing categories: edit name/colour inline; the default is protected (no Delete)  -->
+            <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox
+                                    Grid.Column="0"
+                                    Height="36"
+                                    VerticalAlignment="Center"
+                                    LostFocus="RowField_Committed"
+                                    Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                                <ComboBox
+                                    Grid.Column="1"
+                                    Width="130"
+                                    Height="36"
+                                    Margin="8,0,0,0"
+                                    VerticalAlignment="Center"
+                                    ItemTemplate="{StaticResource ColorItemTemplate}"
+                                    ItemsSource="{Binding ColorOptions}"
+                                    SelectedItem="{Binding Color, Mode=TwoWay}"
+                                    SelectionChanged="RowField_Committed" />
+                                <ui:Button
+                                    Grid.Column="2"
+                                    Height="36"
+                                    Margin="8,0,0,0"
+                                    Appearance="Danger"
+                                    Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}"
+                                    Content="✕"
+                                    ToolTip="Delete">
+                                    <ui:Button.Style>
+                                        <!--
+                                            BasedOn keeps the Fluent chrome — a bare Style would strip it,
+                                            leaving a raw grey button (only this one lacked it).
+                                        -->
+                                        <Style BasedOn="{StaticResource {x:Type ui:Button}}" TargetType="ui:Button">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsDefault}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:Button.Style>
+                                </ui:Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
 
-        <!-- Add a new category -->
-        <Border Style="{StaticResource PanelStyle}" Margin="0,8,0,0">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <ui:TextBox Grid.Column="0" Height="36" PlaceholderText="New category name" VerticalAlignment="Center"
-                            Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}" />
-                <ComboBox Grid.Column="1" Width="130" Height="36" Margin="8,0,0,0" VerticalAlignment="Center"
-                          ItemsSource="{Binding Palette}"
-                          SelectedItem="{Binding NewColor, Mode=TwoWay}"
-                          ItemTemplate="{StaticResource ColorItemTemplate}" />
-                <ui:Button Grid.Column="2" Content="✓" Height="36" Appearance="Success" Margin="8,0,0,0"
-                           Command="{Binding AddCommand}" />
-            </Grid>
-        </Border>
+            <!--  Add a new category  -->
+            <Border Margin="0,8,0,0" Style="{StaticResource PanelStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBox
+                        Grid.Column="0"
+                        Height="36"
+                        VerticalAlignment="Center"
+                        PlaceholderText="New category name"
+                        Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}" />
+                    <ComboBox
+                        Grid.Column="1"
+                        Width="130"
+                        Height="36"
+                        Margin="8,0,0,0"
+                        VerticalAlignment="Center"
+                        ItemTemplate="{StaticResource ColorItemTemplate}"
+                        ItemsSource="{Binding Palette}"
+                        SelectedItem="{Binding NewColor, Mode=TwoWay}" />
+                    <ui:Button
+                        Grid.Column="2"
+                        Height="36"
+                        Margin="8,0,0,0"
+                        Appearance="Success"
+                        Command="{Binding AddCommand}"
+                        Content="✓" />
+                </Grid>
+            </Border>
 
-        <ui:Button Content="Done" Appearance="Success" IsCancel="True"
-                   HorizontalAlignment="Right" Margin="{StaticResource Space.ButtonRow}" />
+            <ui:Button
+                Margin="{StaticResource Space.ButtonRow}"
+                HorizontalAlignment="Right"
+                Appearance="Success"
+                Content="Done"
+                IsCancel="True" />
         </StackPanel>
+
+        <!--
+            Same pattern as MainWindow's RootDialogHost: last child = top z-order, spans both
+            rows so it dims the title bar too. This window needs its own host — a dialog hosted
+            in MainWindow would render behind this modal window.
+        -->
+        <ui:ContentDialogHost x:Name="RootDialogHost" Grid.RowSpan="2" />
     </Grid>
 </ui:FluentWindow>

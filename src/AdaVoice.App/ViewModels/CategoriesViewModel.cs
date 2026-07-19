@@ -14,6 +14,7 @@ namespace AdaVoice.App.ViewModels;
 public partial class CategoriesViewModel : ObservableObject
 {
     private readonly ILibraryHost _library;
+    private readonly Func<CategoryRowViewModel, Task<bool>> _confirmDelete;
 
     [ObservableProperty]
     private string _newName = "";
@@ -21,9 +22,10 @@ public partial class CategoriesViewModel : ObservableObject
     [ObservableProperty]
     private string _newColor = ColorPalette.Swatches[0];
 
-    public CategoriesViewModel(ILibraryHost library)
+    public CategoriesViewModel(ILibraryHost library, Func<CategoryRowViewModel, Task<bool>>? confirmDelete = null)
     {
         _library = library;
+        _confirmDelete = confirmDelete ?? (_ => Task.FromResult(true)); // default: confirm (unit tests)
         Rows = new ObservableCollection<CategoryRowViewModel>(library.Categories.Select(c => new CategoryRowViewModel(c)));
     }
 
@@ -65,9 +67,12 @@ public partial class CategoriesViewModel : ObservableObject
 
     /// <summary>Delete a category (its phrases fall back to Uncategorized). The default is protected.</summary>
     [RelayCommand]
-    private void Delete(CategoryRowViewModel? row)
+    private async Task Delete(CategoryRowViewModel? row)
     {
         if (row is null || row.IsDefault)
+            return;
+
+        if (!await _confirmDelete(row))
             return;
 
         if (_library.DeleteCategory(row.Id))

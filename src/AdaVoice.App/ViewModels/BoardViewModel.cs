@@ -32,7 +32,7 @@ public partial class BoardViewModel : ObservableObject
     private readonly Func<PhraseEditViewModel, bool> _showEditDialog;
     private readonly Action<PhraseVersionsViewModel> _showVersionsDialog;
     private readonly Func<RepairPhraseViewModel, bool> _showRepairDialog;
-    private readonly Action<CategoriesViewModel> _showManageCategories;
+    private readonly Action<ILibraryHost> _showManageCategories;
     private readonly Action<ConversationsViewModel> _showManageConversations;
     private readonly Action _showRecorder;
     private readonly Action<Action> _onUiThread;
@@ -111,7 +111,7 @@ public partial class BoardViewModel : ObservableObject
         Func<PhraseEditViewModel, bool>? showEditDialog = null,
         Action<PhraseVersionsViewModel>? showVersionsDialog = null,
         Func<RepairPhraseViewModel, bool>? showRepairDialog = null,
-        Action<CategoriesViewModel>? showManageCategories = null,
+        Action<ILibraryHost>? showManageCategories = null,
         Action<ConversationsViewModel>? showManageConversations = null,
         Action<SetupWizardViewModel>? showSetupWizard = null,
         Action<ISettingsHost, ISetupHost, string?, Func<string?>>? showSettings = null,
@@ -369,7 +369,7 @@ public partial class BoardViewModel : ObservableObject
     [RelayCommand]
     private void ManageCategories()
     {
-        _showManageCategories(new CategoriesViewModel(_library));
+        _showManageCategories(_library);
 
         foreach (var item in CategoryFilterItems)
             item.PropertyChanged -= OnCategoryFilterItemChanged;

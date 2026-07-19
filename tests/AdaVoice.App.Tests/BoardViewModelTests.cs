@@ -13,7 +13,7 @@ public class BoardViewModelTests
         Func<PhraseItemViewModel, Task<bool>>? confirmDelete = null,
         Func<PhraseEditViewModel, bool>? showEditDialog = null,
         Action<PhraseVersionsViewModel>? showVersionsDialog = null,
-        Action<CategoriesViewModel>? showManageCategories = null,
+        Action<ILibraryHost>? showManageCategories = null,
         Action<ConversationsViewModel>? showManageConversations = null,
         Action<SetupWizardViewModel>? showSetupWizard = null,
         ISettingsHost? settingsHost = null,
@@ -1183,8 +1183,9 @@ public class BoardViewModelTests
             Phrases = [new PhraseEntry { Id = "p-1", Title = "Hi", CategoryId = "c-1" }],
         };
         // The "manager" recolours Greetings and saves, like the user would.
-        var board = NewBoard(host, showManageCategories: vm =>
+        var board = NewBoard(host, showManageCategories: library =>
         {
+            var vm = new CategoriesViewModel(library);
             var row = vm.Rows.First(r => r.Id == "c-1");
             row.Color = "#FF6B6B"; // the dropdown sets the row's colour
             vm.SaveCommand.Execute(row);
@@ -1656,7 +1657,12 @@ public class BoardViewModelTests
             Categories = [new Category { Id = Category.DefaultId, Name = "Uncategorized" }],
         };
         // The "dialog" adds a category, like the user would.
-        var board = NewBoard(host, showManageCategories: vm => { vm.NewName = "Greetings"; vm.AddCommand.Execute(null); });
+        var board = NewBoard(host, showManageCategories: library =>
+        {
+            var vm = new CategoriesViewModel(library);
+            vm.NewName = "Greetings";
+            vm.AddCommand.Execute(null);
+        });
 
         board.ManageCategoriesCommand.Execute(null);
 

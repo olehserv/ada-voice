@@ -127,9 +127,16 @@ public partial class MainWindow : FluentWindow
     public bool ShowRepairDialog(RepairPhraseViewModel repair) =>
         new RepairPhraseDialog { DataContext = repair, Owner = this }.ShowDialog() == true;
 
-    /// <summary>Show the modal category manager (changes persist live, so nothing is returned).</summary>
-    public void ShowManageCategories(CategoriesViewModel categories) =>
-        new ManageCategoriesDialog { DataContext = categories, Owner = this }.ShowDialog();
+    /// <summary>Show the modal category manager (changes persist live, so nothing is returned). Builds
+    /// the view-model here (not in <c>BoardViewModel.ManageCategories</c>) because its delete-confirm
+    /// delegate is the new dialog's own <see cref="ManageCategoriesDialog.ConfirmDeleteAsync"/> — it
+    /// can't exist before the window does (same reasoning as <see cref="ShowSettings"/>).</summary>
+    public void ShowManageCategories(ILibraryHost library)
+    {
+        var window = new ManageCategoriesDialog { Owner = this };
+        window.DataContext = new CategoriesViewModel(library, window.ConfirmDeleteAsync);
+        window.ShowDialog();
+    }
 
     /// <summary>Show the modal conversation manager (changes persist live, so nothing is returned).</summary>
     public void ShowManageConversations(ConversationsViewModel conversations) =>
