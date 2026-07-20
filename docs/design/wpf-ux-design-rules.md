@@ -126,10 +126,10 @@ drive the *mechanical* rules below, not just visuals:
 - Status panel (Row 0, engine controls + Setup/Settings) and the STOP button (last row) are
   fixed `Auto` rows — they never scroll or shrink. Only the phrase grid (middle `*` row)
   scrolls/wraps.
-- The Full/Docked responsive layout (category rail at ≥720 px) is a **known, separately-owned
-  open decision** — see
-  [ui-ux-localization-scope.md](../plans/ui-ux-localization-scope.md). Don't build it as a
-  side effect of a UX polish pass; it needs its own design decision first.
+- The Full/Docked responsive layout is **resolved (2026-07-20)** — no category rail; one
+  continuous layout at every width, `WrapPanel` reflows column count with available space. See
+  [ui-ux-localization-scope.md](../plans/ui-ux-localization-scope.md) and 05 §"Window sizing"
+  for the reasoning. "Full"/"Docked" are width labels, not two components to keep in sync.
 - **Phrase tile sizing is shipped and fixed at `148×128`** — `PhraseButtonStyle` sets
   `Width`/`Height` on the `ui:Button`; a title clamp (`TitleClampConverter`, real
   `FormattedText` measurement — `TextTrimming` does not ellipsize a wrapped line in WPF) caps

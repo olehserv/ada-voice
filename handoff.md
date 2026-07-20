@@ -9,7 +9,7 @@ back up. It answers one question: *where are we right now?*
 - Details of past work live in git history and in the dated docs under `docs/reviews/`.
   This file stays short on purpose.
 
-_Last updated: 2026-07-20._
+_Last updated: 2026-07-20 (Slice 3)._
 
 ## Status in one line
 
@@ -29,6 +29,31 @@ detection, account lockout, per-IP rate limiting, RFC 7807 errors (typed `Proble
 
 ## Latest work (2026-07-20)
 
+- **Slice 3 (Full/Docked responsive layout) resolved: no category rail, dropdown-only stays.**
+  The design-05 mockup's left category rail (planned ≥720 px) never shipped — it was designed
+  2026-06-10, before two things superseded it: the filter-menu redesign (2026-07-07, checkable
+  Categories/Conversations menu buttons at every width) and, decisively, **Conversations**
+  (2026-07-06), which is now the operator's primary mid-call tool (pick a conversation, follow
+  the step highlight), making category browsing secondary. A rail would have served the
+  secondary workflow in the *less* common ≥720 px width — Docked (420–719 px, a narrow strip
+  beside full-screen Chrome) is the primary real-world shape. Updated every doc that named the
+  open decision: [05 §"Window sizing"](docs/design/05-ui-design.md), 09's canonical summary, 01's
+  decision #22, [ui-ux-localization-scope.md](docs/plans/ui-ux-localization-scope.md)'s Slice 3
+  entry (now ✅), and [wpf-ux-design-rules.md](docs/design/wpf-ux-design-rules.md) rule 6. The
+  real gap this closed wasn't a missing feature — the `WrapPanel` board already reflows
+  continuously from 420 px up — it was verification: Pass 3 (2026-07-19) proved the layout holds
+  at 1366×780 but never at the enforced **420 px minimum**, the tightest point of the primary
+  Docked shape. Added `MainWindow_board_docked` (screenshot, 420×560, 10-phrase stress board) and
+  `DockedLayoutTests` (a new live `ActualWidth` regression: the filter row's search box +
+  Category/Conversation/Record buttons must fit within the row's own width at 420 px) — both
+  pass in both themes. One environment note for the next person: this sandbox's screenshot
+  harness occasionally produced a dark capture (and a top-edge composite artifact) for
+  explicitly-`Width`/`Height`-sized `MainWindow` instances when re-run in rapid isolated
+  succession under `ADAVOICE_SCREENSHOT_THEME=Light` — reproduced on the pre-existing
+  `MainWindow_board_wide` too, so it's a capture-timing quirk of this environment, not a product
+  bug; it did not reproduce when the full screenshot suite ran as one coherent batch. 285 App
+  tests (253 passed + 32 skipped, was 253+30 — the +2 are the new gated tests); Core/Audio/
+  Wasapi/Host unaffected (107/98/8/12).
 - **Manual theme setting shipped** — Settings window gained an "Appearance" panel with a
   Follow system/Light/Dark picker (`AppearanceSettingsViewModel`, a new `Theme` field on
   `Settings`/`ISettingsHost` mirroring `Language`). Default `"system"` reproduces the existing
@@ -412,10 +437,10 @@ Categories "Add category" panel dark-background bug (same section).
 
 1. ✅ Settings window — done, smoke-tested.
 2. ✅ Interaction-state gaps — done, smoke-tested.
-3. **Full/Docked responsive layout** — not started; needs a design decision first (bring back
-   the category rail at ≥720 px, or keep dropdown-only and update design 05).
-4. **Localization retrofit (UA/PL/EN)** — last, after slice 3's strings exist. All UI strings
-   so far are English-only; a `.resx` retrofit is known debt.
+3. ✅ **Full/Docked responsive layout** — resolved 2026-07-20: dropdown-only, no rail (see
+   "Latest work" above).
+4. **Localization retrofit (UA/PL/EN)** — next up now that slice 3 is closed. All UI strings so
+   far are English-only; a `.resx` retrofit is known debt.
 
 Separately, **monetization**: Phases 0, 1, and 2 are done. Phase 3 (tenant/user/subscription core)
 is next. OQ-12/OC-06 (device vs per-seat limits) must be answered before Phase 4 (device activation).

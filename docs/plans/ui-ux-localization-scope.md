@@ -52,9 +52,14 @@ Four independently shippable slices, in this order:
    2026-07-06 (repair dialog, category-empty CTA, search Clear + query echo, Recorder
    Processing state, wizard per-check spinner). Deferred with the Devices group: the recorder
    live level meter (same missing live-metering capability).
-3. **Full/Docked responsive layout** — needs a design decision first: does the category rail
-   come back at ≥720px, or do we keep the dropdown-only layout and update design 05 to match
-   reality? Implementation follows once that's decided.
+3. ✅ **Full/Docked responsive layout** — resolved 2026-07-20: keep the dropdown-only layout,
+   no category rail. The rail (designed 2026-06-10) was superseded by the filter-menu redesign
+   (2026-07-07) and, decisively, by Conversations (2026-07-06) — the operator's primary mid-call
+   tool is now picking a conversation and following its step highlight, not browsing categories;
+   a rail would serve the secondary workflow in the less-common ≥720 px width, not the primary
+   Docked strip. Design 05/09/01 updated to match. Verification added: a regression screenshot
+   and a live measurement test at the enforced 420 px minimum (the tightest point of the primary
+   shape), alongside the existing 1366 px check from Pass 3.
 4. **Localization retrofit (UA/PL/EN)** — `.resx` for every string, completeness test. Done last
    so slices 1–3's new strings aren't localized twice.
 

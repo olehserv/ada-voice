@@ -42,6 +42,20 @@ public sealed class WindowScreenshotTests(WpfAppFixture app)
         }, "main-board-wide");
     }
 
+    /// <summary>Slice 3 (responsive layout, resolved 2026-07-20): the wide screenshot above proves
+    /// the layout holds at a typical desktop width, but the enforced <c>MinWidth="420"</c> — the
+    /// primary real-world Docked shape — was never rendered wider than the default 480 px fixture.
+    /// Same stress-loaded board as <see cref="MainWindow_board_wide"/>, pinned at the minimum.</summary>
+    [ScreenshotFact]
+    public void MainWindow_board_docked()
+    {
+        Save(() =>
+        {
+            var window = new MainWindow { DataContext = NewWideBoard(), Width = 420, Height = 560 };
+            return window;
+        }, "main-board-docked");
+    }
+
     /// <summary>
     /// Phase B (brand redesign): the state-lit window backdrop, status pill, and STOP fill all vary
     /// by <see cref="EngineState"/> — the owner reviews the signature by seeing all four, not just

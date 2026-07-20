@@ -89,7 +89,7 @@ No cloud, no accounts, fully offline.
 | 19 | Installer | Inno Setup, **self-contained .NET 10** (no runtime download for a non-technical user; ~80 MB larger accepted). Code signing explicitly deferred — SmartScreen warning accepted for family use; revisit if ever distributed |
 | 20 | Human gates | Employer-permission gate **removed (2026-06-13):** no employer/Zoho agreement needed (employer is loyal). The remaining gate — the supervised operator pilot after Phase 3 — **passed 2026-06-29** |
 | 21 | Visual system | WPF-UI library (Fluent), **fixed dark theme**, Segoe UI Variable, tokenized status colors, 4 px grid — canonical in [09-design-system.md](09-design-system.md) (design review 2026-06-10) |
-| 22 | Window layouts | Two named layouts: Full (≥720 px) and Docked (420–719 px, rail→dropdown, 2-col grid); min 420×560; Docked is the primary real-world shape |
+| 22 | Window layouts | One continuous layout at every width (Slice 3, resolved 2026-07-20: no category rail — a persistent rail would serve category-browsing, now the secondary workflow behind Conversations; category filter is a checkable menu button at all widths); "Full" (≥720 px) and "Docked" (420–719 px) are width labels, not separate layouts; min 420×560; Docked is the primary real-world shape |
 | 23 | Interaction states | Every feature × state (loading/empty/error/success/partial) specified in [05 §2](05-ui-design.md); first-run empty board is a designed welcome with a primary action |
 | 24 | First-call confidence | Wizard ends with a test-call checklist (call a friend/own phone, play 2 phrases) before the first client call — designed bridge over the peak-fear moment |
 

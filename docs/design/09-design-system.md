@@ -206,5 +206,6 @@ Every looping storyboard is stopped by its trigger's `ExitActions`
   (audit finding 9).
 - Utility copy only; localized UA/PL/EN, sized for the longest locale.
 - Icons are Fluent Symbols (`ui:SymbolIcon`) — one icon language; no emoji-as-design.
-- Two named window layouts (Full ≥ 720 px, Docked 420–719 px) remain a slice-3 open
-  item; minimum 420 × 560; per-monitor DPI aware.
+- One continuous layout at every width (Slice 3, resolved 2026-07-20 — no category rail;
+  filter menu buttons at all widths); "Full" (≥ 720 px) and "Docked" (420–719 px) are width
+  labels, not separate layouts; minimum 420 × 560; per-monitor DPI aware.

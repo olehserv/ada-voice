@@ -44,8 +44,8 @@ from.
 └──────────────────────────────────────────────────────────┘
 ```
 
-*(Diagram shows the planned Full layout. The shipped Board uses compact filter menu
-buttons instead of the left rail, and has no mic meter yet — see "Window sizing" below.)*
+*(Diagram shows the original mockup, superseded by the shipped design: compact filter menu
+buttons instead of a left rail — see "Window sizing" below — and no mic meter yet.)*
 
 - **Always-on-top by default** (`Topmost`, 📌 toggle, decision #16): she docks AdaVoice
   beside a full-screen Chrome/Zoho and never hunts for the window mid-call.
@@ -66,20 +66,23 @@ buttons instead of the left rail, and has no mic meter yet — see "Window sizin
 
 ### Window sizing
 
-**Shipped:** one layout at all widths — filter menu buttons + phrase grid.
-**Minimum window size 420 × 560 is enforced** (below-minimum resizing is blocked).
+**Shipped and final (Slice 3, resolved 2026-07-20):** one continuous layout at every width —
+filter menu buttons (Categories, Conversations) above a `WrapPanel` phrase grid that reflows its
+column count naturally as the window widens. **Minimum window size 420 × 560 is enforced**
+(below-minimum resizing is blocked); verified clean with no wrap/clip/overlap at that minimum and
+at a typical 1366×780 laptop width.
 
-The two named layouts below are a **slice-3 open item**, not built yet. Open design
-decision: bring back the category rail at ≥ 720 px, or keep the single filter-bar layout and
-update this doc.
+The original mockup's left category **rail** does not ship. Decision, closed 2026-07-20: the rail
+was designed 2026-06-10, before two things that superseded it — the filter-menu redesign
+(2026-07-07, Categories/Conversations as compact checkable menu buttons, working at every width)
+and **Conversations** (2026-07-06), which is now the operator's primary mid-call tool (pick a
+conversation, play in order, follow the step highlight) — category browsing is secondary. A
+persistent rail would have served the secondary workflow, in what would have been the *less*
+common window shape: a narrow strip beside full-screen Chrome (the **Docked** width, 420–719 px)
+is the primary real-world shape, not the ≥720 px "Full" width the rail was designed for. The
+"Full" and "Docked" names are now purely descriptive of width, not two different layouts — the
+status bar and STOP are always fixed, never collapse, at any width.
 
-| Layout (planned) | Width | Behavior |
-|---|---|---|
-| **Full** | ≥ 720 px | Category rail visible, 3-column phrase grid |
-| **Docked** | 420–719 px | Rail collapses to a category dropdown above the grid, 2-column grid, status bar and STOP unchanged (never collapse) |
-
-- Docked is the *primary* real-world layout (a strip beside full-screen Chrome on a
-  1366×768 laptop).
 - Respects OS display scaling (per-monitor DPI aware); all sizes in DIPs.
 
 ### Accessibility floor
