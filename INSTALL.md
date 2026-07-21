@@ -2,9 +2,8 @@
 
 *Українською: [INSTALL.uk.md](INSTALL.uk.md)*
 
-This is a beta build for trying out AdaVoice and giving feedback. It is not the final
-installer — just a zip you unpack and run. See [handoff.md](handoff.md) for what's
-finished vs. still being built.
+This is a beta build for trying out AdaVoice and giving feedback. See [handoff.md](handoff.md)
+for what's finished vs. still being built.
 
 There are two parts. **Do Part 1 first, on your own** — it's quick and needs nothing extra.
 **Do Part 2 together** (a screen-share works best) — it needs a separate driver install and
@@ -12,11 +11,13 @@ a couple of Windows settings.
 
 ## Part 1 — Install and try the app
 
-1. **Download** the zip you were sent and unzip it anywhere (e.g. your Desktop or Documents).
-2. **Run `AdaVoice.App.exe`** (inside the unzipped folder).
-3. Windows will likely show a blue **"Windows protected your PC"** warning. This is normal —
+1. **Download** the installer you were sent (`AdaVoice-Setup-*.exe`) and run it.
+2. Windows will likely show a blue **"Windows protected your PC"** warning. This is normal —
    it just means the app isn't digitally signed yet (that costs money and comes later).
    Click **"More info"**, then **"Run anyway"**. You only need to do this once.
+3. Click through the installer (**Next → Next → Install → Finish**). It installs just for
+   your account — no admin password needed. Leave "Launch AdaVoice" checked on the last
+   page, or find it later in the Start Menu.
 4. The app opens straight into a short **setup wizard**. A few checks will fail (that's
    expected — see Part 2) — just click **"Skip anyway"** to move past them, and click
    through to the end.
@@ -29,6 +30,8 @@ a couple of Windows settings.
 Nothing you record leaves your machine — everything is stored locally, no internet needed.
 
 **Playing a phrase into a real call doesn't work yet at this point** — that's Part 2.
+
+*To uninstall later: Windows Settings → Apps → AdaVoice → Uninstall (same as any app).*
 
 ## Part 2 — Enable playing phrases into a real call
 
