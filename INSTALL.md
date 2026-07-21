@@ -1,5 +1,7 @@
 # Installing AdaVoice (Beta)
 
+*Українською: [INSTALL.uk.md](INSTALL.uk.md)*
+
 This is a beta build for trying out AdaVoice and giving feedback. It is not the final
 installer — just a zip you unpack and run. See [handoff.md](handoff.md) for what's
 finished vs. still being built.
@@ -50,6 +52,14 @@ one-time install.
    now pass (green).
 7. Do one real test: start or join a call (calling your own phone is a good test), play a
    phrase from AdaVoice, and confirm the other side hears it clearly.
+
+## Switching the app's language
+
+AdaVoice also speaks Ukrainian and Polish. To switch:
+
+1. Open **Settings** (the gear icon).
+2. Under **"Language & Backup"**, pick **Language** → your language.
+3. The app will offer to restart — accept it. The change takes effect after restart.
 
 ## If something doesn't work
 
