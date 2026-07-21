@@ -16,6 +16,20 @@ public class JsonSettingsRepositoryTests : IDisposable
         Assert.True(settings.MonitorEnabled);
         Assert.Equal(-12, settings.MicDuckDb);
         Assert.Equal(50, settings.DuckRampMs);
+        // Beta feedback prompted this: an old settings.json (this field absent) must get the
+        // feature on, not silently stay off.
+        Assert.True(settings.MonitorLivePlayback);
+        Assert.Equal(100, settings.MonitorVolumePercent);
+    }
+
+    [Fact]
+    public void Save_then_load_roundtrips_the_live_monitor_settings()
+    {
+        new JsonSettingsRepository(_root).Save(new Settings { MonitorLivePlayback = false, MonitorVolumePercent = 60 });
+
+        var reloaded = new JsonSettingsRepository(_root).Load();
+        Assert.False(reloaded.MonitorLivePlayback);
+        Assert.Equal(60, reloaded.MonitorVolumePercent);
     }
 
     [Fact]

@@ -219,6 +219,15 @@
   <data name="Settings_MicDuck" xml:space="preserve">
     <value>Mic duck</value>
   </data>
+  <data name="Settings_MonitorLivePlayback" xml:space="preserve">
+    <value>Let me hear phrases too</value>
+  </data>
+  <data name="Settings_MonitorVolume" xml:space="preserve">
+    <value>Monitor volume</value>
+  </data>
+  <data name="Settings_MonitorVolumeHint" xml:space="preserve">
+    <value>Use headphones — with speakers the phrase can echo back into the call.</value>
+  </data>
   <data name="Settings_Behavior" xml:space="preserve">
     <value>Behavior</value>
   </data>

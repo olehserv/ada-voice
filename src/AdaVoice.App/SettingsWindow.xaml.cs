@@ -33,6 +33,12 @@ public partial class SettingsWindow : Wpf.Ui.Controls.FluentWindow
 
     private void DuckSlider_Committed(object sender, RoutedEventArgs e) => CommitLevels();
 
+    // Same debounce as the duck slider: persist the monitor volume only when the drag ends or
+    // focus leaves, not on every value change.
+    private void MonitorVolumeSlider_DragCompleted(object sender, DragCompletedEventArgs e) => CommitLevels();
+
+    private void MonitorVolumeSlider_Committed(object sender, RoutedEventArgs e) => CommitLevels();
+
     private void CommitLevels() => (DataContext as SettingsWindowViewModel)?.Levels.Commit();
 
     /// <summary>Ask which archive to import and whether to merge or replace. Returns null if the

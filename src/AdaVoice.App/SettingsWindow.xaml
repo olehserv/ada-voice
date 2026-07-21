@@ -96,6 +96,45 @@
                                     Typography.NumeralAlignment="Tabular" />
                             </StackPanel>
                             <Separator Margin="0,12" Background="{DynamicResource Border.Subtle}" />
+
+                            <!--  Live monitor: hear a phrase in your own headphones while it plays to the call.  -->
+                            <CheckBox
+                                Margin="0,0,0,8"
+                                Content="{x:Static res:Strings.Settings_MonitorLivePlayback}"
+                                IsChecked="{Binding Levels.MonitorLivePlayback}" />
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock
+                                    MinWidth="70"
+                                    VerticalAlignment="Center"
+                                    Foreground="{DynamicResource Text.Secondary}"
+                                    Text="{x:Static res:Strings.Settings_MonitorVolume}" />
+                                <Slider
+                                    Width="170"
+                                    Margin="8,0"
+                                    VerticalAlignment="Center"
+                                    IsEnabled="{Binding Levels.MonitorLivePlayback}"
+                                    IsSnapToTickEnabled="True"
+                                    LostFocus="MonitorVolumeSlider_Committed"
+                                    Maximum="100"
+                                    Minimum="0"
+                                    SmallChange="1"
+                                    Thumb.DragCompleted="MonitorVolumeSlider_DragCompleted"
+                                    TickFrequency="5"
+                                    Value="{Binding Levels.MonitorVolumePercent, Mode=TwoWay}" />
+                                <TextBlock
+                                    MinWidth="48"
+                                    VerticalAlignment="Center"
+                                    Text="{Binding Levels.MonitorVolumeLabel}"
+                                    Typography.NumeralAlignment="Tabular" />
+                            </StackPanel>
+                            <TextBlock
+                                Margin="0,4,0,0"
+                                FontSize="{StaticResource FontSize.Label}"
+                                Foreground="{DynamicResource Text.Muted}"
+                                Text="{x:Static res:Strings.Settings_MonitorVolumeHint}"
+                                TextWrapping="Wrap" />
+
+                            <Separator Margin="0,12" Background="{DynamicResource Border.Subtle}" />
                             <local:CalibrationStepView DataContext="{Binding Levels.Calibration}" />
                         </StackPanel>
                     </Border>

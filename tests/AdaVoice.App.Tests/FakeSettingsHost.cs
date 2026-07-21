@@ -86,4 +86,22 @@ internal class FakeSettingsHost : ISettingsHost
     public DateOnly? LastBackupDate { get; set; }
     public int OpenBackupFolderCount { get; private set; }
     public void OpenBackupFolder() => OpenBackupFolderCount++;
+
+    public bool MonitorLivePlayback { get; set; } = true;
+    public int SetMonitorLivePlaybackCount { get; private set; }
+
+    public void SetMonitorLivePlayback(bool value)
+    {
+        MonitorLivePlayback = value;
+        SetMonitorLivePlaybackCount++;
+    }
+
+    public int MonitorVolumePercent { get; set; } = 100;
+    public List<int> SetMonitorVolumePercentCalls { get; } = [];
+
+    public void SetMonitorVolumePercent(int percent)
+    {
+        MonitorVolumePercent = percent;
+        SetMonitorVolumePercentCalls.Add(percent);
+    }
 }

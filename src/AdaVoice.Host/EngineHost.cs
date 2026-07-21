@@ -55,13 +55,25 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     private readonly object _previewLock = new();
     private WasapiRenderDevice? _previewRender;
 
+    // The live monitor (headphone monitoring of a phrase while it plays to the call). Set once in
+    // the constructor; the samples it should render are stashed here by PlayEntry (caller thread),
+    // right before Play, and read by OnEngineEvent's PhraseChanged handler (control thread) once the
+    // engine confirms the phrase actually started (see the class remarks on PhraseChanged). Keyed by
+    // phrase id, not a single field: PlayEntry posts to a queue and returns immediately, so two
+    // different phrases triggered back-to-back could otherwise overwrite each other's samples before
+    // the engine processes the first — the monitor must never play the wrong phrase's audio.
+    private readonly ILiveMonitor _liveMonitor;
+    private readonly object _pendingMonitorLock = new();
+    private readonly Dictionary<string, float[]> _pendingMonitorSamples = new();
+
     /// <param name="factory">Device factory override — tests inject a fake; null = real WASAPI.</param>
     /// <param name="monitor">Device monitor override — tests inject a fake; null = real COM monitor.</param>
     /// <param name="clock">Engine clock override — tests inject a manual clock; null = system clock.</param>
     /// <param name="dataRoot">Data root override — tests use a temp dir; null = %LOCALAPPDATA%\AdaVoice.</param>
+    /// <param name="liveMonitor">Live-monitor override — tests inject a fake; null = real WASAPI.</param>
     public EngineHost(WasapiAudioOptions options, Action<string>? log = null, RecorderOptions? recorderOptions = null,
         IAudioDeviceFactory? factory = null, IDeviceMonitor? monitor = null, IEngineClock? clock = null,
-        string? dataRoot = null)
+        string? dataRoot = null, ILiveMonitor? liveMonitor = null)
     {
         _options = options;
         _recorderOptions = recorderOptions ?? new RecorderOptions();
@@ -78,6 +90,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
 
         _factory = factory ?? new WasapiDeviceFactory(options);
         _monitor = monitor ?? new WasapiDeviceMonitor();
+        _liveMonitor = liveMonitor ?? new WasapiLiveMonitor(ResolveMonitorDevice, options.CableName, _log);
         _engine = new AudioEngine(_factory, clock ?? new SystemEngineClock(), PlayerOptionsFromSettings());
 
         _engine.Events += OnEngineEvent;
@@ -248,6 +261,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     {
         _engine.StopPhrase();
         StopPreview();
+        _liveMonitor.Stop(); // cut the monitor immediately, not on the fade-out's later PhraseChanged(null)
     }
 
     public void EnterOffAir() => _engine.EnterOffAir();
@@ -291,6 +305,11 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
         for (var i = 0; i < samples.Length; i++)
             samples[i] *= gain;
 
+        // Stashed for OnEngineEvent's PhraseChanged handler: the monitor must only start once the
+        // engine confirms this phrase actually began playing (not Live, or a retrigger the engine
+        // ignores, must stay silent on the monitor too — see the class remarks on PhraseChanged).
+        lock (_pendingMonitorLock)
+            _pendingMonitorSamples[entry.Id] = samples;
         Play(new Phrase(entry.Id, samples));
         return null;
     }
@@ -446,6 +465,25 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
 
     /// <summary>Persist the current settings to disk (call when a slider drag finishes).</summary>
     public void SaveSettings() => _settingsRepository.Save(_settings);
+
+    /// <summary>Whether a playing phrase is also rendered to the operator's own output.</summary>
+    public bool MonitorLivePlayback => _settings.MonitorLivePlayback;
+
+    /// <summary>Remember the live-monitor on/off preference in memory. Does not write to disk —
+    /// call <see cref="SaveSettings"/> to persist. Turning it off does not cut a monitor already
+    /// in flight; it takes effect on the next phrase, matching the volume control below.</summary>
+    public void SetMonitorLivePlayback(bool value) => _settings = _settings with { MonitorLivePlayback = value };
+
+    /// <summary>The current live-monitor volume, 0-100.</summary>
+    public int MonitorVolumePercent => _settings.MonitorVolumePercent;
+
+    /// <summary>Remember a new live-monitor volume in memory (no disk write — call
+    /// <see cref="SaveSettings"/> when the drag ends, mirroring <see cref="SetMicDuckDb"/>).</summary>
+    public void SetMonitorVolumePercent(int percent)
+    {
+        percent = Math.Clamp(percent, 0, 100);
+        _settings = _settings with { MonitorVolumePercent = percent };
+    }
 
     /// <summary>The window's saved size and position, or null if any coordinate was never saved.</summary>
     public WindowPlacement? WindowPlacement =>
@@ -643,6 +681,24 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
         if (e is EngineEvent.PhraseChanged p)
         {
             PlayingPhraseChanged?.Invoke(this, p.PhraseId);
+
+            // Drive the live monitor off this signal, not off the PlayEntry call: it only fires
+            // once the engine confirms a phrase actually started (State was Live, and it was not
+            // an ignored retrigger), so the monitor always matches what the cable really played.
+            if (p.PhraseId is { } id)
+            {
+                float[]? samples;
+                lock (_pendingMonitorLock)
+                    _pendingMonitorSamples.TryGetValue(id, out samples);
+
+                if (_settings.MonitorLivePlayback && samples is not null)
+                    _liveMonitor.Start(samples, _settings.MonitorVolumePercent / 100.0);
+            }
+            else
+            {
+                _liveMonitor.Stop();
+            }
+
             return;
         }
 
@@ -709,5 +765,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
 
         _engine.Events -= OnEngineEvent;
         _engine.Dispose();
+
+        _liveMonitor.Dispose();
     }
 }

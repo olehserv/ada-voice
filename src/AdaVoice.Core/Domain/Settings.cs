@@ -60,4 +60,15 @@ public sealed record Settings
     /// <summary>Theme preference: "system" (follow the OS, default), "light", or "dark". Absent in
     /// an existing settings.json ⇒ "system", i.e. the app's original OS-follow behavior.</summary>
     public string Theme { get; init; } = "system";
+
+    /// <summary>Whether a playing phrase is also rendered to the operator's own output (the OS
+    /// default device) while it plays to the call, so the operator can confirm what the other side
+    /// hears. Distinct from <see cref="MonitorEnabled"/>, which only picks the device previews use.
+    /// Default true — an existing settings.json (this field absent) gets the feature on, matching
+    /// the beta feedback that prompted it.</summary>
+    public bool MonitorLivePlayback { get; init; } = true;
+
+    /// <summary>Volume of the live monitor, 0-100 (100 = the same level the call hears). A
+    /// percentage, not dB, since this is a plain operator-facing control. Default 100.</summary>
+    public int MonitorVolumePercent { get; init; } = 100;
 }

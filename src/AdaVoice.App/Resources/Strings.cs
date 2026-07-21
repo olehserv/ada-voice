@@ -71,6 +71,9 @@ public static class Strings
     public static string Settings_ThemeDark => Get("Settings_ThemeDark");
     public static string Settings_Levels => Get("Settings_Levels");
     public static string Settings_MicDuck => Get("Settings_MicDuck");
+    public static string Settings_MonitorLivePlayback => Get("Settings_MonitorLivePlayback");
+    public static string Settings_MonitorVolume => Get("Settings_MonitorVolume");
+    public static string Settings_MonitorVolumeHint => Get("Settings_MonitorVolumeHint");
     public static string Settings_Behavior => Get("Settings_Behavior");
     public static string Settings_AlwaysOnTop => Get("Settings_AlwaysOnTop");
     public static string Settings_ReplaceOnRetrigger => Get("Settings_ReplaceOnRetrigger");

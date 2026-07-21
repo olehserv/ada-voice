@@ -3,7 +3,9 @@ using AdaVoice.Audio.Abstractions;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Recording;
 using AdaVoice.Audio.Setup;
+using AdaVoice.Audio.Storage;
 using AdaVoice.Audio.Tests.Engine.Fakes;
+using AdaVoice.Audio.Tests.Fakes;
 using AdaVoice.Audio.Wasapi;
 using AdaVoice.Core.Domain;
 using AdaVoice.Core.Storage;
@@ -18,12 +20,24 @@ public class EngineHostTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "adavoice-host-" + Guid.NewGuid().ToString("N"));
 
-    private EngineHost NewHost(FakeDeviceFactory? factory = null) =>
+    private EngineHost NewHost(FakeDeviceFactory? factory = null, ILiveMonitor? liveMonitor = null) =>
         new(new WasapiAudioOptions(), log: null, recorderOptions: null,
             factory: factory ?? new FakeDeviceFactory(),
             monitor: new FakeDeviceMonitor(),
             clock: new ManualEngineClock(),
-            dataRoot: _root);
+            dataRoot: _root,
+            liveMonitor: liveMonitor ?? new FakeLiveMonitor());
+
+    /// <summary>Write a short real WAV under the data root so PlayEntry's File.Exists/WavFile.Load
+    /// actually succeeds (unlike the version-vs-primary tests above, which leave files missing on
+    /// purpose) — needed here because the live monitor only starts once the engine really plays.</summary>
+    private string WriteWav(string fileName, int sampleCount = 480)
+    {
+        Directory.CreateDirectory(_root);
+        var path = AdaVoicePaths.AudioPath(_root, fileName);
+        WavFile.Save(path, TestAudio.Sine(440, sampleCount));
+        return path;
+    }
 
     [Fact]
     public void Fresh_data_root_loads_an_empty_library_with_no_warning()
@@ -199,6 +213,122 @@ public class EngineHostTests : IDisposable
         Assert.False(result.Ok);
         Assert.Equal(CalibrationFailureReason.RecordingInProgress, result.Reason);
         host.StopRecording();
+    }
+
+    // ---- Live monitor (headphone monitoring of a phrase while it plays to the call) -----------
+
+    /// <summary>The monitor must reflect what the cable actually played, so it is driven off the
+    /// engine's own PhraseChanged signal — this proves the whole chain (PlayEntry stashes samples,
+    /// the engine confirms the phrase started, OnEngineEvent starts the monitor) with real audio,
+    /// not just the version-vs-primary tests above (which leave files missing on purpose).</summary>
+    [Fact]
+    public async Task PlayEntry_starts_the_live_monitor_with_the_played_samples()
+    {
+        var liveMonitor = new FakeLiveMonitor();
+        using var host = NewHost(liveMonitor: liveMonitor);
+        host.Start();
+        await WaitFor(() => host.State == EngineState.Live);
+        WriteWav("primary.wav");
+        var entry = new PhraseEntry { Id = "p-1", FileName = "primary.wav" };
+
+        var error = host.PlayEntry(entry);
+
+        Assert.Null(error);
+        await WaitFor(() => liveMonitor.StartCalls.Count == 1);
+        Assert.Equal(1.0, liveMonitor.StartCalls[0].Volume, precision: 5); // default 100 %
+    }
+
+    [Fact]
+    public async Task PlayEntry_does_not_start_the_live_monitor_when_disabled()
+    {
+        var liveMonitor = new FakeLiveMonitor();
+        using var host = NewHost(liveMonitor: liveMonitor);
+        host.SetMonitorLivePlayback(false);
+        host.Start();
+        await WaitFor(() => host.State == EngineState.Live);
+        WriteWav("primary.wav");
+        var entry = new PhraseEntry { Id = "p-1", FileName = "primary.wav" };
+
+        string? playingId = null;
+        host.PlayingPhraseChanged += (_, id) => playingId = id;
+        host.PlayEntry(entry);
+
+        // Wait for proof the phrase really started (not just that we didn't wait long enough) —
+        // then assert the monitor still never started.
+        await WaitFor(() => playingId == "p-1");
+        Assert.Empty(liveMonitor.StartCalls);
+    }
+
+    /// <summary>Volume is a plain 0-100 percentage of the call's own level; 50 % must reach the
+    /// monitor as 0.5 linear.</summary>
+    [Fact]
+    public async Task PlayEntry_applies_the_configured_monitor_volume()
+    {
+        var liveMonitor = new FakeLiveMonitor();
+        using var host = NewHost(liveMonitor: liveMonitor);
+        host.SetMonitorVolumePercent(50);
+        host.Start();
+        await WaitFor(() => host.State == EngineState.Live);
+        WriteWav("primary.wav");
+        var entry = new PhraseEntry { Id = "p-1", FileName = "primary.wav" };
+
+        host.PlayEntry(entry);
+
+        await WaitFor(() => liveMonitor.StartCalls.Count == 1);
+        Assert.Equal(0.5, liveMonitor.StartCalls[0].Volume, precision: 5);
+    }
+
+    /// <summary>The dictionary keyed by phrase id (not a single mutable field) exists to guard
+    /// exactly this: two different phrases triggered back-to-back must never cross-contaminate —
+    /// each PhraseChanged(id) must drive the monitor with that phrase's own samples.</summary>
+    [Fact]
+    public async Task Two_different_phrases_played_in_a_row_each_start_the_monitor_with_their_own_samples()
+    {
+        var liveMonitor = new FakeLiveMonitor();
+        using var host = NewHost(liveMonitor: liveMonitor);
+        host.Start();
+        await WaitFor(() => host.State == EngineState.Live);
+        WriteWav("first.wav", sampleCount: 480);
+        WriteWav("second.wav", sampleCount: 960); // a different length, so the samples are distinguishable
+        var first = new PhraseEntry { Id = "p-1", FileName = "first.wav" };
+        var second = new PhraseEntry { Id = "p-2", FileName = "second.wav" };
+
+        host.PlayEntry(first);
+        await WaitFor(() => liveMonitor.StartCalls.Count == 1);
+        host.PlayEntry(second); // ReplaceOnRetrigger defaults true — replaces the first
+        await WaitFor(() => liveMonitor.StartCalls.Count == 2);
+
+        Assert.Equal(480, liveMonitor.StartCalls[0].Samples.Length);
+        Assert.Equal(960, liveMonitor.StartCalls[1].Samples.Length);
+    }
+
+    [Fact]
+    public async Task StopPhrase_stops_the_live_monitor()
+    {
+        var liveMonitor = new FakeLiveMonitor();
+        using var host = NewHost(liveMonitor: liveMonitor);
+        host.Start();
+        await WaitFor(() => host.State == EngineState.Live);
+        WriteWav("primary.wav");
+        var entry = new PhraseEntry { Id = "p-1", FileName = "primary.wav" };
+        host.PlayEntry(entry);
+        await WaitFor(() => liveMonitor.StartCalls.Count == 1);
+
+        host.StopPhrase();
+
+        Assert.Equal(1, liveMonitor.StopCount);
+    }
+
+    [Fact]
+    public void PlayEntry_does_not_start_the_live_monitor_when_the_engine_is_not_live()
+    {
+        var liveMonitor = new FakeLiveMonitor();
+        using var host = NewHost(liveMonitor: liveMonitor); // never started — still Stopped
+        var entry = new PhraseEntry { Id = "p-1", FileName = "primary.wav" };
+
+        host.PlayEntry(entry);
+
+        Assert.Empty(liveMonitor.StartCalls);
     }
 
     /// <summary>Engine state changes land on the host control thread — poll briefly.</summary>

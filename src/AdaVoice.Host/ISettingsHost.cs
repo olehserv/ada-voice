@@ -88,4 +88,22 @@ public interface ISettingsHost
 
     /// <summary>Open the backups folder in the OS file explorer.</summary>
     void OpenBackupFolder();
+
+    /// <summary>Whether a playing phrase is also rendered to the operator's own output (the OS
+    /// default device) while it plays to the call, so the operator can confirm what the other
+    /// side hears.</summary>
+    bool MonitorLivePlayback { get; }
+
+    /// <summary>Set the live-monitor on/off preference and remember it in memory. Does not write
+    /// to disk — call <see cref="SaveSettings"/> to persist (a checkbox applies+saves immediately,
+    /// same as <see cref="SetAlwaysOnTop"/>, just with no drag to debounce).</summary>
+    void SetMonitorLivePlayback(bool value);
+
+    /// <summary>Volume of the live monitor, 0-100 (100 = the same level the call hears).</summary>
+    int MonitorVolumePercent { get; }
+
+    /// <summary>Set the live-monitor volume: remembers it in memory only. Does not write to
+    /// disk — call <see cref="SaveSettings"/> to persist (debounced like <see cref="SetMicDuckDb"/>).
+    /// Takes effect on the next phrase played, not on one already in flight.</summary>
+    void SetMonitorVolumePercent(int percent);
 }

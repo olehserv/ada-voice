@@ -29,6 +29,44 @@ detection, account lockout, per-IP rate limiting, RFC 7807 errors (typed `Proble
 
 ## Latest work (2026-07-21)
 
+- **Live phrase monitoring (headphones) — shipped, user-verified on the target machine.** Beta
+  feedback (the wife, the real operator): when a phrase plays into the call she
+  hears nothing today — only the cable does — and asked to also hear it in her own headphones, at
+  a configurable volume, to confirm what the other side hears. New `ILiveMonitor` seam
+  (`src/AdaVoice.Audio/Abstractions/ILiveMonitor.cs`, real impl `WasapiLiveMonitor`) renders the
+  phrase's already-decoded samples to a second, independent WASAPI output — deliberately not a tap
+  on the engine's mixer, which also carries the live mic (a tap would loop the operator's own voice
+  into their headphones). Driven off the engine's own `PhraseChanged` signal, not the `PlayEntry`
+  call, so the monitor always matches what the cable actually played: a phrase the engine drops
+  (not Live, or an ignored retrigger) never reaches the monitor either — no play-decision logic is
+  duplicated in the host. Two new settings in the Levels group, `MonitorLivePlayback` (checkbox,
+  default **on** per owner decision) and `MonitorVolumePercent` (slider, default 100), plus an
+  echo-risk hint ("use headphones"). Found and fixed one real correctness bug before it shipped:
+  stashing the pending monitor samples in a single mutable field would let two different phrases
+  triggered back-to-back cross-contaminate (the monitor could play the wrong phrase's audio) —
+  replaced with a small id-keyed dictionary, with a dedicated regression test proving each phrase's
+  own samples reach the monitor. 108 Core (+2) / 101 Audio / 8 Wasapi / 18 Host (+6) / 264 App
+  (+5, 32 screenshot skipped without `ADAVOICE_SCREENSHOTS=1`) tests green. A second-opinion review
+  of the WASAPI leg (no unit test reaches it) found and fixed one real threading defect and flagged
+  one hardware-gated risk, both in `WasapiLiveMonitor`: **(1, fixed)** `StopCurrent()` was calling
+  `render.Dispose()` directly — `WasapiOut.Dispose()` joins its playback thread, and on the natural
+  phrase-end path `PhraseChanged(null)` reaches `_liveMonitor.Stop()` from the mixer's own render
+  thread (see `OnEngineEvent`'s remarks on `PhraseChanged`), so this was a blocking wait on an audio
+  thread — the exact stall class the codebase's stall watchdog (500 ms) exists to catch, risking
+  intermittent call-audio glitches or a false DEGRADED. Fixed to mirror `EngineHost.StopPreview`
+  exactly: `StopCurrent()` now calls only `render.Stop()`; the owning `Run()` background task's own
+  `finally` does the actual `Dispose()`, off any audio thread. **(2, not yet verified)** copied
+  `optOutOfDucking: false` from `Preview()`, but Preview only ever runs off-call (ducking is moot
+  there) while the live monitor runs *during* a call — Windows' communications-ducking (default:
+  reduce other sounds ~80%) will very likely attenuate the monitor to a fraction of the set volume,
+  quietly defeating the feature — flagged rather than blind-fixed since it needed empirical
+  confirmation, not guesswork; if it turns out to be a real problem later, the fix is
+  `optOutOfDucking: true` in `WasapiLiveMonitor` (matching the cable's own setting, for the same
+  reason). **User confirmed on the target machine (2026-07-21): it works.** The screenshot suite
+  could not be used for a visual check this session: every window (not just Settings) fails to
+  render in this sandbox with a `Cannot locate resource 'resources/appicon.ico'` error, tied to the
+  very recent app-icon commit — a pre-existing environment issue, not caused by this feature;
+  worth a dedicated look before the next screenshot pass.
 - **Localization (en/uk/pl) — Stages 1–3 of 7 done, not yet committed.** Prompted directly by
   the beta trial below: the wife can't use an English-only app. Full plan, architecture
   decisions, gotchas, and exact remaining work (Stages 4–7):
@@ -486,6 +524,13 @@ detection, account lockout, per-IP rate limiting, RFC 7807 errors (typed `Proble
   step highlight follows correctly, delete a phrase mid-conversation.
 
 ## Next action
+
+**Live phrase monitoring shipped and user-verified — no further action needed unless new feedback
+comes in.** One thing to keep an eye on if reported later: whether the monitor sounds quieter
+during a live call than idle (Windows communications-ducking) — the fix, if so, is a one-line
+`optOutOfDucking: true` in `WasapiLiveMonitor` (see "Latest work" above). Separately, worth a quick
+look sometime: the screenshot harness's `resources/appicon.ico` load failure (every window, not
+feature-specific) blocks a visual check of any window in this sandbox until fixed.
 
 **Pine Signal brand redesign implementation is fully done — Phases A, B, C, and D all shipped.**
 Every phase build/full-suite/both-theme-screenshot verified and committed (see "Latest work"
