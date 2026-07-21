@@ -12,6 +12,7 @@
     ExtendsContentIntoTitleBar="True"
     FontFamily="Segoe UI Variable, Segoe UI"
     FontSize="{StaticResource FontSize.Body}"
+    Icon="/Resources/AppIcon.ico"
     ResizeMode="NoResize"
     ShowInTaskbar="False"
     SizeToContent="Height"

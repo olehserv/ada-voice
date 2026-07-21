@@ -22,6 +22,7 @@
 #define MyAppPublisher "AdaVoice"
 #define MyAppExeName "AdaVoice.App.exe"
 #define PublishDir "..\artifacts\publish\win-x64"
+#define AppIconFile "..\src\AdaVoice.App\Resources\AppIcon.ico"
 
 [Setup]
 AppId={{8F2C6E1A-9B3D-4E7C-9A1F-6D2B7C4A5E10}
@@ -37,9 +38,14 @@ OutputBaseFilename=AdaVoice-Setup-{#MyAppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile={#AppIconFile}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ; Unsigned build (same as the zip today) -- SmartScreen still warns once on first run.
 ; Code signing is a separate, paid, later step (see INSTALL.md).
+; The app exe's own icon (App.csproj's ApplicationIcon, same file as AppIconFile above) is what
+; the Start Menu/Desktop/uninstall shortcuts below show -- Windows shortcuts inherit their
+; target's icon automatically, so nothing else here needs to reference it explicitly. SetupIconFile
+; only covers the Setup.exe file itself (what you see in Explorer before running it).
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
