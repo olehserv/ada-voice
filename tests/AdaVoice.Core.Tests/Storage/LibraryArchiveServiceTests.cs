@@ -191,7 +191,7 @@ public class LibraryArchiveServiceTests : IDisposable
         var result = Archive(dest).Import(zip, ImportMode.Replace);
 
         Assert.False(result.Success);
-        Assert.Contains("version", result.Error!);
+        Assert.Equal(ImportErrorCode.UnsupportedVersion, result.ErrorCode);
         Assert.Equal("p-keep", Assert.Single(new JsonPhraseRepository(dest).Load().Library.Phrases).Id);
     }
 
@@ -288,7 +288,7 @@ public class LibraryArchiveServiceTests : IDisposable
         var result = Archive(dest).Import(zip, ImportMode.Merge);
 
         Assert.False(result.Success);
-        Assert.NotNull(result.Error);
+        Assert.Equal(ImportErrorCode.ImportFailed, result.ErrorCode);
         var library = new JsonPhraseRepository(dest).Load().Library;
         Assert.Equal("p-keep", Assert.Single(library.Phrases).Id);              // metadata unchanged
         Assert.False(File.Exists(AdaVoicePaths.AudioPath(dest, "p-a.wav")));    // staged WAV never moved
@@ -376,7 +376,7 @@ public class LibraryArchiveServiceTests : IDisposable
         var result = Archive(dest).Import(zip, ImportMode.Merge);
 
         Assert.False(result.Success);
-        Assert.Contains("large", result.Error!);
+        Assert.Equal(ImportErrorCode.LibraryJsonTooLarge, result.ErrorCode);
     }
 
     private static void WriteZipWithLibraryJson(string zipPath, string libraryJson)

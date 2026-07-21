@@ -19,8 +19,28 @@ public enum CheckStatus
     Fail,
 }
 
-/// <summary>One environment-check row: a name, pass/fail, and a human-readable detail or fix hint.</summary>
-public sealed record EnvironmentCheck(string Name, CheckStatus Status, string Detail);
+/// <summary>Which environment check a row reports on — the App layer's localization key, since Audio
+/// carries no display text (design: this project has no UI concerns, see CLAUDE.md).</summary>
+public enum EnvironmentCheckKind
+{
+    CableOutput,
+    CableSampleRate,
+    DefaultOutput,
+    Microphone,
+}
+
+/// <summary>One environment-check row: which check, pass/fail, and the raw data the App layer's
+/// localized message needs — never pre-formatted text (that was the whole point of <see cref="Kind"/>
+/// existing). <see cref="RequestedName"/> is the name that was searched for (only set on a name-search
+/// failure); <see cref="FoundName"/> is the device actually found (pass, or <see cref="DefaultOutput"/>'s
+/// fail case, which reports what the default output resolved to); <see cref="MeasuredSampleRate"/> is
+/// only set for <see cref="CableSampleRate"/>'s wrong-rate failure.</summary>
+public sealed record EnvironmentCheck(
+    EnvironmentCheckKind Kind,
+    CheckStatus Status,
+    string? RequestedName = null,
+    string? FoundName = null,
+    int? MeasuredSampleRate = null);
 
 /// <summary>
 /// The setup wizard's environment checks (design 05 §4 / mvp-roadmap): the cable exists and is at
@@ -43,22 +63,22 @@ public sealed class EnvironmentChecks(IEnvironmentProbe probe)
         var checks = new List<EnvironmentCheck>
         {
             cable is null
-                ? Fail("Cable output", $"'{cableName}' not found — install VB-Cable.")
-                : Pass("Cable output", cable.FriendlyName),
+                ? new EnvironmentCheck(EnvironmentCheckKind.CableOutput, CheckStatus.Fail, RequestedName: cableName)
+                : new EnvironmentCheck(EnvironmentCheckKind.CableOutput, CheckStatus.Pass, FoundName: cable.FriendlyName),
 
             cable is null
-                ? Fail("Cable sample rate", "cable not found.")
+                ? new EnvironmentCheck(EnvironmentCheckKind.CableSampleRate, CheckStatus.Fail)
                 : cable.SampleRate == AudioFormats.SampleRate
-                    ? Pass("Cable sample rate", "48 kHz")
-                    : Fail("Cable sample rate", $"{cable.SampleRate} Hz — set both CABLE endpoints to 48 kHz in Sound settings."),
+                    ? new EnvironmentCheck(EnvironmentCheckKind.CableSampleRate, CheckStatus.Pass)
+                    : new EnvironmentCheck(EnvironmentCheckKind.CableSampleRate, CheckStatus.Fail, MeasuredSampleRate: cable.SampleRate),
 
             defaultOutput is not null && Contains(defaultOutput.FriendlyName, cableName)
-                ? Fail("Default output", $"is the cable ('{defaultOutput.FriendlyName}') — previews and the alarm would reach the call. Make speakers/headphones the Windows default.")
-                : Pass("Default output", defaultOutput?.FriendlyName ?? "(none)"),
+                ? new EnvironmentCheck(EnvironmentCheckKind.DefaultOutput, CheckStatus.Fail, FoundName: defaultOutput.FriendlyName)
+                : new EnvironmentCheck(EnvironmentCheckKind.DefaultOutput, CheckStatus.Pass, FoundName: defaultOutput?.FriendlyName),
 
             mic is null
-                ? Fail("Microphone", micName is null ? "no active microphone found." : $"'{micName}' not found.")
-                : Pass("Microphone", mic.FriendlyName),
+                ? new EnvironmentCheck(EnvironmentCheckKind.Microphone, CheckStatus.Fail, RequestedName: micName)
+                : new EnvironmentCheck(EnvironmentCheckKind.Microphone, CheckStatus.Pass, FoundName: mic.FriendlyName),
         };
 
         return checks;
@@ -66,7 +86,4 @@ public sealed class EnvironmentChecks(IEnvironmentProbe probe)
 
     private static bool Contains(string haystack, string needle) =>
         haystack.Contains(needle, StringComparison.OrdinalIgnoreCase);
-
-    private static EnvironmentCheck Pass(string name, string detail) => new(name, CheckStatus.Pass, detail);
-    private static EnvironmentCheck Fail(string name, string detail) => new(name, CheckStatus.Fail, detail);
 }

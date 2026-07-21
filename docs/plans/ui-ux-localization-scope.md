@@ -60,8 +60,12 @@ Four independently shippable slices, in this order:
    Docked strip. Design 05/09/01 updated to match. Verification added: a regression screenshot
    and a live measurement test at the enforced 420 px minimum (the tightest point of the primary
    shape), alongside the existing 1366 px check from Pass 3.
-4. **Localization retrofit (UA/PL/EN)** — `.resx` for every string, completeness test. Done last
-   so slices 1–3's new strings aren't localized twice.
+4. 🟡 **Localization retrofit (UA/PL/EN)** — in progress. Stages 1–2 (of 7) done: `.resx`
+   infra + full App-layer string extraction (all XAML + ViewModels + code-behind). Stages
+   3–7 (Audio/Core code/text split, uk/pl translation, test fixes, theme×language screenshot
+   verification, beta.2 re-release) not started. See
+   [localization-implementation-plan.md](localization-implementation-plan.md) for the full
+   plan, decisions, and exact pickup point.
 
 ## Not blocking
 

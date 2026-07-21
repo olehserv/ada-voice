@@ -1,5 +1,7 @@
+using AdaVoice.App.Resources;
 using AdaVoice.App.ViewModels;
 using AdaVoice.Core.Domain;
+using AdaVoice.Host;
 
 namespace AdaVoice.App.Tests;
 
@@ -216,7 +218,7 @@ public class PhraseVersionsViewModelTests
     {
         var entry = new PhraseEntry { Id = "p-1", Title = "T", FileName = "p-1.wav" };
         var host = HostWith(entry);
-        host.PreviewEntryResult = "missing audio file: p-1.wav";
+        host.PreviewEntryResult = new PlaybackError(PlaybackErrorCode.AudioFileMissing);
         var vm = new PhraseVersionsViewModel(host, host, entry);
         BoardNotification? seen = null;
         vm.Notified += (_, n) => seen = n;
@@ -225,7 +227,7 @@ public class PhraseVersionsViewModelTests
 
         Assert.NotNull(seen);
         Assert.Equal(NoticeSeverity.Error, seen.Severity);
-        Assert.Equal("missing audio file: p-1.wav", seen.Message);
+        Assert.Equal(Strings.Board_AudioFileMissing, seen.Message);
     }
 
     /// <summary>Review finding 4: an exception from the preview call (corrupt WAV, no output device)

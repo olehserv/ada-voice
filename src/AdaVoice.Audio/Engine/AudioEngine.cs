@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using AdaVoice.Audio.Abstractions;
+using AdaVoice.Audio.Dsp;
 using AdaVoice.Audio.Passthrough;
 using AdaVoice.Audio.Playback;
 using NAudio.Wave;
@@ -139,15 +140,27 @@ public sealed class AudioEngine : IDisposable
         {
             BuildGraph();
         }
+        catch (UnsupportedChannelCountException ex)
+        {
+            TeardownGraph();
+            SetState(EngineState.Stopped, new EngineError(EngineErrorReason.TooManyMicChannels, Channels: ex.Channels));
+            return;
+        }
+        catch (UnsupportedSampleRateException)
+        {
+            TeardownGraph();
+            SetState(EngineState.Stopped, new EngineError(EngineErrorReason.CableSampleRateMismatch));
+            return;
+        }
         catch (Exception ex)
         {
-            // Opening the graph failed — e.g. a missing device, or a cable not at 48 kHz (the render
-            // seam refuses to resample). Clean up the partial graph and stay Stopped with the error
-            // surfaced, so the caller can fix it and press Start again.
+            // Opening the graph failed for some other reason — e.g. a missing device. Clean up the
+            // partial graph and stay Stopped with the error surfaced, so the caller can fix it and
+            // press Start again.
             // v1 limit: we do not auto-retry from a cold Start. The design §2.2 "Start fails →
             // Degraded + backoff" needs cold-start (dual-stream) rebuild and is deferred to the host.
             TeardownGraph();
-            SetState(EngineState.Stopped, ex.Message);
+            SetState(EngineState.Stopped, new EngineError(EngineErrorReason.DeviceFailure, ex.Message));
             return;
         }
 
@@ -172,7 +185,7 @@ public sealed class AudioEngine : IDisposable
         if (State is EngineState.Degraded or EngineState.Stopped)
             return;
 
-        EnterDegraded(role, error?.Message);
+        EnterDegraded(role, error is null ? null : new EngineError(EngineErrorReason.DeviceFailure, error.Message));
     }
 
     private void HandleDeviceChanged(DeviceRole role, DeviceChangeKind kind)
@@ -183,7 +196,7 @@ public sealed class AudioEngine : IDisposable
             // stream so the rebuild loop recovers it.
             case DeviceChangeKind.Removed or DeviceChangeKind.DefaultChanged
                 when State is EngineState.Live or EngineState.OffAir:
-                EnterDegraded(role, $"device {kind} for {role}");
+                EnterDegraded(role, new EngineError(EngineErrorReason.DeviceChanged, $"{kind}/{role}"));
                 break;
 
             // The device we are waiting for came back: skip the remaining backoff and let the next
@@ -202,7 +215,7 @@ public sealed class AudioEngine : IDisposable
             // stopped pulling — treat that as a cable fault.
             case EngineState.Live or EngineState.OffAir:
                 if (_clock.NowMs - _gate!.LastReadMs > StallThresholdMs)
-                    EnterDegraded(DeviceRole.Cable, "cable render stalled");
+                    EnterDegraded(DeviceRole.Cable, new EngineError(EngineErrorReason.CableStalled));
                 break;
 
             // While Degraded, the same tick drives the rebuild schedule (one clock, no extra timer).
@@ -218,7 +231,7 @@ public sealed class AudioEngine : IDisposable
     /// alarm, and announce the state. The dead device is left alone here — disposing and recreating
     /// it belongs to the rebuild (commit 4b), so we never double-dispose.
     /// </summary>
-    private void EnterDegraded(DeviceRole role, string? error)
+    private void EnterDegraded(DeviceRole role, EngineError? error)
     {
         _restoreState = State;
         _faultedRole = role;
@@ -260,14 +273,14 @@ public sealed class AudioEngine : IDisposable
         {
             // Terminal (non-recoverable) error: stop everything and surface it loudly.
             TeardownGraph();
-            SetState(EngineState.Stopped, ex.Message);
+            SetState(EngineState.Stopped, new EngineError(EngineErrorReason.DeviceFailure, ex.Message));
             return;
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             // Not an AudioDeviceException — e.g. Init refusing a wrong-rate cable
-            // (NotSupportedException) or a raw COMException from seam construction. Escaping here
-            // would leave the backoff schedule unadvanced and turn the 100 ms watchdog into a
+            // (UnsupportedSampleRateException) or a raw COMException from seam construction. Escaping
+            // here would leave the backoff schedule unadvanced and turn the 100 ms watchdog into a
             // tight rebuild loop. Treat unknown errors as transient: keep the alarm, keep backing
             // off, and let a replug (or the steady 5 s poll) recover.
             ScheduleNextRebuild();
@@ -459,7 +472,7 @@ public sealed class AudioEngine : IDisposable
     private void OnActivePhraseChanged(object? sender, string? phraseId)
         => Raise(new EngineEvent.PhraseChanged(phraseId));
 
-    private void SetState(EngineState state, string? error = null)
+    private void SetState(EngineState state, EngineError? error = null)
     {
         State = state;
         Raise(new EngineEvent.StateChanged(state, error));

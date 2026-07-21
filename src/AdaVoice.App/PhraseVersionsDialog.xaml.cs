@@ -1,3 +1,4 @@
+using AdaVoice.App.Resources;
 using AdaVoice.App.Services;
 using AdaVoice.App.ViewModels;
 using Wpf.Ui;
@@ -36,8 +37,8 @@ public partial class PhraseVersionsDialog : Wpf.Ui.Controls.FluentWindow
     /// same reasoning as <c>ManageCategoriesDialog.ConfirmDeleteAsync</c>: this dialog's own confirm
     /// can't exist before the window does.</summary>
     public Task<bool> ConfirmDeleteAsync(PhraseVersionRowViewModel row) => DialogPrompts.ConfirmAsync(
-        _dialogService, "Delete version",
-        $"Delete the \"{row.Label}\" version?\n\nIts recording will be removed.", "Delete");
+        _dialogService, Strings.PhraseVersions_DeleteConfirmTitle,
+        string.Format(Strings.PhraseVersions_DeleteConfirmFormat, row.Label), Strings.PhraseVersions_Delete);
 
     /// <summary>A preview failure (missing file, bad device) as a toast — this window previously had
     /// no toast channel and swallowed the failure entirely (review finding 4).</summary>

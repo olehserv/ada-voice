@@ -67,6 +67,26 @@ public class AudioEngineTests
         Assert.Equal(EngineState.Live, engine.State);
     }
 
+    // A multi-capsule USB mic is real hardware, not corrupt input — Start must report the specific
+    // reason (with the channel count) rather than falling through to the generic DeviceFailure text.
+    [Fact]
+    public void Start_with_a_multi_channel_mic_reports_the_channel_count()
+    {
+        var (engine, factory, _, events) = NewEngine();
+        factory.MicFormat = WaveFormat.CreateIeeeFloatWaveFormat(48_000, 4);
+
+        engine.Start();
+        engine.DrainPending();
+
+        Assert.Equal(EngineState.Stopped, engine.State);
+        Assert.Contains(events, e => e is EngineEvent.StateChanged
+        {
+            State: EngineState.Stopped,
+            Error.Reason: EngineErrorReason.TooManyMicChannels,
+            Error.Channels: 4,
+        });
+    }
+
     [Fact]
     public void Post_after_dispose_does_not_throw()
     {

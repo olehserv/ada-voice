@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using AdaVoice.App.Resources;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AdaVoice.App.ViewModels;
@@ -9,9 +10,9 @@ public sealed class FirstCallStepViewModel : ObservableObject, IWizardStep
 {
     public ObservableCollection<ChecklistItem> Checklist { get; } =
     [
-        new("Call your own phone or a friend through Zoho."),
-        new("Play two phrases during that call."),
-        new("Confirm they sound natural and the levels match your voice."),
+        new(Strings.FirstCall_Check1),
+        new(Strings.FirstCall_Check2),
+        new(Strings.FirstCall_Check3),
     ];
 
     public bool CanAdvance => true;

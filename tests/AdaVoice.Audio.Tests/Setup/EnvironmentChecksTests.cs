@@ -10,8 +10,8 @@ public class EnvironmentChecksTests
         public IReadOnlyList<AudioEndpointInfo> Inputs() => inputs;
     }
 
-    private static CheckStatus StatusOf(IReadOnlyList<EnvironmentCheck> checks, string name) =>
-        checks.First(c => c.Name == name).Status;
+    private static CheckStatus StatusOf(IReadOnlyList<EnvironmentCheck> checks, EnvironmentCheckKind kind) =>
+        checks.First(c => c.Kind == kind).Status;
 
     private static readonly AudioEndpointInfo Mic = new("Microphone", 48_000, IsDefault: true);
 
@@ -36,8 +36,8 @@ public class EnvironmentChecksTests
 
         var checks = new EnvironmentChecks(new FakeProbe(outputs, [Mic])).Run("CABLE Input", null);
 
-        Assert.Equal(CheckStatus.Fail, StatusOf(checks, "Cable output"));
-        Assert.Equal(CheckStatus.Fail, StatusOf(checks, "Cable sample rate"));
+        Assert.Equal(CheckStatus.Fail, StatusOf(checks, EnvironmentCheckKind.CableOutput));
+        Assert.Equal(CheckStatus.Fail, StatusOf(checks, EnvironmentCheckKind.CableSampleRate));
     }
 
     [Fact]
@@ -51,8 +51,8 @@ public class EnvironmentChecksTests
 
         var checks = new EnvironmentChecks(new FakeProbe(outputs, [Mic])).Run("CABLE Input", null);
 
-        Assert.Equal(CheckStatus.Pass, StatusOf(checks, "Cable output"));
-        Assert.Equal(CheckStatus.Fail, StatusOf(checks, "Cable sample rate"));
+        Assert.Equal(CheckStatus.Pass, StatusOf(checks, EnvironmentCheckKind.CableOutput));
+        Assert.Equal(CheckStatus.Fail, StatusOf(checks, EnvironmentCheckKind.CableSampleRate));
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class EnvironmentChecksTests
 
         var checks = new EnvironmentChecks(new FakeProbe(outputs, [Mic])).Run("CABLE Input", null);
 
-        Assert.Equal(CheckStatus.Fail, StatusOf(checks, "Default output"));
+        Assert.Equal(CheckStatus.Fail, StatusOf(checks, EnvironmentCheckKind.DefaultOutput));
     }
 
     [Fact]
@@ -77,6 +77,6 @@ public class EnvironmentChecksTests
 
         var checks = new EnvironmentChecks(new FakeProbe(outputs, inputs)).Run("CABLE Input", micName: "Yeti");
 
-        Assert.Equal(CheckStatus.Fail, StatusOf(checks, "Microphone"));
+        Assert.Equal(CheckStatus.Fail, StatusOf(checks, EnvironmentCheckKind.Microphone));
     }
 }

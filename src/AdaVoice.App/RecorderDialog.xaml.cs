@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows.Threading;
+using AdaVoice.App.Resources;
 using AdaVoice.App.Services;
 using AdaVoice.App.ViewModels;
 using Wpf.Ui;
@@ -47,7 +48,7 @@ public partial class RecorderDialog : Wpf.Ui.Controls.FluentWindow
     /// one dialog instance, so its confirm delegate must be re-pointed at this dialog's own host
     /// each time, not wired once.</summary>
     public Task<bool> ConfirmDiscardAsync() => DialogPrompts.ConfirmAsync(
-        _dialogService, "Discard take", "Discard this take?\n\nThe recording will be lost.", "Discard");
+        _dialogService, Strings.Recorder_DiscardConfirmTitle, Strings.Recorder_DiscardConfirmMessage, Strings.Recorder_Discard);
 
     private void OnBoardPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {

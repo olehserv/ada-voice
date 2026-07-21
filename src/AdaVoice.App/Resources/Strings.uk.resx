@@ -1,0 +1,736 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Main_Record" xml:space="preserve">
+    <value>Записати</value>
+  </data>
+  <data name="Main_Stop" xml:space="preserve">
+    <value>СТОП</value>
+  </data>
+  <data name="Main_OffAir" xml:space="preserve">
+    <value>[TODO] OFF AIR</value>
+  </data>
+  <data name="Main_Setup" xml:space="preserve">
+    <value>[TODO] Setup</value>
+  </data>
+  <data name="Main_RunSetupAgain" xml:space="preserve">
+    <value>[TODO] Run setup again</value>
+  </data>
+  <data name="Main_Settings" xml:space="preserve">
+    <value>[TODO] Settings</value>
+  </data>
+  <data name="Main_SearchPlaceholder" xml:space="preserve">
+    <value>[TODO] Search title or tags…  (Ctrl+F)</value>
+  </data>
+  <data name="Main_ClearSearch" xml:space="preserve">
+    <value>[TODO] Clear search</value>
+  </data>
+  <data name="Main_CategoryFilter" xml:space="preserve">
+    <value>[TODO] Category filter</value>
+  </data>
+  <data name="Main_CategoryFilterTooltip" xml:space="preserve">
+    <value>[TODO] Filter by category, or manage categories</value>
+  </data>
+  <data name="Main_ConversationFilter" xml:space="preserve">
+    <value>[TODO] Conversation filter</value>
+  </data>
+  <data name="Main_ConversationFilterTooltip" xml:space="preserve">
+    <value>[TODO] Filter by conversation, or manage conversations</value>
+  </data>
+  <data name="Main_TestOnHeadphones" xml:space="preserve">
+    <value>[TODO] Test on headphones</value>
+  </data>
+  <data name="Main_Edit" xml:space="preserve">
+    <value>[TODO] Edit…</value>
+  </data>
+  <data name="Main_Versions" xml:space="preserve">
+    <value>[TODO] Versions…</value>
+  </data>
+  <data name="Main_Delete" xml:space="preserve">
+    <value>[TODO] Delete</value>
+  </data>
+  <data name="Main_AudioMissing" xml:space="preserve">
+    <value>[TODO] ⚠ audio missing</value>
+  </data>
+  <data name="Main_EmptyBoardTitle" xml:space="preserve">
+    <value>[TODO] Your phrase board is empty</value>
+  </data>
+  <data name="Main_EmptyBoardHint" xml:space="preserve">
+    <value>[TODO] Record your first phrase — it takes about 30 seconds.</value>
+  </data>
+  <data name="Main_CategoryEmptyTitle" xml:space="preserve">
+    <value>[TODO] No phrases in {0} yet.</value>
+  </data>
+  <data name="Main_RecordInto" xml:space="preserve">
+    <value>[TODO] Record into {0}</value>
+  </data>
+  <data name="Main_NoMatchCheckedCategories" xml:space="preserve">
+    <value>[TODO] No phrases match the checked categories</value>
+  </data>
+  <data name="Main_SearchNoMatchTitle" xml:space="preserve">
+    <value>[TODO] No phrases match '{0}'</value>
+  </data>
+  <data name="Main_ConversationEmptyTitle" xml:space="preserve">
+    <value>[TODO] No phrases in {0} yet.</value>
+  </data>
+  <data name="Main_AddPhrasesFromConversations" xml:space="preserve">
+    <value>[TODO] Add phrases to it from Conversations…</value>
+  </data>
+  <data name="Settings_Title" xml:space="preserve">
+    <value>[TODO] AdaVoice settings</value>
+  </data>
+  <data name="Settings_Appearance" xml:space="preserve">
+    <value>[TODO] Appearance</value>
+  </data>
+  <data name="Settings_Theme" xml:space="preserve">
+    <value>[TODO] Theme</value>
+  </data>
+  <data name="Settings_ThemeFollowSystem" xml:space="preserve">
+    <value>[TODO] Follow system</value>
+  </data>
+  <data name="Settings_ThemeLight" xml:space="preserve">
+    <value>[TODO] Light</value>
+  </data>
+  <data name="Settings_ThemeDark" xml:space="preserve">
+    <value>[TODO] Dark</value>
+  </data>
+  <data name="Settings_Levels" xml:space="preserve">
+    <value>[TODO] Levels</value>
+  </data>
+  <data name="Settings_MicDuck" xml:space="preserve">
+    <value>[TODO] Mic duck</value>
+  </data>
+  <data name="Settings_Behavior" xml:space="preserve">
+    <value>[TODO] Behavior</value>
+  </data>
+  <data name="Settings_AlwaysOnTop" xml:space="preserve">
+    <value>[TODO] Keep the board always on top</value>
+  </data>
+  <data name="Settings_ReplaceOnRetrigger" xml:space="preserve">
+    <value>[TODO] A new phrase stops the one currently playing</value>
+  </data>
+  <data name="Settings_AppliesAfterRestart" xml:space="preserve">
+    <value>[TODO] (applies after restart)</value>
+  </data>
+  <data name="Settings_LanguageAndBackup" xml:space="preserve">
+    <value>[TODO] Language &amp; Backup</value>
+  </data>
+  <data name="Settings_Language" xml:space="preserve">
+    <value>[TODO] Language</value>
+  </data>
+  <data name="Settings_Export" xml:space="preserve">
+    <value>[TODO] Export…</value>
+  </data>
+  <data name="Settings_Import" xml:space="preserve">
+    <value>[TODO] Import…</value>
+  </data>
+  <data name="Settings_OpenBackupFolder" xml:space="preserve">
+    <value>[TODO] Open backup folder</value>
+  </data>
+  <data name="Settings_LastBackupLabel" xml:space="preserve">
+    <value>[TODO] Last backup: </value>
+  </data>
+  <data name="Settings_LastBackupNever" xml:space="preserve">
+    <value>[TODO] never</value>
+  </data>
+  <data name="Settings_Done" xml:space="preserve">
+    <value>[TODO] Done</value>
+  </data>
+  <data name="ManageConversations_Title" xml:space="preserve">
+    <value>[TODO] Manage conversations</value>
+  </data>
+  <data name="ManageConversations_NoConversationsYet" xml:space="preserve">
+    <value>[TODO] No conversations yet — add one below.</value>
+  </data>
+  <data name="ManageConversations_NewNamePlaceholder" xml:space="preserve">
+    <value>[TODO] New conversation name</value>
+  </data>
+  <data name="ManageConversations_AddConversation" xml:space="preserve">
+    <value>[TODO] Add conversation</value>
+  </data>
+  <data name="ManageConversations_Delete" xml:space="preserve">
+    <value>[TODO] Delete</value>
+  </data>
+  <data name="ManageConversations_PlayRandomVersion" xml:space="preserve">
+    <value>[TODO] Play a random version of each phrase</value>
+  </data>
+  <data name="ManageConversations_MoveUp" xml:space="preserve">
+    <value>[TODO] Move up</value>
+  </data>
+  <data name="ManageConversations_MoveDown" xml:space="preserve">
+    <value>[TODO] Move down</value>
+  </data>
+  <data name="ManageConversations_Remove" xml:space="preserve">
+    <value>[TODO] Remove</value>
+  </data>
+  <data name="ManageConversations_AddPhrase" xml:space="preserve">
+    <value>[TODO] Add phrase</value>
+  </data>
+  <data name="ManageConversations_Done" xml:space="preserve">
+    <value>[TODO] Done</value>
+  </data>
+  <data name="ManageCategories_Title" xml:space="preserve">
+    <value>[TODO] Manage categories</value>
+  </data>
+  <data name="ManageCategories_Delete" xml:space="preserve">
+    <value>[TODO] Delete</value>
+  </data>
+  <data name="ManageCategories_NewNamePlaceholder" xml:space="preserve">
+    <value>[TODO] New category name</value>
+  </data>
+  <data name="ManageCategories_AddCategory" xml:space="preserve">
+    <value>[TODO] Add category</value>
+  </data>
+  <data name="ManageCategories_Done" xml:space="preserve">
+    <value>[TODO] Done</value>
+  </data>
+  <data name="PhraseEdit_Title" xml:space="preserve">
+    <value>[TODO] Edit phrase</value>
+  </data>
+  <data name="PhraseEdit_TitleLabel" xml:space="preserve">
+    <value>[TODO] Title</value>
+  </data>
+  <data name="PhraseEdit_CategoryLabel" xml:space="preserve">
+    <value>[TODO] Category</value>
+  </data>
+  <data name="PhraseEdit_TagsLabel" xml:space="preserve">
+    <value>[TODO] Tags</value>
+  </data>
+  <data name="PhraseEdit_RemoveTag" xml:space="preserve">
+    <value>[TODO] Remove tag</value>
+  </data>
+  <data name="PhraseEdit_AddTagPlaceholder" xml:space="preserve">
+    <value>[TODO] Add a tag…</value>
+  </data>
+  <data name="PhraseEdit_Add" xml:space="preserve">
+    <value>[TODO] Add</value>
+  </data>
+  <data name="PhraseEdit_AddExistingTag" xml:space="preserve">
+    <value>[TODO] Add this existing tag</value>
+  </data>
+  <data name="PhraseEdit_Cancel" xml:space="preserve">
+    <value>[TODO] Cancel</value>
+  </data>
+  <data name="PhraseEdit_Save" xml:space="preserve">
+    <value>[TODO] Save</value>
+  </data>
+  <data name="RepairPhrase_Title" xml:space="preserve">
+    <value>[TODO] Repair phrase</value>
+  </data>
+  <data name="RepairPhrase_AudioMissing" xml:space="preserve">
+    <value>[TODO] This phrase's audio file is missing.</value>
+  </data>
+  <data name="RepairPhrase_Cancel" xml:space="preserve">
+    <value>[TODO] Cancel</value>
+  </data>
+  <data name="RepairPhrase_Remove" xml:space="preserve">
+    <value>[TODO] Remove</value>
+  </data>
+  <data name="RepairPhrase_ReRecord" xml:space="preserve">
+    <value>[TODO] Re-record</value>
+  </data>
+  <data name="PhraseVersions_TitleFormat" xml:space="preserve">
+    <value>[TODO] Versions — {0}</value>
+  </data>
+  <data name="PhraseVersions_AudioMissing" xml:space="preserve">
+    <value>[TODO] ⚠ audio missing</value>
+  </data>
+  <data name="PhraseVersions_Play" xml:space="preserve">
+    <value>[TODO] Play</value>
+  </data>
+  <data name="PhraseVersions_Stop" xml:space="preserve">
+    <value>[TODO] Stop</value>
+  </data>
+  <data name="PhraseVersions_Delete" xml:space="preserve">
+    <value>[TODO] Delete</value>
+  </data>
+  <data name="PhraseVersions_AddVersion" xml:space="preserve">
+    <value>[TODO] Add version (record)…</value>
+  </data>
+  <data name="PhraseVersions_Close" xml:space="preserve">
+    <value>[TODO] Close</value>
+  </data>
+  <data name="Recorder_Title" xml:space="preserve">
+    <value>[TODO] Recorder</value>
+  </data>
+  <data name="Recorder_Record" xml:space="preserve">
+    <value>[TODO] Record</value>
+  </data>
+  <data name="Recorder_IdleGuidance" xml:space="preserve">
+    <value>[TODO] Nothing is saved until you say so — you can preview or discard the take first.</value>
+  </data>
+  <data name="Recorder_RecordingInProgress" xml:space="preserve">
+    <value>[TODO] Recording… speak now</value>
+  </data>
+  <data name="Recorder_Stop" xml:space="preserve">
+    <value>[TODO] Stop</value>
+  </data>
+  <data name="Recorder_Processing" xml:space="preserve">
+    <value>[TODO] Processing…</value>
+  </data>
+  <data name="Recorder_TitleLabel" xml:space="preserve">
+    <value>[TODO] Title</value>
+  </data>
+  <data name="Recorder_Discard" xml:space="preserve">
+    <value>[TODO] Discard</value>
+  </data>
+  <data name="Recorder_Preview" xml:space="preserve">
+    <value>[TODO] Preview</value>
+  </data>
+  <data name="Recorder_Save" xml:space="preserve">
+    <value>[TODO] Save</value>
+  </data>
+  <data name="Recorder_OffAirHint" xml:space="preserve">
+    <value>[TODO] While recording, the call cannot hear you (OFF AIR).</value>
+  </data>
+  <data name="Recorder_Close" xml:space="preserve">
+    <value>[TODO] Close</value>
+  </data>
+  <data name="Wizard_Title" xml:space="preserve">
+    <value>[TODO] AdaVoice setup</value>
+  </data>
+  <data name="Wizard_Cancel" xml:space="preserve">
+    <value>[TODO] Cancel</value>
+  </data>
+  <data name="Wizard_Back" xml:space="preserve">
+    <value>[TODO] Back</value>
+  </data>
+  <data name="Wizard_SkipAnyway" xml:space="preserve">
+    <value>[TODO] Skip anyway</value>
+  </data>
+  <data name="EnvChecks_Title" xml:space="preserve">
+    <value>[TODO] Environment checks</value>
+  </data>
+  <data name="EnvChecks_Checking" xml:space="preserve">
+    <value>[TODO] Checking…</value>
+  </data>
+  <data name="EnvChecks_DownloadVbCable" xml:space="preserve">
+    <value>[TODO] Download VB-CABLE</value>
+  </data>
+  <data name="EnvChecks_Recheck" xml:space="preserve">
+    <value>[TODO] Re-check</value>
+  </data>
+  <data name="Calibration_Title" xml:space="preserve">
+    <value>[TODO] Voice calibration</value>
+  </data>
+  <data name="Calibration_TooQuiet" xml:space="preserve">
+    <value>[TODO] We barely heard you — move closer to the mic and try again.</value>
+  </data>
+  <data name="Calibration_AlreadyRecording" xml:space="preserve">
+    <value>[TODO] A recording is in progress — stop it first.</value>
+  </data>
+  <data name="Calibration_CouldNotPauseCallFeed" xml:space="preserve">
+    <value>[TODO] Could not pause the call feed — try again.</value>
+  </data>
+  <data name="Calibration_Instructions" xml:space="preserve">
+    <value>[TODO] Speak normally for 5 seconds so AdaVoice can match your recorded phrases to your live voice level.</value>
+  </data>
+  <data name="Calibration_Start" xml:space="preserve">
+    <value>[TODO] Start</value>
+  </data>
+  <data name="Calibration_RecordingInProgress" xml:space="preserve">
+    <value>[TODO] Recording… speak now</value>
+  </data>
+  <data name="Calibration_Captured" xml:space="preserve">
+    <value>[TODO] Voice level captured ✓</value>
+  </data>
+  <data name="Calibration_TryAgain" xml:space="preserve">
+    <value>[TODO] Try again</value>
+  </data>
+  <data name="HotkeyStatus_Title" xml:space="preserve">
+    <value>[TODO] Stop hotkey</value>
+  </data>
+  <data name="Instruction_Title" xml:space="preserve">
+    <value>[TODO] Point Chrome/Zoho at the cable</value>
+  </data>
+  <data name="FirstCall_Title" xml:space="preserve">
+    <value>[TODO] Before your first client call</value>
+  </data>
+  <data name="FirstCall_Subtitle" xml:space="preserve">
+    <value>[TODO] Make a test call and confirm everything sounds right:</value>
+  </data>
+  <data name="Board_NoneConversation" xml:space="preserve">
+    <value>[TODO] None</value>
+  </data>
+  <data name="Board_CategoriesLabel" xml:space="preserve">
+    <value>[TODO] Categories</value>
+  </data>
+  <data name="Board_CategoriesCountFormat" xml:space="preserve">
+    <value>[TODO] {0} categories</value>
+  </data>
+  <data name="Board_ConversationsLabel" xml:space="preserve">
+    <value>[TODO] Conversations</value>
+  </data>
+  <data name="Board_StartEngineToPlay" xml:space="preserve">
+    <value>[TODO] Start the engine (and be ON AIR) to play to the call.</value>
+  </data>
+  <data name="Board_CouldNotPlayFormat" xml:space="preserve">
+    <value>[TODO] Could not play "{0}": {1}</value>
+  </data>
+  <data name="Board_PreviewPlaybackError" xml:space="preserve">
+    <value>[TODO] Could not play the preview — check the playback device and try again.</value>
+  </data>
+  <data name="Board_AudioFileMissing" xml:space="preserve">
+    <value>[TODO] The recording for this phrase could not be found.</value>
+  </data>
+  <data name="Board_MonitorIsCable" xml:space="preserve">
+    <value>[TODO] The preview output is the cable — pick a different monitor (or default) playback device.</value>
+  </data>
+  <data name="Board_StartEngineToRecord" xml:space="preserve">
+    <value>[TODO] Start the engine before recording.</value>
+  </data>
+  <data name="Board_PressStartToRecord" xml:space="preserve">
+    <value>[TODO] Press Start to go Live before recording.</value>
+  </data>
+  <data name="Board_RecordingStartError" xml:space="preserve">
+    <value>[TODO] Could not start recording — check the microphone and try again.</value>
+  </data>
+  <data name="Board_DefaultTakeTitleFormat" xml:space="preserve">
+    <value>[TODO] Take {0:yyyy-MM-dd HH:mm:ss}</value>
+  </data>
+  <data name="Board_NoSignal" xml:space="preserve">
+    <value>[TODO] No signal — nothing recorded.</value>
+  </data>
+  <data name="Board_RecordingFinishError" xml:space="preserve">
+    <value>[TODO] Could not finish the recording — the take was lost.</value>
+  </data>
+  <data name="Board_Previewing" xml:space="preserve">
+    <value>[TODO] Previewing…</value>
+  </data>
+  <data name="Board_SaveRecordingError" xml:space="preserve">
+    <value>[TODO] Could not save the recording — check disk space and try again.</value>
+  </data>
+  <data name="Board_SavedButApplyFailed" xml:space="preserve">
+    <value>[TODO] Saved, but could not apply the category/tags — edit it manually.</value>
+  </data>
+  <data name="Board_SaveVersionError" xml:space="preserve">
+    <value>[TODO] Could not save the version — check disk space and try again.</value>
+  </data>
+  <data name="Board_SaveVersionPhraseGone" xml:space="preserve">
+    <value>[TODO] Could not save the version — the phrase no longer exists.</value>
+  </data>
+  <data name="Board_NewVersionSaved" xml:space="preserve">
+    <value>[TODO] New version saved</value>
+  </data>
+  <data name="Board_TakeDiscarded" xml:space="preserve">
+    <value>[TODO] Take discarded.</value>
+  </data>
+  <data name="Board_LibraryReadError" xml:space="preserve">
+    <value>[TODO] Your phrase library could not be read (another program may be holding the file). Your phrases are safe, but changes are disabled — restart AdaVoice to try again.</value>
+  </data>
+  <data name="Board_LibraryCorrupt" xml:space="preserve">
+    <value>[TODO] Your phrase library file was unreadable and has been set aside, so the board starts empty. Your recordings are still on disk.</value>
+  </data>
+  <data name="Board_LibraryRecovered" xml:space="preserve">
+    <value>[TODO] Your phrase library was restored from the latest daily backup — very recent changes may be missing.</value>
+  </data>
+  <data name="Board_SettingsWereReset" xml:space="preserve">
+    <value>[TODO] Your saved settings could not be read and were reset to defaults — including the microphone calibration. Re-run setup calibration so phrases play at the right level.</value>
+  </data>
+  <data name="Status_Live" xml:space="preserve">
+    <value>[TODO] LIVE</value>
+  </data>
+  <data name="Status_OffAir" xml:space="preserve">
+    <value>[TODO] OFF AIR</value>
+  </data>
+  <data name="Status_Degraded" xml:space="preserve">
+    <value>[TODO] DEGRADED</value>
+  </data>
+  <data name="Status_Stopped" xml:space="preserve">
+    <value>[TODO] STOPPED</value>
+  </data>
+  <data name="Status_DeviceChanged" xml:space="preserve">
+    <value>[TODO] An audio device changed — recovering.</value>
+  </data>
+  <data name="Status_CableStalled" xml:space="preserve">
+    <value>[TODO] The cable stopped responding — recovering.</value>
+  </data>
+  <data name="Status_TooManyMicChannelsFormat" xml:space="preserve">
+    <value>[TODO] Microphone has {0} channels — use a mono or stereo device.</value>
+  </data>
+  <data name="Status_CableSampleRateMismatch" xml:space="preserve">
+    <value>[TODO] Set both CABLE endpoints to 48 kHz in Sound settings.</value>
+  </data>
+  <data name="Wizard_StepLabelFormat" xml:space="preserve">
+    <value>[TODO] Step {0} of {1}</value>
+  </data>
+  <data name="Wizard_Finish" xml:space="preserve">
+    <value>[TODO] Finish</value>
+  </data>
+  <data name="Wizard_Next" xml:space="preserve">
+    <value>[TODO] Next</value>
+  </data>
+  <data name="Hotkey_Registered" xml:space="preserve">
+    <value>[TODO] Global stop hotkey registered: {0}</value>
+  </data>
+  <data name="Hotkey_Status" xml:space="preserve">
+    <value>[TODO] Global stop hotkey: {0}</value>
+  </data>
+  <data name="Hotkey_Unavailable" xml:space="preserve">
+    <value>[TODO] No global stop hotkey available — use the on-screen STOP button.</value>
+  </data>
+  <data name="Instruction_Step1" xml:space="preserve">
+    <value>[TODO] Open Chrome and go to your call site (e.g. Zoho Meeting or Zoho Voice).</value>
+  </data>
+  <data name="Instruction_Step2" xml:space="preserve">
+    <value>[TODO] Open the microphone/audio settings for the call.</value>
+  </data>
+  <data name="Instruction_Step3" xml:space="preserve">
+    <value>[TODO] Set the microphone to "CABLE Output (VB-Audio Virtual Cable)".</value>
+  </data>
+  <data name="Instruction_Step4" xml:space="preserve">
+    <value>[TODO] Continue to the next step to confirm it works with a real test call.</value>
+  </data>
+  <data name="FirstCall_Check1" xml:space="preserve">
+    <value>[TODO] Call your own phone or a friend through Zoho.</value>
+  </data>
+  <data name="FirstCall_Check2" xml:space="preserve">
+    <value>[TODO] Play two phrases during that call.</value>
+  </data>
+  <data name="FirstCall_Check3" xml:space="preserve">
+    <value>[TODO] Confirm they sound natural and the levels match your voice.</value>
+  </data>
+  <data name="Calibration_MicAccessError" xml:space="preserve">
+    <value>[TODO] Could not access the microphone — close anything else using it and try again.</value>
+  </data>
+  <data name="PhraseVersions_PrimaryLabel" xml:space="preserve">
+    <value>[TODO] Primary</value>
+  </data>
+  <data name="Backup_ExportDroppedVersionsFormat" xml:space="preserve">
+    <value>[TODO] Exported. {0} alternate take(s) were not included — phrase versions aren't included in exports yet.</value>
+  </data>
+  <data name="Backup_ExportErrorFormat" xml:space="preserve">
+    <value>[TODO] Could not export: {0}</value>
+  </data>
+  <data name="Backup_ImportErrorFormat" xml:space="preserve">
+    <value>[TODO] Could not import: {0}</value>
+  </data>
+  <data name="Backup_ImportSuccessFormat" xml:space="preserve">
+    <value>[TODO] Imported {0} phrase(s) ({1} skipped). Restart AdaVoice to see them on your board.</value>
+  </data>
+  <data name="Backup_ImportArchiveOpenFailedFormat" xml:space="preserve">
+    <value>[TODO] could not open archive: {0}</value>
+  </data>
+  <data name="Backup_ImportTooManyEntriesFormat" xml:space="preserve">
+    <value>[TODO] the archive has too many entries ({0})</value>
+  </data>
+  <data name="Backup_ImportLibraryJsonTooLarge" xml:space="preserve">
+    <value>[TODO] the archive's library.json is unreasonably large</value>
+  </data>
+  <data name="Backup_ImportNoValidLibraryJson" xml:space="preserve">
+    <value>[TODO] the archive has no valid library.json</value>
+  </data>
+  <data name="Backup_ImportUnsupportedVersionFormat" xml:space="preserve">
+    <value>[TODO] unsupported library version {0} (expected {1})</value>
+  </data>
+  <data name="Backup_ImportFailedFormat" xml:space="preserve">
+    <value>[TODO] import failed, the library was not changed: {0}</value>
+  </data>
+  <data name="Backup_ImportAudioEntryTooLarge" xml:space="preserve">
+    <value>[TODO] an audio recording in the archive is unreasonably large</value>
+  </data>
+  <data name="Backup_ImportTotalAudioTooLarge" xml:space="preserve">
+    <value>[TODO] the archive's total audio recordings exceed the import limit</value>
+  </data>
+  <data name="DialogPrompts_Cancel" xml:space="preserve">
+    <value>[TODO] Cancel</value>
+  </data>
+  <data name="DialogPrompts_Ok" xml:space="preserve">
+    <value>[TODO] OK</value>
+  </data>
+  <data name="EnvChecks_Pass" xml:space="preserve">
+    <value>[TODO] ✓ Pass</value>
+  </data>
+  <data name="EnvChecks_Fail" xml:space="preserve">
+    <value>[TODO] ✗ Fail</value>
+  </data>
+  <data name="EnvChecks_CableOutputName" xml:space="preserve">
+    <value>[TODO] Cable output</value>
+  </data>
+  <data name="EnvChecks_CableSampleRateName" xml:space="preserve">
+    <value>[TODO] Cable sample rate</value>
+  </data>
+  <data name="EnvChecks_DefaultOutputName" xml:space="preserve">
+    <value>[TODO] Default output</value>
+  </data>
+  <data name="EnvChecks_MicrophoneName" xml:space="preserve">
+    <value>[TODO] Microphone</value>
+  </data>
+  <data name="EnvChecks_CableOutputMissingFormat" xml:space="preserve">
+    <value>[TODO] '{0}' not found — install VB-Cable.</value>
+  </data>
+  <data name="EnvChecks_CableSampleRateNoCable" xml:space="preserve">
+    <value>[TODO] cable not found.</value>
+  </data>
+  <data name="EnvChecks_CableSampleRateWrongFormat" xml:space="preserve">
+    <value>[TODO] {0} Hz — set both CABLE endpoints to 48 kHz in Sound settings.</value>
+  </data>
+  <data name="EnvChecks_CableSampleRatePass" xml:space="preserve">
+    <value>[TODO] 48 kHz</value>
+  </data>
+  <data name="EnvChecks_DefaultOutputIsCableFormat" xml:space="preserve">
+    <value>[TODO] is the cable ('{0}') — previews and the alarm would reach the call. Make speakers/headphones the Windows default.</value>
+  </data>
+  <data name="EnvChecks_NoneFound" xml:space="preserve">
+    <value>[TODO] (none)</value>
+  </data>
+  <data name="EnvChecks_MicrophoneNoneFound" xml:space="preserve">
+    <value>[TODO] no active microphone found.</value>
+  </data>
+  <data name="EnvChecks_MicrophoneNotFoundFormat" xml:space="preserve">
+    <value>[TODO] '{0}' not found.</value>
+  </data>
+  <data name="Category_Uncategorized" xml:space="preserve">
+    <value>[TODO] Uncategorized</value>
+  </data>
+  <data name="Main_DeletePhraseTitle" xml:space="preserve">
+    <value>[TODO] Delete phrase</value>
+  </data>
+  <data name="Main_DeletePhraseConfirmFormat" xml:space="preserve">
+    <value>[TODO] Delete “{0}”?
+
+The recording is kept as a backup and can be recovered.</value>
+  </data>
+  <data name="Main_ManageCategoriesMenuItem" xml:space="preserve">
+    <value>[TODO] Manage categories…</value>
+  </data>
+  <data name="Main_ManageConversationsMenuItem" xml:space="preserve">
+    <value>[TODO] Manage conversations…</value>
+  </data>
+  <data name="Main_ExportFilter" xml:space="preserve">
+    <value>[TODO] AdaVoice export (*.zip)|*.zip</value>
+  </data>
+  <data name="Main_HotkeyHintFormat" xml:space="preserve">
+    <value>[TODO] Or press {0} to stop from any window</value>
+  </data>
+  <data name="Main_UseOnScreenStop" xml:space="preserve">
+    <value>[TODO] Use the on-screen STOP button.</value>
+  </data>
+  <data name="Main_HotkeyUnavailableTitle" xml:space="preserve">
+    <value>[TODO] Stop hotkey unavailable</value>
+  </data>
+  <data name="Main_SavedToastTitle" xml:space="preserve">
+    <value>[TODO] Saved</value>
+  </data>
+  <data name="Main_DeletedToastTitle" xml:space="preserve">
+    <value>[TODO] Deleted</value>
+  </data>
+  <data name="App_AlreadyRunning" xml:space="preserve">
+    <value>[TODO] AdaVoice is already running.</value>
+  </data>
+  <data name="App_CrashMessageFormat" xml:space="preserve">
+    <value>[TODO] Something went wrong: {0}
+
+AdaVoice keeps running; details are in the log.</value>
+  </data>
+  <data name="Settings_ImportLibraryTitle" xml:space="preserve">
+    <value>[TODO] Import library</value>
+  </data>
+  <data name="Settings_ImportLibraryPrompt" xml:space="preserve">
+    <value>[TODO] Merge with your current library, or replace it entirely?
+
+Merge keeps your current phrases. Replace overwrites your current library.</value>
+  </data>
+  <data name="Settings_Merge" xml:space="preserve">
+    <value>[TODO] Merge</value>
+  </data>
+  <data name="Settings_Replace" xml:space="preserve">
+    <value>[TODO] Replace</value>
+  </data>
+  <data name="Settings_RestartRequiredTitle" xml:space="preserve">
+    <value>[TODO] Restart required</value>
+  </data>
+  <data name="Settings_RestartPrompt" xml:space="preserve">
+    <value>[TODO] The language change takes effect after a restart. Restart AdaVoice now?</value>
+  </data>
+  <data name="Settings_RestartNow" xml:space="preserve">
+    <value>[TODO] Restart now</value>
+  </data>
+  <data name="ManageCategories_DeleteConfirmTitle" xml:space="preserve">
+    <value>[TODO] Delete category</value>
+  </data>
+  <data name="ManageCategories_DeleteConfirmFormat" xml:space="preserve">
+    <value>[TODO] Delete "{0}"?
+
+Its phrases will move to Uncategorized.</value>
+  </data>
+  <data name="ManageConversations_DeleteConfirmTitle" xml:space="preserve">
+    <value>[TODO] Delete conversation</value>
+  </data>
+  <data name="ManageConversations_DeleteConfirmFormat" xml:space="preserve">
+    <value>[TODO] Delete "{0}"?</value>
+  </data>
+  <data name="PhraseVersions_DeleteConfirmTitle" xml:space="preserve">
+    <value>[TODO] Delete version</value>
+  </data>
+  <data name="PhraseVersions_DeleteConfirmFormat" xml:space="preserve">
+    <value>[TODO] Delete the "{0}" version?
+
+Its recording will be removed.</value>
+  </data>
+  <data name="Recorder_DiscardConfirmTitle" xml:space="preserve">
+    <value>[TODO] Discard take</value>
+  </data>
+  <data name="Recorder_DiscardConfirmMessage" xml:space="preserve">
+    <value>[TODO] Discard this take?
+
+The recording will be lost.</value>
+  </data>
+</root>

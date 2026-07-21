@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using AdaVoice.App.Resources;
 using AdaVoice.Core.Domain;
 using AdaVoice.Host;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -81,14 +82,30 @@ public partial class CategoriesViewModel : ObservableObject
 }
 
 /// <summary>One row in the category manager: an editable name and colour for a single category. The
-/// "Uncategorized" default is flagged so the UI can hide its delete button.</summary>
+/// "Uncategorized" default is flagged so the UI can hide its delete button and disable its name
+/// field — <see cref="DisplayName"/> shows a localized label for it, but that label must never be
+/// typeable back into <see cref="Name"/> (the stored value is a live constraint: other phrases
+/// reference it by id, and Stage 3 of the localization plan requires it stay unchanged on disk).</summary>
 public partial class CategoryRowViewModel(Category category) : ObservableObject
 {
     public string Id { get; } = category.Id;
     public bool IsDefault { get; } = category.Id == Category.DefaultId;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayName))]
     private string _name = category.Name;
+
+    /// <summary>What the name field shows: the localized "Uncategorized" label for the default row
+    /// (read-only there — the field is disabled in XAML), or the real editable name otherwise.</summary>
+    public string DisplayName
+    {
+        get => IsDefault ? Strings.Category_Uncategorized : Name;
+        set
+        {
+            if (!IsDefault)
+                Name = value;
+        }
+    }
 
     [ObservableProperty]
     private string _color = category.Color;

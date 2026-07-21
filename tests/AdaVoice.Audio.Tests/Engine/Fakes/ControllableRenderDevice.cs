@@ -35,8 +35,7 @@ public sealed class ControllableRenderDevice : IAudioRenderDevice
     public void Init(ISampleProvider source)
     {
         if (source.WaveFormat.SampleRate != Format.SampleRate)
-            throw new NotSupportedException(
-                $"Source is {source.WaveFormat.SampleRate} Hz but the device is {Format.SampleRate} Hz.");
+            throw new UnsupportedSampleRateException();
 
         _source = source;
     }

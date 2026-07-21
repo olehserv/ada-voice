@@ -1,4 +1,5 @@
 using System.Windows;
+using AdaVoice.App.Resources;
 using AdaVoice.App.Services;
 using AdaVoice.App.ViewModels;
 using Wpf.Ui;
@@ -33,6 +34,6 @@ public partial class ManageCategoriesDialog : Wpf.Ui.Controls.FluentWindow
 
     /// <summary>Confirm before deleting a category — its phrases fall back to Uncategorized.</summary>
     public Task<bool> ConfirmDeleteAsync(CategoryRowViewModel row) => DialogPrompts.ConfirmAsync(
-        _dialogService, "Delete category",
-        $"Delete \"{row.Name}\"?\n\nIts phrases will move to Uncategorized.", "Delete");
+        _dialogService, Strings.ManageCategories_DeleteConfirmTitle,
+        string.Format(Strings.ManageCategories_DeleteConfirmFormat, row.Name), Strings.ManageCategories_Delete);
 }

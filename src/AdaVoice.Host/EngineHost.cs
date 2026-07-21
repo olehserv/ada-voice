@@ -42,7 +42,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     private readonly PhraseLibraryService _library;
     private readonly LibraryArchiveService _archive;
     private readonly JsonSettingsRepository _settingsRepository;
-    private readonly string? _settingsWarning;
+    private readonly bool _settingsWereReset;
     private Settings _settings;
     private volatile bool _running;
 
@@ -72,9 +72,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
         _settingsRepository = new JsonSettingsRepository(_dataRoot);
         _settings = _settingsRepository.Load();
         if (_settingsRepository.LoadReplacedCorruptFile)
-            _settingsWarning =
-                "Your saved settings could not be read and were reset to defaults — including the " +
-                "microphone calibration. Re-run setup calibration so phrases play at the right level.";
+            _settingsWereReset = true;
         // The wizard-calibrated mic reference (if any) drives the recorder's loudness-match.
         _recorderOptions = _recorderOptions with { ReferenceRms = _settings.MicReferenceRms };
 
@@ -138,7 +136,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     public CalibrationResult Calibrate(int seconds = 5)
     {
         if (_recorder is not null)
-            return new CalibrationResult(false, 0, "A recording is in progress — stop it first.");
+            return new CalibrationResult(false, 0, CalibrationFailureReason.RecordingInProgress);
 
         var wasLive = State == EngineState.Live;
         if (wasLive)
@@ -147,7 +145,7 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
             if (!WaitForState(EngineState.OffAir, TimeSpan.FromSeconds(2)))
             {
                 ExitOffAir(); // a late transition must not strand the engine OFF AIR
-                return new CalibrationResult(false, 0, "Could not pause the call feed — try again.");
+                return new CalibrationResult(false, 0, CalibrationFailureReason.CouldNotPauseCallFeed);
             }
         }
 
@@ -201,22 +199,11 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     /// setter's exception swallowed by WPF's binding engine (review finding 9).</summary>
     public bool IsWritable => _library.IsWritable;
 
-    /// <summary>Maps the load status to operator text. Mirrors the log warnings in the constructor,
-    /// but reaches the board — an operator never reads the log.</summary>
-    public string? LibraryWarning => _library.LoadStatus switch
-    {
-        LibraryLoadStatus.ReadError =>
-            "Your phrase library could not be read (another program may be holding the file). " +
-            "Your phrases are safe, but changes are disabled — restart AdaVoice to try again.",
-        LibraryLoadStatus.Corrupt =>
-            "Your phrase library file was unreadable and has been set aside, so the board starts empty. " +
-            "Your recordings are still on disk.",
-        LibraryLoadStatus.RecoveredFromBackup =>
-            "Your phrase library was restored from the latest daily backup — very recent changes may be missing.",
-        _ => null,
-    };
+    /// <summary>Mirrors the log warnings in the constructor, but reaches the board — an operator never
+    /// reads the log. The App layer maps this to operator text (Host carries no display text).</summary>
+    public LibraryLoadStatus LoadStatus => _library.LoadStatus;
 
-    public string? SettingsWarning => _settingsWarning;
+    public bool SettingsWereReset => _settingsWereReset;
 
     public PhraseEntry? SetPhraseTitle(string phraseId, string title) => _library.SetPhraseTitle(phraseId, title);
     public PhraseEntry? SetPhraseCategory(string phraseId, string categoryId) => _library.SetPhraseCategory(phraseId, categoryId);
@@ -281,14 +268,13 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     /// always the entry's, regardless of which take played. Returns an error message if nothing was
     /// played (not Live, or the audio file is missing), or null on success — mirrors
     /// <see cref="PreviewEntry"/> so a caller can surface the drop instead of silence.</summary>
-    public string? PlayEntry(PhraseEntry entry, PhraseVersion? version = null)
+    public PlaybackError? PlayEntry(PhraseEntry entry, PhraseVersion? version = null)
     {
         if (State != EngineState.Live)
         {
             // The engine routes Play to the cable only when Live; surface the drop instead of silence.
-            var message = $"engine is {State}, not Live — press Start (and be ON AIR)";
-            _log($"cannot play {entry.Id}: {message}");
-            return message;
+            _log($"cannot play {entry.Id}: engine is {State}, not Live");
+            return new PlaybackError(PlaybackErrorCode.EngineNotLive);
         }
 
         var fileName = version?.FileName ?? entry.FileName;
@@ -296,9 +282,8 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
         var path = AdaVoicePaths.AudioPath(_dataRoot, fileName);
         if (!File.Exists(path))
         {
-            var message = $"missing audio file: {fileName}";
-            _log($"cannot play {entry.Id}: {message}");
-            return message;
+            _log($"cannot play {entry.Id}: missing audio file {fileName}");
+            return new PlaybackError(PlaybackErrorCode.AudioFileMissing, fileName);
         }
 
         var samples = WavFile.Load(path);
@@ -426,19 +411,22 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
         return result;
     }
 
-    /// <summary>Load a catalogued phrase from disk and preview it. Returns an error message, or null
+    /// <summary>Load a catalogued phrase from disk and preview it. Returns why it failed, or null on
+    /// success.</summary>
+    public PlaybackError? PreviewEntry(PhraseEntry entry) => PreviewFile(entry.FileName, entry.GainDb);
+
+    /// <summary>Load one version of a phrase from disk and preview it. Returns why it failed, or null
     /// on success.</summary>
-    public string? PreviewEntry(PhraseEntry entry) => PreviewFile(entry.FileName, entry.GainDb);
+    public PlaybackError? PreviewVersion(PhraseVersion version) => PreviewFile(version.FileName, version.GainDb);
 
-    /// <summary>Load one version of a phrase from disk and preview it. Returns an error message, or
-    /// null on success.</summary>
-    public string? PreviewVersion(PhraseVersion version) => PreviewFile(version.FileName, version.GainDb);
-
-    private string? PreviewFile(string fileName, double gainDb)
+    private PlaybackError? PreviewFile(string fileName, double gainDb)
     {
         var path = AdaVoicePaths.AudioPath(_dataRoot, fileName);
         if (!File.Exists(path))
-            return $"missing audio file: {fileName}";
+        {
+            _log($"cannot preview: missing audio file {fileName}");
+            return new PlaybackError(PlaybackErrorCode.AudioFileMissing, fileName);
+        }
 
         return Preview(WavFile.Load(path), gainDb);
     }
@@ -543,9 +531,9 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
     /// <summary>
     /// Play samples to the monitor device (the configured output, else the OS default), applying
     /// <paramref name="gainDb"/>. Refuses if that device is the cable — preview must never reach the
-    /// call (decision #11). Blocks until playback finishes. Returns an error message, or null on success.
+    /// call (decision #11). Blocks until playback finishes. Returns why it failed, or null on success.
     /// </summary>
-    public string? Preview(float[] samples, double gainDb)
+    public PlaybackError? Preview(float[] samples, double gainDb)
     {
         var device = ResolveMonitorDevice();
 
@@ -554,7 +542,8 @@ public sealed class EngineHost : IDisposable, IPlaybackHost, IRecorderHost, ISet
         if (device.FriendlyName.Contains(_options.CableName, StringComparison.OrdinalIgnoreCase))
         {
             device.Dispose();
-            return "the preview output is the cable — pick a different monitor (or default) playback device";
+            _log("preview refused: monitor resolves to the cable");
+            return new PlaybackError(PlaybackErrorCode.MonitorIsCable);
         }
 
         _log($"preview → {device.FriendlyName}"); // so the operator can see which device it played to

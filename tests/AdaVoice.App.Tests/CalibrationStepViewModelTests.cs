@@ -1,3 +1,4 @@
+using AdaVoice.App.Resources;
 using AdaVoice.App.ViewModels;
 using AdaVoice.Audio.Setup;
 
@@ -34,7 +35,7 @@ public class CalibrationStepViewModelTests
     {
         var host = new FakePlaybackHost
         {
-            NextCalibrationResult = new CalibrationResult(false, 0.001, "We barely heard you — move closer to the mic and try again."),
+            NextCalibrationResult = new CalibrationResult(false, 0.001, CalibrationFailureReason.TooQuiet),
         };
         var step = new CalibrationStepViewModel(host);
 
@@ -42,13 +43,14 @@ public class CalibrationStepViewModelTests
 
         Assert.False(step.CanAdvance);
         Assert.True(step.HasMessage);
-        Assert.Equal("We barely heard you — move closer to the mic and try again.", step.Result!.Message);
+        Assert.Equal(CalibrationFailureReason.TooQuiet, step.Result!.Reason);
+        Assert.Equal(Strings.Calibration_TooQuiet, step.Message);
     }
 
     [Fact]
     public async Task Retrying_after_a_too_quiet_result_can_succeed()
     {
-        var host = new FakePlaybackHost { NextCalibrationResult = new CalibrationResult(false, 0.001, "too quiet") };
+        var host = new FakePlaybackHost { NextCalibrationResult = new CalibrationResult(false, 0.001, CalibrationFailureReason.TooQuiet) };
         var step = new CalibrationStepViewModel(host);
         await step.StartCalibrationCommand.ExecuteAsync(null);
         Assert.False(step.CanAdvance);

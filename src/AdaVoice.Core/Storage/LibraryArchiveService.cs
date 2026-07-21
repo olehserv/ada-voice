@@ -15,8 +15,34 @@ public enum ImportMode
     Replace,
 }
 
-/// <summary>The outcome of an import. <see cref="Success"/> false means nothing was changed.</summary>
-public sealed record ImportResult(bool Success, int Added, int Skipped, string? Error = null);
+/// <summary>Why an import failed — the App layer's localization key, since Core carries no display
+/// text. <see cref="ArchiveOpenFailed"/>/<see cref="ImportFailed"/> carry a framework
+/// <see cref="ImportResult.ExceptionMessage"/> suffix that stays English by design (a system detail,
+/// not our own text) — see the localization plan's Stage 3 notes.</summary>
+public enum ImportErrorCode
+{
+    ArchiveOpenFailed,
+    TooManyEntries,
+    LibraryJsonTooLarge,
+    NoValidLibraryJson,
+    UnsupportedVersion,
+    AudioEntryTooLarge,
+    TotalAudioTooLarge,
+    ImportFailed,
+}
+
+/// <summary>The outcome of an import. <see cref="Success"/> false means nothing was changed; the
+/// remaining fields are the raw data an <see cref="ErrorCode"/>'s localized message needs — only the
+/// ones relevant to that code are set.</summary>
+public sealed record ImportResult(
+    bool Success,
+    int Added,
+    int Skipped,
+    ImportErrorCode? ErrorCode = null,
+    string? ExceptionMessage = null,
+    int? EntryCount = null,
+    int? FoundVersion = null,
+    int? ExpectedVersion = null);
 
 /// <summary>
 /// Manual export and import of the library (design 04 §4). The archive is a plain zip with the same
@@ -27,6 +53,15 @@ public sealed record ImportResult(bool Success, int Added, int Skipped, string? 
 /// </summary>
 public sealed class LibraryArchiveService(string root, IPhraseRepository repository)
 {
+    /// <summary>Discriminates a resource-cap violation (its own <see cref="ImportErrorCode"/>) from
+    /// any other staging failure inside <see cref="Import"/>'s single catch block — same "hostile
+    /// archive" family as <see cref="ImportErrorCode.TooManyEntries"/>/
+    /// <see cref="ImportErrorCode.LibraryJsonTooLarge"/>, just thrown from deeper in the call stack.</summary>
+    private sealed class ImportLimitExceededException(ImportErrorCode code) : Exception
+    {
+        public ImportErrorCode Code { get; } = code;
+    }
+
     private const int SupportedVersion = 1;
 
     // Resource caps: a crafted or corrupted archive must not be able to fill the disk or OOM
@@ -73,21 +108,22 @@ public sealed class LibraryArchiveService(string root, IPhraseRepository reposit
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
         {
-            return new ImportResult(false, 0, 0, $"could not open archive: {ex.Message}");
+            return new ImportResult(false, 0, 0, ImportErrorCode.ArchiveOpenFailed, ExceptionMessage: ex.Message);
         }
 
         using var _ = zip;
         if (zip.Entries.Count > MaxEntries)
-            return new ImportResult(false, 0, 0, $"the archive has too many entries ({zip.Entries.Count})");
+            return new ImportResult(false, 0, 0, ImportErrorCode.TooManyEntries, EntryCount: zip.Entries.Count);
 
         var entry = zip.GetEntry("library.json");
         if (entry is not null && entry.Length > MaxLibraryJsonBytes)
-            return new ImportResult(false, 0, 0, "the archive's library.json is unreasonably large");
+            return new ImportResult(false, 0, 0, ImportErrorCode.LibraryJsonTooLarge);
         var imported = entry is null ? null : LibraryJson.TryParse(ReadEntry(entry));
         if (imported is null)
-            return new ImportResult(false, 0, 0, "the archive has no valid library.json");
+            return new ImportResult(false, 0, 0, ImportErrorCode.NoValidLibraryJson);
         if (imported.Version != SupportedVersion)
-            return new ImportResult(false, 0, 0, $"unsupported library version {imported.Version} (expected {SupportedVersion})");
+            return new ImportResult(false, 0, 0, ImportErrorCode.UnsupportedVersion,
+                FoundVersion: imported.Version, ExpectedVersion: SupportedVersion);
 
         // Normalize the catalogue before anything else: drop blank-id phrases and duplicate ids
         // (keep the first) so the re-key and merge maths below are well-defined. Also flatten
@@ -154,11 +190,17 @@ public sealed class LibraryArchiveService(string root, IPhraseRepository reposit
 
             repository.Save(result);
         }
+        catch (ImportLimitExceededException ex)
+        {
+            foreach (var (tmp, _) in staged)
+                FileOps.TryDelete(tmp);
+            return new ImportResult(false, 0, 0, ex.Code);
+        }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             foreach (var (tmp, _) in staged)
                 FileOps.TryDelete(tmp);
-            return new ImportResult(false, 0, 0, $"import failed, the library was not changed: {ex.Message}");
+            return new ImportResult(false, 0, 0, ImportErrorCode.ImportFailed, ExceptionMessage: ex.Message);
         }
 
         return new ImportResult(true, added.Count, imported.Phrases.Count - added.Count);
@@ -229,10 +271,10 @@ public sealed class LibraryArchiveService(string root, IPhraseRepository reposit
         // Header-declared sizes; ExtractToFile verifies them against the actual stream, so a
         // lying header fails the extract (and the transaction) rather than bypassing the cap.
         if (source.Length > MaxWavBytes)
-            throw new InvalidDataException($"audio entry '{archiveFileName}' is unreasonably large");
+            throw new ImportLimitExceededException(ImportErrorCode.AudioEntryTooLarge);
         totalAudioBytes += source.Length;
         if (totalAudioBytes > MaxTotalAudioBytes)
-            throw new InvalidDataException("the archive's total audio exceeds the import limit");
+            throw new ImportLimitExceededException(ImportErrorCode.TotalAudioTooLarge);
 
         Directory.CreateDirectory(AdaVoicePaths.AudioDir(root));
         // Zip-slip guard: flatten to a bare file name so a crafted entry can never escape audio\.

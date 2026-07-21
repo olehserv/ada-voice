@@ -2,8 +2,9 @@
     x:Class="AdaVoice.App.PhraseEditDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:res="clr-namespace:AdaVoice.App.Resources"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    Title="Edit phrase"
+    Title="{x:Static res:Strings.PhraseEdit_Title}"
     Width="380"
     Background="{DynamicResource Surface.Window}"
     ExtendsContentIntoTitleBar="True"
@@ -22,20 +23,20 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <ui:TitleBar
-            Title="Edit phrase"
+            Title="{x:Static res:Strings.PhraseEdit_Title}"
             Grid.Row="0"
             CanMaximize="False"
             ShowMaximize="False"
             ShowMinimize="False" />
 
         <StackPanel Grid.Row="1" Margin="{StaticResource Space.DialogContent}">
-            <TextBlock Style="{StaticResource FieldLabelStyle}" Text="Title" />
+            <TextBlock Style="{StaticResource FieldLabelStyle}" Text="{x:Static res:Strings.PhraseEdit_TitleLabel}" />
             <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" />
 
             <TextBlock
                 Margin="0,12,0,4"
                 Style="{StaticResource FieldLabelStyle}"
-                Text="Category" />
+                Text="{x:Static res:Strings.PhraseEdit_CategoryLabel}" />
             <ComboBox
                 ItemsSource="{Binding Categories}"
                 SelectedValue="{Binding SelectedCategoryId}"
@@ -52,7 +53,7 @@
                             <TextBlock
                                 Margin="8,0,0,0"
                                 VerticalAlignment="Center"
-                                Text="{Binding Name}" />
+                                Text="{Binding Converter={StaticResource CategoryName}}" />
                         </StackPanel>
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
@@ -61,7 +62,7 @@
             <TextBlock
                 Margin="0,12,0,4"
                 Style="{StaticResource FieldLabelStyle}"
-                Text="Tags" />
+                Text="{x:Static res:Strings.PhraseEdit_TagsLabel}" />
 
             <!--  Current tags as removable chips  -->
             <ItemsControl ItemsSource="{Binding Tags}">
@@ -87,7 +88,7 @@
                                     Margin="6,0,0,0"
                                     Padding="0"
                                     VerticalAlignment="Center"
-                                    AutomationProperties.Name="Remove tag"
+                                    AutomationProperties.Name="{x:Static res:Strings.PhraseEdit_RemoveTag}"
                                     Background="Transparent"
                                     BorderThickness="0"
                                     Command="{Binding DataContext.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
@@ -95,7 +96,7 @@
                                     Content="✕"
                                     Cursor="Hand"
                                     Foreground="{DynamicResource Text.Secondary}"
-                                    ToolTip="Remove tag" />
+                                    ToolTip="{x:Static res:Strings.PhraseEdit_RemoveTag}" />
                             </StackPanel>
                         </Border>
                     </DataTemplate>
@@ -110,7 +111,7 @@
                 </Grid.ColumnDefinitions>
                 <ui:TextBox
                     Grid.Column="0"
-                    PlaceholderText="Add a tag…"
+                    PlaceholderText="{x:Static res:Strings.PhraseEdit_AddTagPlaceholder}"
                     Text="{Binding NewTag, UpdateSourceTrigger=PropertyChanged}">
                     <ui:TextBox.InputBindings>
                         <KeyBinding Key="Return" Command="{Binding AddTagCommand}" />
@@ -121,7 +122,7 @@
                     Margin="8,0,0,0"
                     Appearance="Secondary"
                     Command="{Binding AddTagCommand}"
-                    Content="Add" />
+                    Content="{x:Static res:Strings.PhraseEdit_Add}" />
             </Grid>
 
             <!--  Reuse an existing tag  -->
@@ -144,7 +145,7 @@
                             Content="{Binding}"
                             Cursor="Hand"
                             Foreground="{DynamicResource Text.Secondary}"
-                            ToolTip="Add this existing tag" />
+                            ToolTip="{x:Static res:Strings.PhraseEdit_AddExistingTag}" />
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
@@ -156,12 +157,12 @@
                 <ui:Button
                     Margin="0,0,8,0"
                     Appearance="Secondary"
-                    Content="Cancel"
+                    Content="{x:Static res:Strings.PhraseEdit_Cancel}"
                     IsCancel="True" />
                 <ui:Button
                     x:Name="SaveButton"
                     Click="Save_Click"
-                    Content="Save"
+                    Content="{x:Static res:Strings.PhraseEdit_Save}"
                     IsDefault="True"
                     IsEnabled="{Binding HasValidTitle}"
                     Style="{StaticResource BrandCtaButtonStyle}" />

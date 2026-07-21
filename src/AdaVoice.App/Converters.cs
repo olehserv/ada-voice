@@ -3,9 +3,33 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
+using AdaVoice.App.Resources;
 using AdaVoice.Audio.Setup;
+using AdaVoice.Core.Domain;
 
 namespace AdaVoice.App;
+
+/// <summary>Localizes a category's displayed name — the stored value never changes (the seeded
+/// "Uncategorized" category is a live constraint: it's persisted data other phrases reference by
+/// id), only what the operator sees. Every UI site that shows a category name should go through
+/// this, not <see cref="Category.Name"/> directly, so the seed's display can never be typed back in
+/// as a new stored name (see <c>CategoryRowViewModel.DisplayName</c>, the one editable site).</summary>
+public static class CategoryDisplay
+{
+    public static string NameOf(Category category) =>
+        category.Id == Category.DefaultId ? Strings.Category_Uncategorized : category.Name;
+}
+
+/// <summary>A <see cref="Category"/> (via a path-less `{Binding}`) → its localized display name.
+/// See <see cref="CategoryDisplay"/>.</summary>
+public sealed class CategoryNameConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is Category category ? CategoryDisplay.NameOf(category) : "";
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
 
 /// <summary>Shared frozen-brush helper for converters below — a frozen brush is cross-thread safe and
 /// slightly cheaper to render, and every converter here needs the same construction.</summary>
@@ -121,7 +145,7 @@ public sealed class TitleClampConverter : IValueConverter
 public sealed class CheckStatusToLabelConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        value is CheckStatus.Pass ? "✓ Pass" : "✗ Fail";
+        value is CheckStatus.Pass ? Strings.EnvChecks_Pass : Strings.EnvChecks_Fail;
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();
@@ -129,15 +153,76 @@ public sealed class CheckStatusToLabelConverter : IValueConverter
 
 /// <summary>The whole bound <see cref="EnvironmentCheck"/> (via a path-less `{Binding}`) →
 /// visible only for the failed cable-output check, so the VB-CABLE download link shows next to
-/// that one check's detail text and nowhere else. Matches by <see cref="EnvironmentCheck.Name"/>
-/// since no `CheckType` enum exists — see EnvironmentChecks.cs's "Cable output" literal.</summary>
+/// that one check's detail text and nowhere else.</summary>
 public sealed class FailedCableCheckToVisibilityConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        value is EnvironmentCheck { Name: "Cable output", Status: CheckStatus.Fail }
+        value is EnvironmentCheck { Kind: EnvironmentCheckKind.CableOutput, Status: CheckStatus.Fail }
             ? Visibility.Visible
             : Visibility.Collapsed;
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();
+}
+
+/// <summary>An <see cref="EnvironmentCheck"/> (via a path-less `{Binding}`) → its localized title,
+/// keyed only by <see cref="EnvironmentCheck.Kind"/> — never by English text (Audio carries none;
+/// see EnvironmentChecksTests, which asserts by Kind for exactly this reason).</summary>
+public sealed class EnvironmentCheckToTitleConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is EnvironmentCheck check ? TitleFor(check.Kind) : "";
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+
+    private static string TitleFor(EnvironmentCheckKind kind) => kind switch
+    {
+        EnvironmentCheckKind.CableOutput => Strings.EnvChecks_CableOutputName,
+        EnvironmentCheckKind.CableSampleRate => Strings.EnvChecks_CableSampleRateName,
+        EnvironmentCheckKind.DefaultOutput => Strings.EnvChecks_DefaultOutputName,
+        EnvironmentCheckKind.Microphone => Strings.EnvChecks_MicrophoneName,
+        _ => "",
+    };
+}
+
+/// <summary>An <see cref="EnvironmentCheck"/> (via a path-less `{Binding}`) → its localized detail
+/// text, formatted from the check's Kind/Status/params — the Audio layer only carries the raw data
+/// (design: Audio has no UI concerns, see CLAUDE.md).</summary>
+public sealed class EnvironmentCheckToDetailConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is EnvironmentCheck check ? DetailFor(check) : "";
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+
+    private static string DetailFor(EnvironmentCheck check) => check switch
+    {
+        { Kind: EnvironmentCheckKind.CableOutput, Status: CheckStatus.Fail } =>
+            string.Format(Strings.EnvChecks_CableOutputMissingFormat, check.RequestedName),
+        { Kind: EnvironmentCheckKind.CableOutput, Status: CheckStatus.Pass } =>
+            check.FoundName ?? "",
+
+        { Kind: EnvironmentCheckKind.CableSampleRate, Status: CheckStatus.Fail, MeasuredSampleRate: null } =>
+            Strings.EnvChecks_CableSampleRateNoCable,
+        { Kind: EnvironmentCheckKind.CableSampleRate, Status: CheckStatus.Fail, MeasuredSampleRate: { } rate } =>
+            string.Format(Strings.EnvChecks_CableSampleRateWrongFormat, rate),
+        { Kind: EnvironmentCheckKind.CableSampleRate, Status: CheckStatus.Pass } =>
+            Strings.EnvChecks_CableSampleRatePass,
+
+        { Kind: EnvironmentCheckKind.DefaultOutput, Status: CheckStatus.Fail } =>
+            string.Format(Strings.EnvChecks_DefaultOutputIsCableFormat, check.FoundName),
+        { Kind: EnvironmentCheckKind.DefaultOutput, Status: CheckStatus.Pass } =>
+            check.FoundName ?? Strings.EnvChecks_NoneFound,
+
+        { Kind: EnvironmentCheckKind.Microphone, Status: CheckStatus.Fail, RequestedName: null } =>
+            Strings.EnvChecks_MicrophoneNoneFound,
+        { Kind: EnvironmentCheckKind.Microphone, Status: CheckStatus.Fail, RequestedName: { } name } =>
+            string.Format(Strings.EnvChecks_MicrophoneNotFoundFormat, name),
+        { Kind: EnvironmentCheckKind.Microphone, Status: CheckStatus.Pass } =>
+            check.FoundName ?? "",
+
+        _ => "",
+    };
 }

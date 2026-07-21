@@ -1,3 +1,4 @@
+using AdaVoice.App.Resources;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Host;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -22,10 +23,26 @@ public partial class StatusViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsEngineRunning))]
     private EngineState _state;
 
-    /// <summary>Why the engine landed in the current state (e.g. a failed Start's reason), or null.
-    /// Without this, "VB-Cable missing" looks like "the Start button does nothing".</summary>
     [ObservableProperty]
-    private string? _stateError;
+    [NotifyPropertyChangedFor(nameof(StateErrorText))]
+    private EngineError? _stateError;
+
+    /// <summary>The localized reason the engine landed in the current state (e.g. a failed Start's
+    /// reason), or null. Without this, "VB-Cable missing" looks like "the Start button does nothing".
+    /// Audio carries only the raw <see cref="EngineError"/>, never display text.</summary>
+    public string? StateErrorText => StateError is { } error ? Describe(error) : null;
+
+    private static string Describe(EngineError error) => error.Reason switch
+    {
+        // Framework/system text (a caught exception's message) — stays English by design, not our
+        // own text (same boundary as LibraryArchiveService.ImportResult.ExceptionMessage).
+        EngineErrorReason.DeviceFailure => error.Detail ?? "",
+        EngineErrorReason.DeviceChanged => Strings.Status_DeviceChanged,
+        EngineErrorReason.CableStalled => Strings.Status_CableStalled,
+        EngineErrorReason.TooManyMicChannels => string.Format(Strings.Status_TooManyMicChannelsFormat, error.Channels),
+        EngineErrorReason.CableSampleRateMismatch => Strings.Status_CableSampleRateMismatch,
+        _ => "",
+    };
 
     public StatusViewModel(IPlaybackHost host, Action<Action>? onUiThread = null)
     {
@@ -37,10 +54,10 @@ public partial class StatusViewModel : ObservableObject, IDisposable
 
     public string StateLabel => State switch
     {
-        EngineState.Live => "LIVE",
-        EngineState.OffAir => "OFF AIR",
-        EngineState.Degraded => "DEGRADED",
-        _ => "STOPPED",
+        EngineState.Live => Strings.Status_Live,
+        EngineState.OffAir => Strings.Status_OffAir,
+        EngineState.Degraded => Strings.Status_Degraded,
+        _ => Strings.Status_Stopped,
     };
 
     /// <summary>True while recording: the call feed is paused. The view shows an OFF AIR banner.</summary>

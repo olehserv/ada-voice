@@ -1,3 +1,4 @@
+using AdaVoice.App.Resources;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Extensions;
@@ -11,17 +12,19 @@ namespace AdaVoice.App.Services;
 internal static class DialogPrompts
 {
     /// <summary>Confirm before a destructive/consequential action. <paramref name="confirmButtonText"/>
-    /// must name the action ("Delete phrase", not "Yes") per CTRL-008.</summary>
+    /// must name the action ("Delete phrase", not "Yes") per CTRL-008. <paramref name="cancelButtonText"/>
+    /// defaults to the localized "Cancel" — null, not a literal default, since a resource lookup isn't a
+    /// compile-time constant.</summary>
     public static async Task<bool> ConfirmAsync(
         ContentDialogService dialogService, string title, string message, string confirmButtonText,
-        string cancelButtonText = "Cancel")
+        string? cancelButtonText = null)
     {
         var result = await dialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
         {
             Title = title,
             Content = message,
             PrimaryButtonText = confirmButtonText,
-            CloseButtonText = cancelButtonText,
+            CloseButtonText = cancelButtonText ?? Strings.DialogPrompts_Cancel,
         });
         return result == ContentDialogResult.Primary;
     }
@@ -31,7 +34,7 @@ internal static class DialogPrompts
         {
             Title = "AdaVoice",
             Content = message,
-            CloseButtonText = "OK",
+            CloseButtonText = Strings.DialogPrompts_Ok,
         });
 
     public static Task ShowInfoAsync(ContentDialogService dialogService, string message) =>
@@ -39,6 +42,6 @@ internal static class DialogPrompts
         {
             Title = "AdaVoice",
             Content = message,
-            CloseButtonText = "OK",
+            CloseButtonText = Strings.DialogPrompts_Ok,
         });
 }

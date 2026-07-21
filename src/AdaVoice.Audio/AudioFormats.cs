@@ -13,3 +13,9 @@ public static class AudioFormats
 
     public static WaveFormat Engine { get; } = WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, 1);
 }
+
+/// <summary>A render device (the cable or its monitor) is not delivering 48 kHz — the same condition
+/// the setup wizard's environment check reports, hit live instead. No display text: Audio has none;
+/// <see cref="AdaVoice.Audio.Engine.AudioEngine"/> maps this to
+/// <see cref="AdaVoice.Audio.Engine.EngineErrorReason.CableSampleRateMismatch"/> for the App layer.</summary>
+public sealed class UnsupportedSampleRateException : Exception;

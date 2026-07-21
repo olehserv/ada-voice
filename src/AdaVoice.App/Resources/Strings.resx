@@ -1,0 +1,858 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    Microsoft ResX Schema
+
+    Version 2.0
+
+    The primary goals of this format is to allow a simple XML format
+    that is mostly human readable. The generation and parsing of the
+    various data types are done through the TypeConverter classes
+    associated with the data types.
+
+    Example:
+
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+
+    There are any number of "resheader" rows that contain simple
+    name/value pairs.
+
+    Each data row contains a name, and value. The row also contains a
+    type or mimetype. Type corresponds to a .NET class that support
+    text/value conversion through the TypeConverter architecture.
+    Classes that don't support this are serialized and stored with the
+    mimetype set.
+
+    The mimetype is used for serialized objects, and tells the
+    ResXResourceReader how to depersist the object. This is currently not
+    extensible. For a given mimetype the value must be set accordingly:
+
+    Note - application/x-microsoft.net.object.binary.base64 is the format
+    that the ResXResourceWriter will generate, however the reader can
+    read any of the formats listed below.
+
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <!-- MainWindow (board) -->
+  <data name="Main_Record" xml:space="preserve">
+    <value>Record</value>
+  </data>
+  <data name="Main_Stop" xml:space="preserve">
+    <value>STOP</value>
+  </data>
+  <data name="Main_OffAir" xml:space="preserve">
+    <value>OFF AIR</value>
+  </data>
+  <data name="Main_Setup" xml:space="preserve">
+    <value>Setup</value>
+  </data>
+  <data name="Main_RunSetupAgain" xml:space="preserve">
+    <value>Run setup again</value>
+  </data>
+  <data name="Main_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Main_SearchPlaceholder" xml:space="preserve">
+    <value>Search title or tags…  (Ctrl+F)</value>
+  </data>
+  <data name="Main_ClearSearch" xml:space="preserve">
+    <value>Clear search</value>
+  </data>
+  <data name="Main_CategoryFilter" xml:space="preserve">
+    <value>Category filter</value>
+  </data>
+  <data name="Main_CategoryFilterTooltip" xml:space="preserve">
+    <value>Filter by category, or manage categories</value>
+  </data>
+  <data name="Main_ConversationFilter" xml:space="preserve">
+    <value>Conversation filter</value>
+  </data>
+  <data name="Main_ConversationFilterTooltip" xml:space="preserve">
+    <value>Filter by conversation, or manage conversations</value>
+  </data>
+  <data name="Main_TestOnHeadphones" xml:space="preserve">
+    <value>Test on headphones</value>
+  </data>
+  <data name="Main_Edit" xml:space="preserve">
+    <value>Edit…</value>
+  </data>
+  <data name="Main_Versions" xml:space="preserve">
+    <value>Versions…</value>
+  </data>
+  <data name="Main_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Main_AudioMissing" xml:space="preserve">
+    <value>⚠ audio missing</value>
+  </data>
+  <data name="Main_EmptyBoardTitle" xml:space="preserve">
+    <value>Your phrase board is empty</value>
+  </data>
+  <data name="Main_EmptyBoardHint" xml:space="preserve">
+    <value>Record your first phrase — it takes about 30 seconds.</value>
+  </data>
+  <data name="Main_CategoryEmptyTitle" xml:space="preserve">
+    <value>No phrases in {0} yet.</value>
+  </data>
+  <data name="Main_RecordInto" xml:space="preserve">
+    <value>Record into {0}</value>
+  </data>
+  <data name="Main_NoMatchCheckedCategories" xml:space="preserve">
+    <value>No phrases match the checked categories</value>
+  </data>
+  <data name="Main_SearchNoMatchTitle" xml:space="preserve">
+    <value>No phrases match '{0}'</value>
+  </data>
+  <data name="Main_ConversationEmptyTitle" xml:space="preserve">
+    <value>No phrases in {0} yet.</value>
+  </data>
+  <data name="Main_AddPhrasesFromConversations" xml:space="preserve">
+    <value>Add phrases to it from Conversations…</value>
+  </data>
+
+  <!-- SettingsWindow -->
+  <data name="Settings_Title" xml:space="preserve">
+    <value>AdaVoice settings</value>
+  </data>
+  <data name="Settings_Appearance" xml:space="preserve">
+    <value>Appearance</value>
+  </data>
+  <data name="Settings_Theme" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="Settings_ThemeFollowSystem" xml:space="preserve">
+    <value>Follow system</value>
+  </data>
+  <data name="Settings_ThemeLight" xml:space="preserve">
+    <value>Light</value>
+  </data>
+  <data name="Settings_ThemeDark" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="Settings_Levels" xml:space="preserve">
+    <value>Levels</value>
+  </data>
+  <data name="Settings_MicDuck" xml:space="preserve">
+    <value>Mic duck</value>
+  </data>
+  <data name="Settings_Behavior" xml:space="preserve">
+    <value>Behavior</value>
+  </data>
+  <data name="Settings_AlwaysOnTop" xml:space="preserve">
+    <value>Keep the board always on top</value>
+  </data>
+  <data name="Settings_ReplaceOnRetrigger" xml:space="preserve">
+    <value>A new phrase stops the one currently playing</value>
+  </data>
+  <data name="Settings_AppliesAfterRestart" xml:space="preserve">
+    <value>(applies after restart)</value>
+  </data>
+  <data name="Settings_LanguageAndBackup" xml:space="preserve">
+    <value>Language &amp; Backup</value>
+  </data>
+  <data name="Settings_Language" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Settings_Export" xml:space="preserve">
+    <value>Export…</value>
+  </data>
+  <data name="Settings_Import" xml:space="preserve">
+    <value>Import…</value>
+  </data>
+  <data name="Settings_OpenBackupFolder" xml:space="preserve">
+    <value>Open backup folder</value>
+  </data>
+  <data name="Settings_LastBackupLabel" xml:space="preserve">
+    <value>Last backup: </value>
+  </data>
+  <data name="Settings_LastBackupNever" xml:space="preserve">
+    <value>never</value>
+  </data>
+  <data name="Settings_Done" xml:space="preserve">
+    <value>Done</value>
+  </data>
+
+  <!-- ManageConversationsDialog -->
+  <data name="ManageConversations_Title" xml:space="preserve">
+    <value>Manage conversations</value>
+  </data>
+  <data name="ManageConversations_NoConversationsYet" xml:space="preserve">
+    <value>No conversations yet — add one below.</value>
+  </data>
+  <data name="ManageConversations_NewNamePlaceholder" xml:space="preserve">
+    <value>New conversation name</value>
+  </data>
+  <data name="ManageConversations_AddConversation" xml:space="preserve">
+    <value>Add conversation</value>
+  </data>
+  <data name="ManageConversations_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="ManageConversations_PlayRandomVersion" xml:space="preserve">
+    <value>Play a random version of each phrase</value>
+  </data>
+  <data name="ManageConversations_MoveUp" xml:space="preserve">
+    <value>Move up</value>
+  </data>
+  <data name="ManageConversations_MoveDown" xml:space="preserve">
+    <value>Move down</value>
+  </data>
+  <data name="ManageConversations_Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="ManageConversations_AddPhrase" xml:space="preserve">
+    <value>Add phrase</value>
+  </data>
+  <data name="ManageConversations_Done" xml:space="preserve">
+    <value>Done</value>
+  </data>
+
+  <!-- ManageCategoriesDialog -->
+  <data name="ManageCategories_Title" xml:space="preserve">
+    <value>Manage categories</value>
+  </data>
+  <data name="ManageCategories_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="ManageCategories_NewNamePlaceholder" xml:space="preserve">
+    <value>New category name</value>
+  </data>
+  <data name="ManageCategories_AddCategory" xml:space="preserve">
+    <value>Add category</value>
+  </data>
+  <data name="ManageCategories_Done" xml:space="preserve">
+    <value>Done</value>
+  </data>
+
+  <!-- PhraseEditDialog -->
+  <data name="PhraseEdit_Title" xml:space="preserve">
+    <value>Edit phrase</value>
+  </data>
+  <data name="PhraseEdit_TitleLabel" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="PhraseEdit_CategoryLabel" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="PhraseEdit_TagsLabel" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="PhraseEdit_RemoveTag" xml:space="preserve">
+    <value>Remove tag</value>
+  </data>
+  <data name="PhraseEdit_AddTagPlaceholder" xml:space="preserve">
+    <value>Add a tag…</value>
+  </data>
+  <data name="PhraseEdit_Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="PhraseEdit_AddExistingTag" xml:space="preserve">
+    <value>Add this existing tag</value>
+  </data>
+  <data name="PhraseEdit_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="PhraseEdit_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+
+  <!-- RepairPhraseDialog -->
+  <data name="RepairPhrase_Title" xml:space="preserve">
+    <value>Repair phrase</value>
+  </data>
+  <data name="RepairPhrase_AudioMissing" xml:space="preserve">
+    <value>This phrase's audio file is missing.</value>
+  </data>
+  <data name="RepairPhrase_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="RepairPhrase_Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="RepairPhrase_ReRecord" xml:space="preserve">
+    <value>Re-record</value>
+  </data>
+
+  <!-- PhraseVersionsDialog -->
+  <data name="PhraseVersions_TitleFormat" xml:space="preserve">
+    <value>Versions — {0}</value>
+  </data>
+  <data name="PhraseVersions_AudioMissing" xml:space="preserve">
+    <value>⚠ audio missing</value>
+  </data>
+  <data name="PhraseVersions_Play" xml:space="preserve">
+    <value>Play</value>
+  </data>
+  <data name="PhraseVersions_Stop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="PhraseVersions_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="PhraseVersions_AddVersion" xml:space="preserve">
+    <value>Add version (record)…</value>
+  </data>
+  <data name="PhraseVersions_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+
+  <!-- RecorderDialog -->
+  <data name="Recorder_Title" xml:space="preserve">
+    <value>Recorder</value>
+  </data>
+  <data name="Recorder_Record" xml:space="preserve">
+    <value>Record</value>
+  </data>
+  <data name="Recorder_IdleGuidance" xml:space="preserve">
+    <value>Nothing is saved until you say so — you can preview or discard the take first.</value>
+  </data>
+  <data name="Recorder_RecordingInProgress" xml:space="preserve">
+    <value>Recording… speak now</value>
+  </data>
+  <data name="Recorder_Stop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="Recorder_Processing" xml:space="preserve">
+    <value>Processing…</value>
+  </data>
+  <data name="Recorder_TitleLabel" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="Recorder_Discard" xml:space="preserve">
+    <value>Discard</value>
+  </data>
+  <data name="Recorder_Preview" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="Recorder_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Recorder_OffAirHint" xml:space="preserve">
+    <value>While recording, the call cannot hear you (OFF AIR).</value>
+  </data>
+  <data name="Recorder_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+
+  <!-- SetupWizardWindow -->
+  <data name="Wizard_Title" xml:space="preserve">
+    <value>AdaVoice setup</value>
+  </data>
+  <data name="Wizard_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Wizard_Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Wizard_SkipAnyway" xml:space="preserve">
+    <value>Skip anyway</value>
+  </data>
+
+  <!-- EnvironmentChecksStepView -->
+  <data name="EnvChecks_Title" xml:space="preserve">
+    <value>Environment checks</value>
+  </data>
+  <data name="EnvChecks_Checking" xml:space="preserve">
+    <value>Checking…</value>
+  </data>
+  <data name="EnvChecks_DownloadVbCable" xml:space="preserve">
+    <value>Download VB-CABLE</value>
+  </data>
+  <data name="EnvChecks_Recheck" xml:space="preserve">
+    <value>Re-check</value>
+  </data>
+
+  <!-- CalibrationStepView -->
+  <data name="Calibration_Title" xml:space="preserve">
+    <value>Voice calibration</value>
+  </data>
+  <data name="Calibration_TooQuiet" xml:space="preserve">
+    <value>We barely heard you — move closer to the mic and try again.</value>
+  </data>
+  <data name="Calibration_AlreadyRecording" xml:space="preserve">
+    <value>A recording is in progress — stop it first.</value>
+  </data>
+  <data name="Calibration_CouldNotPauseCallFeed" xml:space="preserve">
+    <value>Could not pause the call feed — try again.</value>
+  </data>
+  <data name="Calibration_Instructions" xml:space="preserve">
+    <value>Speak normally for 5 seconds so AdaVoice can match your recorded phrases to your live voice level.</value>
+  </data>
+  <data name="Calibration_Start" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="Calibration_RecordingInProgress" xml:space="preserve">
+    <value>Recording… speak now</value>
+  </data>
+  <data name="Calibration_Captured" xml:space="preserve">
+    <value>Voice level captured ✓</value>
+  </data>
+  <data name="Calibration_TryAgain" xml:space="preserve">
+    <value>Try again</value>
+  </data>
+
+  <!-- HotkeyStatusStepView -->
+  <data name="HotkeyStatus_Title" xml:space="preserve">
+    <value>Stop hotkey</value>
+  </data>
+
+  <!-- InstructionStepView -->
+  <data name="Instruction_Title" xml:space="preserve">
+    <value>Point Chrome/Zoho at the cable</value>
+  </data>
+
+  <!-- FirstCallStepView -->
+  <data name="FirstCall_Title" xml:space="preserve">
+    <value>Before your first client call</value>
+  </data>
+  <data name="FirstCall_Subtitle" xml:space="preserve">
+    <value>Make a test call and confirm everything sounds right:</value>
+  </data>
+
+  <!-- BoardViewModel -->
+  <data name="Board_NoneConversation" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="Board_CategoriesLabel" xml:space="preserve">
+    <value>Categories</value>
+  </data>
+  <data name="Board_CategoriesCountFormat" xml:space="preserve">
+    <value>{0} categories</value>
+  </data>
+  <data name="Board_ConversationsLabel" xml:space="preserve">
+    <value>Conversations</value>
+  </data>
+  <data name="Board_StartEngineToPlay" xml:space="preserve">
+    <value>Start the engine (and be ON AIR) to play to the call.</value>
+  </data>
+  <data name="Board_CouldNotPlayFormat" xml:space="preserve">
+    <value>Could not play "{0}": {1}</value>
+  </data>
+  <data name="Board_PreviewPlaybackError" xml:space="preserve">
+    <value>Could not play the preview — check the playback device and try again.</value>
+  </data>
+  <data name="Board_AudioFileMissing" xml:space="preserve">
+    <value>The recording for this phrase could not be found.</value>
+  </data>
+  <data name="Board_MonitorIsCable" xml:space="preserve">
+    <value>The preview output is the cable — pick a different monitor (or default) playback device.</value>
+  </data>
+  <data name="Board_StartEngineToRecord" xml:space="preserve">
+    <value>Start the engine before recording.</value>
+  </data>
+  <data name="Board_PressStartToRecord" xml:space="preserve">
+    <value>Press Start to go Live before recording.</value>
+  </data>
+  <data name="Board_RecordingStartError" xml:space="preserve">
+    <value>Could not start recording — check the microphone and try again.</value>
+  </data>
+  <data name="Board_DefaultTakeTitleFormat" xml:space="preserve">
+    <value>Take {0:yyyy-MM-dd HH:mm:ss}</value>
+  </data>
+  <data name="Board_NoSignal" xml:space="preserve">
+    <value>No signal — nothing recorded.</value>
+  </data>
+  <data name="Board_RecordingFinishError" xml:space="preserve">
+    <value>Could not finish the recording — the take was lost.</value>
+  </data>
+  <data name="Board_Previewing" xml:space="preserve">
+    <value>Previewing…</value>
+  </data>
+  <data name="Board_SaveRecordingError" xml:space="preserve">
+    <value>Could not save the recording — check disk space and try again.</value>
+  </data>
+  <data name="Board_SavedButApplyFailed" xml:space="preserve">
+    <value>Saved, but could not apply the category/tags — edit it manually.</value>
+  </data>
+  <data name="Board_SaveVersionError" xml:space="preserve">
+    <value>Could not save the version — check disk space and try again.</value>
+  </data>
+  <data name="Board_SaveVersionPhraseGone" xml:space="preserve">
+    <value>Could not save the version — the phrase no longer exists.</value>
+  </data>
+  <data name="Board_NewVersionSaved" xml:space="preserve">
+    <value>New version saved</value>
+  </data>
+  <data name="Board_TakeDiscarded" xml:space="preserve">
+    <value>Take discarded.</value>
+  </data>
+  <data name="Board_LibraryReadError" xml:space="preserve">
+    <value>Your phrase library could not be read (another program may be holding the file). Your phrases are safe, but changes are disabled — restart AdaVoice to try again.</value>
+  </data>
+  <data name="Board_LibraryCorrupt" xml:space="preserve">
+    <value>Your phrase library file was unreadable and has been set aside, so the board starts empty. Your recordings are still on disk.</value>
+  </data>
+  <data name="Board_LibraryRecovered" xml:space="preserve">
+    <value>Your phrase library was restored from the latest daily backup — very recent changes may be missing.</value>
+  </data>
+  <data name="Board_SettingsWereReset" xml:space="preserve">
+    <value>Your saved settings could not be read and were reset to defaults — including the microphone calibration. Re-run setup calibration so phrases play at the right level.</value>
+  </data>
+
+  <!-- StatusViewModel -->
+  <data name="Status_Live" xml:space="preserve">
+    <value>LIVE</value>
+  </data>
+  <data name="Status_OffAir" xml:space="preserve">
+    <value>OFF AIR</value>
+  </data>
+  <data name="Status_Degraded" xml:space="preserve">
+    <value>DEGRADED</value>
+  </data>
+  <data name="Status_Stopped" xml:space="preserve">
+    <value>STOPPED</value>
+  </data>
+  <data name="Status_DeviceChanged" xml:space="preserve">
+    <value>An audio device changed — recovering.</value>
+  </data>
+  <data name="Status_CableStalled" xml:space="preserve">
+    <value>The cable stopped responding — recovering.</value>
+  </data>
+  <data name="Status_TooManyMicChannelsFormat" xml:space="preserve">
+    <value>Microphone has {0} channels — use a mono or stereo device.</value>
+  </data>
+  <data name="Status_CableSampleRateMismatch" xml:space="preserve">
+    <value>Set both CABLE endpoints to 48 kHz in Sound settings.</value>
+  </data>
+
+  <!-- SetupWizardViewModel -->
+  <data name="Wizard_StepLabelFormat" xml:space="preserve">
+    <value>Step {0} of {1}</value>
+  </data>
+  <data name="Wizard_Finish" xml:space="preserve">
+    <value>Finish</value>
+  </data>
+  <data name="Wizard_Next" xml:space="preserve">
+    <value>Next</value>
+  </data>
+
+  <!-- HotkeyStatusStepViewModel / BehaviorSettingsViewModel -->
+  <data name="Hotkey_Registered" xml:space="preserve">
+    <value>Global stop hotkey registered: {0}</value>
+  </data>
+  <data name="Hotkey_Status" xml:space="preserve">
+    <value>Global stop hotkey: {0}</value>
+  </data>
+  <data name="Hotkey_Unavailable" xml:space="preserve">
+    <value>No global stop hotkey available — use the on-screen STOP button.</value>
+  </data>
+
+  <!-- InstructionStepViewModel -->
+  <data name="Instruction_Step1" xml:space="preserve">
+    <value>Open Chrome and go to your call site (e.g. Zoho Meeting or Zoho Voice).</value>
+  </data>
+  <data name="Instruction_Step2" xml:space="preserve">
+    <value>Open the microphone/audio settings for the call.</value>
+  </data>
+  <data name="Instruction_Step3" xml:space="preserve">
+    <value>Set the microphone to "CABLE Output (VB-Audio Virtual Cable)".</value>
+  </data>
+  <data name="Instruction_Step4" xml:space="preserve">
+    <value>Continue to the next step to confirm it works with a real test call.</value>
+  </data>
+
+  <!-- FirstCallStepViewModel -->
+  <data name="FirstCall_Check1" xml:space="preserve">
+    <value>Call your own phone or a friend through Zoho.</value>
+  </data>
+  <data name="FirstCall_Check2" xml:space="preserve">
+    <value>Play two phrases during that call.</value>
+  </data>
+  <data name="FirstCall_Check3" xml:space="preserve">
+    <value>Confirm they sound natural and the levels match your voice.</value>
+  </data>
+
+  <!-- CalibrationStepViewModel -->
+  <data name="Calibration_MicAccessError" xml:space="preserve">
+    <value>Could not access the microphone — close anything else using it and try again.</value>
+  </data>
+
+  <!-- PhraseVersionsViewModel -->
+  <data name="PhraseVersions_PrimaryLabel" xml:space="preserve">
+    <value>Primary</value>
+  </data>
+
+  <!-- BackupSettingsViewModel -->
+  <data name="Backup_ExportDroppedVersionsFormat" xml:space="preserve">
+    <value>Exported. {0} alternate take(s) were not included — phrase versions aren't included in exports yet.</value>
+  </data>
+  <data name="Backup_ExportErrorFormat" xml:space="preserve">
+    <value>Could not export: {0}</value>
+  </data>
+  <data name="Backup_ImportErrorFormat" xml:space="preserve">
+    <value>Could not import: {0}</value>
+  </data>
+  <data name="Backup_ImportSuccessFormat" xml:space="preserve">
+    <value>Imported {0} phrase(s) ({1} skipped). Restart AdaVoice to see them on your board.</value>
+  </data>
+  <data name="Backup_ImportArchiveOpenFailedFormat" xml:space="preserve">
+    <value>could not open archive: {0}</value>
+  </data>
+  <data name="Backup_ImportTooManyEntriesFormat" xml:space="preserve">
+    <value>the archive has too many entries ({0})</value>
+  </data>
+  <data name="Backup_ImportLibraryJsonTooLarge" xml:space="preserve">
+    <value>the archive's library.json is unreasonably large</value>
+  </data>
+  <data name="Backup_ImportNoValidLibraryJson" xml:space="preserve">
+    <value>the archive has no valid library.json</value>
+  </data>
+  <data name="Backup_ImportUnsupportedVersionFormat" xml:space="preserve">
+    <value>unsupported library version {0} (expected {1})</value>
+  </data>
+  <data name="Backup_ImportFailedFormat" xml:space="preserve">
+    <value>import failed, the library was not changed: {0}</value>
+  </data>
+  <data name="Backup_ImportAudioEntryTooLarge" xml:space="preserve">
+    <value>an audio recording in the archive is unreasonably large</value>
+  </data>
+  <data name="Backup_ImportTotalAudioTooLarge" xml:space="preserve">
+    <value>the archive's total audio recordings exceed the import limit</value>
+  </data>
+
+  <!-- DialogPrompts -->
+  <data name="DialogPrompts_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="DialogPrompts_Ok" xml:space="preserve">
+    <value>OK</value>
+  </data>
+
+  <!-- Converters -->
+  <data name="EnvChecks_Pass" xml:space="preserve">
+    <value>✓ Pass</value>
+  </data>
+  <data name="EnvChecks_Fail" xml:space="preserve">
+    <value>✗ Fail</value>
+  </data>
+  <data name="EnvChecks_CableOutputName" xml:space="preserve">
+    <value>Cable output</value>
+  </data>
+  <data name="EnvChecks_CableSampleRateName" xml:space="preserve">
+    <value>Cable sample rate</value>
+  </data>
+  <data name="EnvChecks_DefaultOutputName" xml:space="preserve">
+    <value>Default output</value>
+  </data>
+  <data name="EnvChecks_MicrophoneName" xml:space="preserve">
+    <value>Microphone</value>
+  </data>
+  <data name="EnvChecks_CableOutputMissingFormat" xml:space="preserve">
+    <value>'{0}' not found — install VB-Cable.</value>
+  </data>
+  <data name="EnvChecks_CableSampleRateNoCable" xml:space="preserve">
+    <value>cable not found.</value>
+  </data>
+  <data name="EnvChecks_CableSampleRateWrongFormat" xml:space="preserve">
+    <value>{0} Hz — set both CABLE endpoints to 48 kHz in Sound settings.</value>
+  </data>
+  <data name="EnvChecks_CableSampleRatePass" xml:space="preserve">
+    <value>48 kHz</value>
+  </data>
+  <data name="EnvChecks_DefaultOutputIsCableFormat" xml:space="preserve">
+    <value>is the cable ('{0}') — previews and the alarm would reach the call. Make speakers/headphones the Windows default.</value>
+  </data>
+  <data name="EnvChecks_NoneFound" xml:space="preserve">
+    <value>(none)</value>
+  </data>
+  <data name="EnvChecks_MicrophoneNoneFound" xml:space="preserve">
+    <value>no active microphone found.</value>
+  </data>
+  <data name="EnvChecks_MicrophoneNotFoundFormat" xml:space="preserve">
+    <value>'{0}' not found.</value>
+  </data>
+  <data name="Category_Uncategorized" xml:space="preserve">
+    <value>Uncategorized</value>
+  </data>
+
+  <!-- MainWindow.xaml.cs -->
+  <data name="Main_DeletePhraseTitle" xml:space="preserve">
+    <value>Delete phrase</value>
+  </data>
+  <data name="Main_DeletePhraseConfirmFormat" xml:space="preserve">
+    <value>Delete “{0}”?
+
+The recording is kept as a backup and can be recovered.</value>
+  </data>
+  <data name="Main_ManageCategoriesMenuItem" xml:space="preserve">
+    <value>Manage categories…</value>
+  </data>
+  <data name="Main_ManageConversationsMenuItem" xml:space="preserve">
+    <value>Manage conversations…</value>
+  </data>
+  <data name="Main_ExportFilter" xml:space="preserve">
+    <value>AdaVoice export (*.zip)|*.zip</value>
+  </data>
+  <data name="Main_HotkeyHintFormat" xml:space="preserve">
+    <value>Or press {0} to stop from any window</value>
+  </data>
+  <data name="Main_UseOnScreenStop" xml:space="preserve">
+    <value>Use the on-screen STOP button.</value>
+  </data>
+  <data name="Main_HotkeyUnavailableTitle" xml:space="preserve">
+    <value>Stop hotkey unavailable</value>
+  </data>
+  <data name="Main_SavedToastTitle" xml:space="preserve">
+    <value>Saved</value>
+  </data>
+  <data name="Main_DeletedToastTitle" xml:space="preserve">
+    <value>Deleted</value>
+  </data>
+
+  <!-- App.xaml.cs -->
+  <data name="App_AlreadyRunning" xml:space="preserve">
+    <value>AdaVoice is already running.</value>
+  </data>
+  <data name="App_CrashMessageFormat" xml:space="preserve">
+    <value>Something went wrong: {0}
+
+AdaVoice keeps running; details are in the log.</value>
+  </data>
+
+  <!-- SettingsWindow.xaml.cs -->
+  <data name="Settings_ImportLibraryTitle" xml:space="preserve">
+    <value>Import library</value>
+  </data>
+  <data name="Settings_ImportLibraryPrompt" xml:space="preserve">
+    <value>Merge with your current library, or replace it entirely?
+
+Merge keeps your current phrases. Replace overwrites your current library.</value>
+  </data>
+  <data name="Settings_Merge" xml:space="preserve">
+    <value>Merge</value>
+  </data>
+  <data name="Settings_Replace" xml:space="preserve">
+    <value>Replace</value>
+  </data>
+  <data name="Settings_RestartRequiredTitle" xml:space="preserve">
+    <value>Restart required</value>
+  </data>
+  <data name="Settings_RestartPrompt" xml:space="preserve">
+    <value>The language change takes effect after a restart. Restart AdaVoice now?</value>
+  </data>
+  <data name="Settings_RestartNow" xml:space="preserve">
+    <value>Restart now</value>
+  </data>
+
+  <!-- ManageCategoriesDialog.xaml.cs -->
+  <data name="ManageCategories_DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete category</value>
+  </data>
+  <data name="ManageCategories_DeleteConfirmFormat" xml:space="preserve">
+    <value>Delete "{0}"?
+
+Its phrases will move to Uncategorized.</value>
+  </data>
+
+  <!-- ManageConversationsDialog.xaml.cs -->
+  <data name="ManageConversations_DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete conversation</value>
+  </data>
+  <data name="ManageConversations_DeleteConfirmFormat" xml:space="preserve">
+    <value>Delete "{0}"?</value>
+  </data>
+
+  <!-- PhraseVersionsDialog.xaml.cs -->
+  <data name="PhraseVersions_DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete version</value>
+  </data>
+  <data name="PhraseVersions_DeleteConfirmFormat" xml:space="preserve">
+    <value>Delete the "{0}" version?
+
+Its recording will be removed.</value>
+  </data>
+
+  <!-- RecorderDialog.xaml.cs -->
+  <data name="Recorder_DiscardConfirmTitle" xml:space="preserve">
+    <value>Discard take</value>
+  </data>
+  <data name="Recorder_DiscardConfirmMessage" xml:space="preserve">
+    <value>Discard this take?
+
+The recording will be lost.</value>
+  </data>
+</root>

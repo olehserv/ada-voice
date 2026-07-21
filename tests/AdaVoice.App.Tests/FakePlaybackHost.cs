@@ -3,6 +3,7 @@ using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Recording;
 using AdaVoice.Audio.Setup;
 using AdaVoice.Core.Domain;
+using AdaVoice.Core.Storage;
 using AdaVoice.Host;
 
 namespace AdaVoice.App.Tests;
@@ -28,7 +29,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     public IReadOnlyList<string> BrokenPhraseIds { get; set; } = [];
     public IReadOnlyList<string> BrokenVersionIds { get; set; } = [];
     public bool IsWritable { get; set; } = true;
-    public string? LibraryWarning { get; set; }
+    public LibraryLoadStatus LoadStatus { get; set; } = LibraryLoadStatus.Loaded;
     public List<PhraseEntry> Deleted { get; } = [];
     public IReadOnlyList<Conversation> Conversations { get; set; } = [];
 
@@ -38,7 +39,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     public List<string> Calls { get; } = [];
     public PhraseEntry? PlayedEntry { get; private set; }
     public PhraseVersion? PlayedVersion { get; private set; }
-    public string? PlayEntryResult { get; set; }
+    public PlaybackError? PlayEntryResult { get; set; }
 
     // Recording knobs/results the tests configure or inspect.
     public bool CanRecord { get; set; } = true;
@@ -49,9 +50,9 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
 
     // Preview-to-headphones knobs the tests inspect / configure.
     public PhraseEntry? PreviewedEntry { get; private set; }
-    public string? PreviewEntryResult { get; set; }
+    public PlaybackError? PreviewEntryResult { get; set; }
     public PhraseVersion? PreviewedVersion { get; private set; }
-    public string? PreviewVersionResult { get; set; }
+    public PlaybackError? PreviewVersionResult { get; set; }
     public bool PreviewThrows { get; set; }
     /// <summary>Run from inside PreviewEntry/PreviewVersion — lets a test observe view-model state
     /// while the (fake) preview is "in flight".</summary>
@@ -89,7 +90,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
     public void EnterOffAir() => Calls.Add("EnterOffAir");
     public void ExitOffAir() => Calls.Add("ExitOffAir");
 
-    public string? PlayEntry(PhraseEntry entry, PhraseVersion? version = null)
+    public PlaybackError? PlayEntry(PhraseEntry entry, PhraseVersion? version = null)
     {
         Calls.Add("PlayEntry");
         PlayedEntry = entry;
@@ -97,7 +98,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
         return PlayEntryResult;
     }
 
-    public string? PreviewEntry(PhraseEntry entry)
+    public PlaybackError? PreviewEntry(PhraseEntry entry)
     {
         Calls.Add("PreviewEntry");
         PreviewedEntry = entry;
@@ -107,7 +108,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
         return PreviewEntryResult;
     }
 
-    public string? PreviewVersion(PhraseVersion version)
+    public PlaybackError? PreviewVersion(PhraseVersion version)
     {
         Calls.Add("PreviewVersion");
         PreviewedVersion = version;
@@ -123,7 +124,7 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
         StopPreviewCalls++;
     }
 
-    public void RaiseStateChanged(EngineState state, string? error = null)
+    public void RaiseStateChanged(EngineState state, EngineError? error = null)
     {
         State = state;
         StateChanged?.Invoke(this, new EngineStateChangedEventArgs(state, error));
@@ -327,10 +328,12 @@ internal sealed class FakePlaybackHost : IPlaybackHost, IRecorderHost, ILibraryH
         return Edit(phraseId, p => p with { Versions = [.. p.Versions, version] });
     }
 
-    public string? Preview(float[] samples, double gainDb)
+    public PlaybackError? NextPreviewResult { get; set; }
+
+    public PlaybackError? Preview(float[] samples, double gainDb)
     {
         Calls.Add("Preview");
         PreviewedSamples = samples;
-        return null;
+        return NextPreviewResult;
     }
 }

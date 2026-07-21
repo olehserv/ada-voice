@@ -5,9 +5,9 @@ using NAudio.Wave;
 namespace AdaVoice.Audio.Tests.Engine.Fakes;
 
 /// <summary>A capture device a test can drive: push samples, and fault on command.</summary>
-public sealed class ControllableCaptureDevice : IAudioCaptureDevice
+public sealed class ControllableCaptureDevice(WaveFormat? format = null) : IAudioCaptureDevice
 {
-    public WaveFormat Format => TestAudio.EngineFormat;
+    public WaveFormat Format { get; } = format ?? TestAudio.EngineFormat;
     public DeviceState State { get; private set; } = DeviceState.Stopped;
 
     /// <summary>How many times Dispose ran — rebuild tests assert the old device was released

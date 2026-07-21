@@ -3,6 +3,21 @@ using AdaVoice.Core.Domain;
 
 namespace AdaVoice.Host;
 
+/// <summary>Why a play/preview attempt failed — the App layer's localization key, since Host carries
+/// no display text. Shared by <see cref="IPlaybackHost"/> and <see cref="IRecorderHost"/>'s
+/// play/preview members.</summary>
+public enum PlaybackErrorCode
+{
+    EngineNotLive,
+    AudioFileMissing,
+    MonitorIsCable,
+}
+
+/// <summary>A play/preview failure. <see cref="FileName"/> is diagnostic only (set on
+/// <see cref="PlaybackErrorCode.AudioFileMissing"/>) — never displayed, so it must never be formatted
+/// into operator-facing text; it exists so tests can prove which file was actually attempted.</summary>
+public sealed record PlaybackError(PlaybackErrorCode Code, string? FileName = null);
+
 /// <summary>
 /// The narrow slice of the host the Board UI needs: the engine state and the phrases to show, plus the
 /// actions a board triggers. The ViewModels depend on this (not on the concrete <see cref="EngineHost"/>)
@@ -28,21 +43,21 @@ public interface IPlaybackHost
     void StopPhrase();
     /// <summary>Play a phrase to the call. When <paramref name="version"/> is given, that take's audio
     /// and gain are used instead of the entry's own — the phrase id used for <see cref="PlayingPhraseChanged"/>
-    /// is always the entry's, regardless of which take played. Returns an error message if nothing was
-    /// played (engine not Live, or the audio file is missing), or null on success — so a caller can
-    /// show the drop instead of it passing silently.</summary>
-    string? PlayEntry(PhraseEntry entry, PhraseVersion? version = null);
+    /// is always the entry's, regardless of which take played. Returns why nothing was played (engine
+    /// not Live, or the audio file is missing), or null on success — so a caller can show the drop
+    /// instead of it passing silently.</summary>
+    PlaybackError? PlayEntry(PhraseEntry entry, PhraseVersion? version = null);
     void EnterOffAir();
     void ExitOffAir();
 
     /// <summary>Play a catalogued phrase to the monitor (headphones/speakers) so the operator can test
     /// it without the engine running — it never reaches the call. Blocks until playback ends, so callers
-    /// should run it off the UI thread. Returns an error message, or null on success.</summary>
-    string? PreviewEntry(PhraseEntry entry);
+    /// should run it off the UI thread. Returns why it failed, or null on success.</summary>
+    PlaybackError? PreviewEntry(PhraseEntry entry);
 
     /// <summary>Like <see cref="PreviewEntry"/> but for one specific version of a phrase, used by the
-    /// Edit dialog's version list. Returns an error message, or null on success.</summary>
-    string? PreviewVersion(PhraseVersion version);
+    /// Edit dialog's version list. Returns why it failed, or null on success.</summary>
+    PlaybackError? PreviewVersion(PhraseVersion version);
 
     /// <summary>Stop a preview started by <see cref="PreviewEntry"/> or <see cref="PreviewVersion"/>
     /// before it finishes on its own. No-op if no preview is active. Safe to call from any thread —

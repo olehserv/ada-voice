@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -11,10 +12,15 @@ namespace AdaVoice.App.Tests.Screenshots;
 /// </summary>
 /// <remarks>
 /// It builds the real <see cref="App"/> resources (Fluent theme, brand tokens, converters) so
-/// <c>DynamicResource</c>/<c>StaticResource</c> lookups resolve exactly as in the running app, but
-/// never calls <see cref="Application.Run()"/> — so <c>OnStartup</c> (the single-instance mutex,
-/// WASAPI, the <c>EngineHost</c>) never fires. Only one <see cref="Application"/> may exist per
-/// process, so this is a shared collection fixture.
+/// <c>DynamicResource</c>/<c>StaticResource</c> lookups resolve exactly as in the running app.
+/// <c>OnStartup</c> does run here (confirmed empirically: merely running
+/// <see cref="Dispatcher.Run()"/> on this thread is enough for WPF to raise <c>Startup</c>, with
+/// no explicit <see cref="Application.Run()"/> call needed) — that is pre-existing, harmless-for-
+/// tests behavior this fixture has always relied on (its real <c>ApplyTheme</c> call is what lets
+/// WPF-UI's pack:// resource resolution work at all on this thread). <see cref="App.
+/// SkipLanguageForTests"/> only gates the one line that would otherwise fight this fixture's
+/// English pin below with whatever language the real <c>settings.json</c> has. Only one
+/// <see cref="Application"/> may exist per process, so this is a shared collection fixture.
 /// </remarks>
 public sealed class WpfAppFixture : IDisposable
 {
@@ -47,8 +53,16 @@ public sealed class WpfAppFixture : IDisposable
 
     private void Pump()
     {
+        // English regardless of the machine's real OS/keyboard language, so string assertions
+        // stay verbatim-English (belt-and-suspenders alongside TestCultureInitializer's
+        // assembly-wide pin). App.SkipLanguageForTests keeps OnStartup's own ApplyLanguage call
+        // from overwriting this with whatever language the real settings.json has.
+        var english = new CultureInfo("en-US");
+        CultureInfo.CurrentCulture = english;
+        CultureInfo.CurrentUICulture = english;
+        App.SkipLanguageForTests = true;
+
         // new App() + InitializeComponent() loads App.xaml's resources without running the app.
-        // Application.Run() (and therefore OnStartup) is never called.
         var app = new App();
         app.InitializeComponent();
 

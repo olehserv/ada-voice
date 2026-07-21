@@ -76,11 +76,12 @@ public interface ISettingsHost
     /// note), so the caller should tell the operator a restart is needed to see the result.</summary>
     ImportResult Import(string sourceZipPath, ImportMode mode);
 
-    /// <summary>Operator-readable warning when the saved settings could not be read and were reset to
-    /// defaults, or null when they loaded cleanly. The board shows it at startup because the reset also
-    /// drops the mic-calibration reference, which changes how loud phrases play (security scan
-    /// 2026-07-12 finding 3). Mirrors <see cref="ILibraryHost.LibraryWarning"/>.</summary>
-    string? SettingsWarning { get; }
+    /// <summary>True when the saved settings could not be read and were reset to defaults — false when
+    /// they loaded cleanly. The board shows a localized notice at startup because the reset also drops
+    /// the mic-calibration reference, which changes how loud phrases play (security scan 2026-07-12
+    /// finding 3). Kept as a raw flag here since Host carries no display text — mirrors
+    /// <see cref="ILibraryHost.LoadStatus"/>'s role for the library.</summary>
+    bool SettingsWereReset { get; }
 
     /// <summary>The date of the newest daily backup, or null if none exist yet.</summary>
     DateOnly? LastBackupDate { get; }

@@ -322,9 +322,9 @@ public sealed class WindowScreenshotTests(WpfAppFixture app)
         Conversations = [new Conversation { Id = "v-1", Name = "Cold call", PhraseIds = ["p-1", "p-2", "p-4"] }],
         NextChecks =
         [
-            new EnvironmentCheck("Virtual cable installed", CheckStatus.Pass, "VB-Audio Cable detected"),
-            new EnvironmentCheck("Microphone available", CheckStatus.Pass, "Default microphone ready"),
-            new EnvironmentCheck("Output routed to the cable", CheckStatus.Fail, "Set your meeting app output to the cable"),
+            new EnvironmentCheck(EnvironmentCheckKind.CableOutput, CheckStatus.Pass, FoundName: "VB-Audio Cable"),
+            new EnvironmentCheck(EnvironmentCheckKind.Microphone, CheckStatus.Pass, FoundName: "Default microphone"),
+            new EnvironmentCheck(EnvironmentCheckKind.DefaultOutput, CheckStatus.Fail, FoundName: "VB-Audio Cable"),
         ],
     };
 }

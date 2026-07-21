@@ -2,19 +2,20 @@
     x:Class="AdaVoice.App.CalibrationStepView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:res="clr-namespace:AdaVoice.App.Resources"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
     <StackPanel>
-        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="Voice calibration" />
+        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="{x:Static res:Strings.Calibration_Title}" />
         <TextBlock
             Margin="0,0,0,12"
             Foreground="{DynamicResource Text.Secondary}"
-            Text="Speak normally for 5 seconds so AdaVoice can match your recorded phrases to your live voice level."
+            Text="{x:Static res:Strings.Calibration_Instructions}"
             TextWrapping="Wrap" />
 
         <ui:Button
             HorizontalAlignment="Left"
             Command="{Binding StartCalibrationCommand}"
-            Content="Start"
+            Content="{x:Static res:Strings.Calibration_Start}"
             Style="{StaticResource BrandCtaButtonStyle}"
             Visibility="{Binding CanStart, Converter={StaticResource BoolToVis}}" />
 
@@ -78,26 +79,26 @@
         <TextBlock
             Margin="0,0,0,8"
             FontWeight="SemiBold"
-            Text="Recording… speak now"
+            Text="{x:Static res:Strings.Calibration_RecordingInProgress}"
             Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}" />
 
         <TextBlock
             FontWeight="SemiBold"
             Foreground="{DynamicResource Status.Live}"
-            Text="Voice level captured ✓"
+            Text="{x:Static res:Strings.Calibration_Captured}"
             Visibility="{Binding Succeeded, Converter={StaticResource BoolToVis}}" />
 
         <StackPanel Visibility="{Binding HasMessage, Converter={StaticResource BoolToVis}}">
             <TextBlock
                 Margin="0,4,0,8"
                 Foreground="{DynamicResource Status.Degraded}"
-                Text="{Binding Result.Message}"
+                Text="{Binding Message}"
                 TextWrapping="Wrap" />
             <ui:Button
                 HorizontalAlignment="Left"
                 Appearance="Secondary"
                 Command="{Binding StartCalibrationCommand}"
-                Content="Try again" />
+                Content="{x:Static res:Strings.Calibration_TryAgain}" />
         </StackPanel>
     </StackPanel>
 </UserControl>

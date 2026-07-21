@@ -1,7 +1,9 @@
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using AdaVoice.App.Resources;
 using AdaVoice.App.ViewModels;
 using AdaVoice.Audio.Wasapi;
 using AdaVoice.Core.Storage;
@@ -19,6 +21,21 @@ public partial class App : Application
     private EngineHost? _host;
     private Mutex? _singleInstanceMutex;
 
+    /// <summary>
+    /// Set by <c>WpfAppFixture</c> (screenshot/layout tests) before constructing <see cref="App"/>.
+    /// Confirmed empirically that merely running <see cref="Dispatcher.Run()"/> on the thread that
+    /// constructed an <see cref="Application"/> — with no explicit <see cref="Application.Run()"/>
+    /// call — is enough for WPF to raise <c>Startup</c> and invoke this method anyway. That
+    /// pre-existing behavior is otherwise harmless for tests (real <see cref="EngineHost"/>
+    /// construction against the operator's real data is a known, separately-tracked gap — see
+    /// handoff.md's open follow-ups), except for one thing this retrofit adds:
+    /// <see cref="ApplyLanguage"/> would overwrite the fixture's English culture pin with whatever
+    /// language the real <c>settings.json</c> happens to have (e.g. "uk"), breaking every
+    /// verbatim-English string assertion in a screenshot/layout test. This flag gates only that
+    /// one line — nothing else about <see cref="OnStartup"/> changes for tests.
+    /// </summary>
+    public static bool SkipLanguageForTests { get; set; }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -29,7 +46,7 @@ public partial class App : Application
         if (!createdNew)
         {
             mutex.Dispose();
-            MessageBox.Show("AdaVoice is already running.", "AdaVoice",
+            MessageBox.Show(Strings.App_AlreadyRunning, "AdaVoice",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             Shutdown();
             return;
@@ -55,6 +72,17 @@ public partial class App : Application
         Wpf.Ui.Appearance.ApplicationThemeManager.Changed += (theme, _) => SyncBrandLayer(theme);
 
         _host = new EngineHost(new WasapiAudioOptions(), msg => Log.Information("{Event}", msg));
+
+        // Localization (en/uk/pl), restart-to-apply (see Settings.Language's doc comment and
+        // BackupSettingsViewModel.OnLanguageChanged's restart prompt) — so culture is set once,
+        // here, before any resource lookup (theme apply below, then every ViewModel/window) can
+        // happen. CurrentUICulture drives Strings.resx lookup; CurrentCulture drives number/date
+        // formatting. Both are safe to set process-wide: the only culture-sensitive format in the
+        // Core storage path is a fixed-digit timestamp, and JSON (de)serialization is invariant.
+        // Skipped in tests (see SkipLanguageForTests) — WpfAppFixture pins English itself, and
+        // this call would otherwise overwrite that pin with the real settings.json's language.
+        if (!SkipLanguageForTests)
+            ApplyLanguage(_host.Language);
 
         // Apply the persisted theme preference (design: manual theme setting). Default "system"
         // reproduces the app's original OS-follow behavior (design 10 redesign, 2026-07-11) for
@@ -106,6 +134,28 @@ public partial class App : Application
         _singleInstanceMutex?.ReleaseMutex();
         _singleInstanceMutex?.Dispose();
         base.OnExit(e);
+    }
+
+    /// <summary>
+    /// Sets the process culture from a persisted language code ("en"/"uk"/"pl"). Unrecognized or
+    /// missing codes (a future bad value, or an old settings.json predating this field) degrade
+    /// safely to English rather than throwing — <see cref="CultureInfo"/> would otherwise reject
+    /// an unknown tag. Sets CurrentUICulture (drives every <c>{x:Static res:Strings.*}</c> lookup)
+    /// and CurrentCulture (number/date formatting) before any window is built, so every
+    /// resource-bound string resolves correctly from first paint — no live-switching needed given
+    /// the restart-to-apply language model (see Settings.Language's doc comment).
+    /// </summary>
+    private static void ApplyLanguage(string code)
+    {
+        var culture = code switch
+        {
+            "uk" => new CultureInfo("uk-UA"),
+            "pl" => new CultureInfo("pl-PL"),
+            _ => new CultureInfo("en-US"),
+        };
+
+        CultureInfo.CurrentUICulture = culture;
+        CultureInfo.CurrentCulture = culture;
     }
 
     /// <summary>
@@ -232,7 +282,7 @@ public partial class App : Application
         {
             Log.Fatal(args.Exception, "Unhandled UI exception");
             MessageBox.Show(
-                $"Something went wrong: {args.Exception.Message}\n\nAdaVoice keeps running; details are in the log.",
+                string.Format(Strings.App_CrashMessageFormat, args.Exception.Message),
                 "AdaVoice", MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
         };

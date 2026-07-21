@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls.Primitives;
+using AdaVoice.App.Resources;
 using AdaVoice.App.Services;
 using AdaVoice.App.ViewModels;
 using AdaVoice.Core.Storage;
@@ -38,18 +39,17 @@ public partial class SettingsWindow : Wpf.Ui.Controls.FluentWindow
     /// operator cancels at either step.</summary>
     public async Task<(string Path, ImportMode Mode)?> PickImportFileAsync()
     {
-        var openDialog = new OpenFileDialog { Filter = "AdaVoice export (*.zip)|*.zip" };
+        var openDialog = new OpenFileDialog { Filter = Strings.Main_ExportFilter };
         if (openDialog.ShowDialog(this) != true)
             return null;
 
         var result = await _dialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
         {
-            Title = "Import library",
-            Content = "Merge with your current library, or replace it entirely?\n\n" +
-                "Merge keeps your current phrases. Replace overwrites your current library.",
-            PrimaryButtonText = "Merge",
-            SecondaryButtonText = "Replace",
-            CloseButtonText = "Cancel",
+            Title = Strings.Settings_ImportLibraryTitle,
+            Content = Strings.Settings_ImportLibraryPrompt,
+            PrimaryButtonText = Strings.Settings_Merge,
+            SecondaryButtonText = Strings.Settings_Replace,
+            CloseButtonText = Strings.DialogPrompts_Cancel,
         });
 
         return result switch
@@ -65,8 +65,8 @@ public partial class SettingsWindow : Wpf.Ui.Controls.FluentWindow
     /// must never block closing Settings.</summary>
     public async Task ConfirmAndRestartAsync()
     {
-        var restart = await DialogPrompts.ConfirmAsync(_dialogService, "Restart required",
-            "The language change takes effect after a restart. Restart AdaVoice now?", "Restart now");
+        var restart = await DialogPrompts.ConfirmAsync(_dialogService, Strings.Settings_RestartRequiredTitle,
+            Strings.Settings_RestartPrompt, Strings.Settings_RestartNow);
 
         if (!restart)
             return;

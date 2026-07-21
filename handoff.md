@@ -9,7 +9,7 @@ back up. It answers one question: *where are we right now?*
 - Details of past work live in git history and in the dated docs under `docs/reviews/`.
   This file stays short on purpose.
 
-_Last updated: 2026-07-20 (Slice 3)._
+_Last updated: 2026-07-21 (localization Stages 1–3)._
 
 ## Status in one line
 
@@ -18,7 +18,7 @@ setup wizard, Settings window (now with a manual **theme picker** — Follow sys
 stop hotkey, backups, export/import, **Conversations** (ordered phrase scripts with a
 step-by-step highlight), **phrase versions** (alternate takes, randomized during a Conversation
 step), and the **Pine Signal brand redesign's motion pass** (state crossfades, breathing/
-blinking status dots, tile hover/press feedback, STOP glow); App suite: 253 passed + 30 skipped
+blinking status dots, tile hover/press feedback, STOP glow); App suite: 256 passed + 32 skipped
 across 3 configurations (default, both-theme screenshots — all green); 107 Core + 98 Audio +
 8 Wasapi + 12 Host, all green, plus 60 server tests (30 DB-less + 30 integration against
 PostgreSQL 16). Monetization: Phases 0–2 shipped — the full 13-table EF Core schema, multi-tenant
@@ -26,6 +26,57 @@ query filters and idempotent seeder (Phase 1), and the **auth API** (Phase 2): E
 login/refresh/logout/change-password/me, rotating refresh tokens with family-revocation reuse
 detection, account lockout, per-IP rate limiting, RFC 7807 errors (typed `ProblemDetails`), and
 **batched audit logging** (audit writes are no longer synchronous with the request).
+
+## Latest work (2026-07-21)
+
+- **Localization (en/uk/pl) — Stages 1–3 of 7 done, not yet committed.** Prompted directly by
+  the beta trial below: the wife can't use an English-only app. Full plan, architecture
+  decisions, gotchas, and exact remaining work (Stages 4–7):
+  [localization-implementation-plan.md](docs/plans/localization-implementation-plan.md) —
+  **read that file before continuing this**, not this summary. Headline: `.resx` + hand-written
+  `Strings.cs` accessor (VS's code-gen doesn't run from `dotnet build`, confirmed empirically)
+  + `{x:Static}` in XAML, culture set once at startup (restart-to-apply, matching the existing
+  `Settings.Language` model). Stage 1 (infra) + Stage 2 (every App-layer string extracted —
+  all 14 XAML files, ~10 ViewModels, 5 dialog code-behind files, `Converters.cs`,
+  `DialogPrompts.cs`) done. **Stage 3 (Audio/Core/Host decoupled to codes, App maps to
+  localized text) also done this session**: `EnvironmentCheck` (new `EnvironmentCheckKind`
+  enum), `VoiceCalibration`'s `CalibrationResult` (new `CalibrationFailureReason` enum),
+  `LibraryArchiveService.ImportResult` (new `ImportErrorCode` enum), and the "Uncategorized"
+  category's *display* (stored value untouched — other phrases reference it by id). Found and
+  fixed two more of the same bug class beyond the written plan: `EngineHost.LibraryWarning`
+  and its settings-reset warning were both pre-formatted English built in the **Host** layer
+  (not just Audio/Core) — both now expose raw codes (`LibraryLoadStatus`/`bool`) that
+  `BoardViewModel` maps to text. The `ManageCategoriesDialog` default row needed a real fix,
+  not just a label swap: its name field was two-way bound with no edit guard, so showing a
+  localized label there would have silently overwritten the stored name on the first blur —
+  fixed via a disabled field + a `DisplayName` wrapper property. Two more rounds of the same
+  bug class turned up on an independent sweep of all three layers: `IPlaybackHost`/
+  `IRecorderHost`'s play/preview errors (new `PlaybackErrorCode` + `PlaybackError` record),
+  `EngineStateChangedEventArgs.Error` (new `EngineErrorReason` + `EngineError` record, replacing
+  the `Status.StateError` binding with `StateErrorText`), and `LibraryArchiveService.StageAudio`'s
+  two audio-size-cap exceptions (now their own `ImportErrorCode` values via a private
+  `ImportLimitExceededException`, instead of falling through to the generic `ImportFailed` catch
+  with a raw message). A fourth round came from tracing one line instead of dismissing it as a
+  backstop: `EngineFormat.cs`'s ">2 channels" message *is* reachable (a real multi-capsule USB mic
+  on an ordinary Start — confirmed by tracing what `WasapiCaptureDevice.Format` actually hands the
+  mic chain), so it's now `UnsupportedChannelCountException` → `EngineErrorReason.
+  TooManyMicChannels`; the same trace caught `WasapiRenderDevice.Init`'s cable-not-at-48kHz message
+  falling through the same catch-all, now `UnsupportedSampleRateException` →
+  `.CableSampleRateMismatch`. `ChannelAdapter.Match`'s sibling throw was traced too and confirmed
+  genuinely unreachable (the engine mixer is hardcoded mono) — left as plain `NotSupportedException`
+  by design. Full scope boundary (what's localized vs. what stays English, and why) is written up
+  at the end of the Stage 3 section in the plan doc. `uk`/`pl` satellites are still empty of every
+  key added this session (Stage 4, not started) — **selecting Ukrainian in Settings right now still
+  shows English** for all of it, by design at this point, not a bug.
+  Also found and narrowly fixed a real pre-existing bug (Stage 1–2 session): the
+  screenshot-test harness's `OnStartup` "never fires in tests" assumption was false (see the
+  plan doc for the full story) — fixed with a one-line test-only flag, not a rewrite.
+  292/292 App tests green (was 253+30 skipped; +3 new `StringsTests`, +2 newly-gated, +4 new
+  `StatusViewModelTests`), full solution otherwise unaffected (107 Core/101 Audio/8 Wasapi/12
+  Host — Audio +3 for the new `EngineFormatTests`/channel-count coverage; server's 30 PostgreSQL
+  integration tests still need a live database, pre-existing). Wizard + Manage Categories
+  screenshots visually spot-checked after Stage 3 — the new converter/binding paths render
+  real text, not blank.
 
 ## Latest work (2026-07-20)
 
@@ -101,6 +152,18 @@ detection, account lockout, per-IP rate limiting, RFC 7807 errors (typed `Proble
   own pre-existing hover-darken chrome) then deleted, not committed. 281 App tests green (251
   passed + 30 screenshot, skipped without `ADAVOICE_SCREENSHOTS=1`, both themes verified) plus
   Core/Audio/Wasapi/Host unaffected (107/98/8/12).
+- **First beta release shipped: `v0.1.0-beta.1`**, packaged for a private feedback trial
+  (owner's wife, who doesn't read English — see the localization entry below for why that
+  mattered immediately). Self-contained win-x64 publish (`scripts/publish.ps1`, new) needs no
+  .NET install on the target machine — verified by actually launching the published `.exe`
+  (not just building it) and confirming the WASAPI/COM native layer initializes correctly.
+  `INSTALL.md` (new) covers the two-part setup: the app itself works immediately (recording,
+  library, headphone preview), while playing a phrase *into* a real call needs a separate
+  VB-CABLE driver install — deliberately not bundled (Windows requires a signed kernel driver
+  for a mic-visible endpoint; there is no user-mode API for this, confirmed against Microsoft's
+  own docs — an unsigned open-source alternative would be strictly worse for a remote install,
+  since VB-CABLE's driver is signed and installs without a Windows driver-signature fight).
+  Tagged and published as a GitHub pre-release with the zip attached.
 
 ## Latest work (2026-07-19)
 
@@ -439,8 +502,13 @@ Categories "Add category" panel dark-background bug (same section).
 2. ✅ Interaction-state gaps — done, smoke-tested.
 3. ✅ **Full/Docked responsive layout** — resolved 2026-07-20: dropdown-only, no rail (see
    "Latest work" above).
-4. **Localization retrofit (UA/PL/EN)** — next up now that slice 3 is closed. All UI strings so
-   far are English-only; a `.resx` retrofit is known debt.
+4. 🟡 **Localization retrofit (UA/PL/EN)** — in progress, Stages 1–3 of 7 done (2026-07-21).
+   **Next: Stage 4** (translate every extracted key to Ukrainian and Polish — `uk` first, per
+   owner's decision). Full remaining-work breakdown, exact files, and the reasoning behind
+   every architecture decision:
+   [localization-implementation-plan.md](docs/plans/localization-implementation-plan.md) —
+   read it before touching this, it has everything a fresh session needs. **Not committed
+   yet** — run `git status` first.
 
 Separately, **monetization**: Phases 0, 1, and 2 are done. Phase 3 (tenant/user/subscription core)
 is next. OQ-12/OC-06 (device vs per-seat limits) must be answered before Phase 4 (device activation).
@@ -462,6 +530,24 @@ needs the subscription/tenant state Phase 3 introduces.
   tapping the engine's capture. Watch for it on hardware.
 - **Cold-start auto-retry into Degraded:** a failed `Start` currently stays Stopped with the
   error surfaced.
+- **`App.OnStartup` runs for real during screenshot/layout tests — pre-existing, not caused by
+  the localization work.** Found 2026-07-20 while adding `App.SkipLanguageForTests`:
+  `WpfAppFixture`'s doc comment claims it "never calls `Application.Run()`, so `OnStartup` ...
+  never fires" — false. Merely running `Dispatcher.Run()` on the thread that constructed the
+  `Application` is enough for WPF to raise `Startup` anyway, with no explicit `Run()` needed.
+  Confirmed by instrumenting `OnStartup` directly (a counter incremented once per fixture
+  construction). This means every screenshot/layout test run builds a real `EngineHost` against
+  the real `%LOCALAPPDATA%\AdaVoice\settings.json`/`library.json` (reads them, and the
+  constructor's daily-backup logic can write into `backups\`), and grabs the real single-instance
+  mutex — if the real app happened to be running, tests would hit the "already running" dialog
+  mid-run. It has apparently been harmless in practice (every prior green run relied on it,
+  since it's also what "warms up" WPF-UI's pack:// resource resolution on that thread — verified
+  the hard way: guarding it off broke 27 screenshot tests with `NotSupportedException: The URI
+  prefix is not recognized` and crashed the test host once). Needs a dedicated pass to properly
+  isolate tests from the real app's data (e.g. an injectable data-root seam for `WpfAppFixture`,
+  or a narrower startup path tests can opt into) — not fixed here, deliberately, since the
+  narrow one-line gate this task actually needed (`SkipLanguageForTests`) is a different, much
+  smaller thing.
 - 🔴 **Light-theme legibility is broken across several dialogs, escalating in severity, unlike
   the two flagship windows — needs its own dedicated investigation, not another one-line fix.**
   Three separate findings during Phase C, each initially looking like an isolated one-off:

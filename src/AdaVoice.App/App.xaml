@@ -26,6 +26,9 @@
             <BooleanToVisibilityConverter x:Key="BoolToVis" />
             <app:CheckStatusToLabelConverter x:Key="CheckStatusToLabel" />
             <app:FailedCableCheckToVisibilityConverter x:Key="FailedCableCheckToLink" />
+            <app:EnvironmentCheckToTitleConverter x:Key="EnvCheckToTitle" />
+            <app:EnvironmentCheckToDetailConverter x:Key="EnvCheckToDetail" />
+            <app:CategoryNameConverter x:Key="CategoryName" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

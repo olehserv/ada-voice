@@ -1,4 +1,5 @@
 using AdaVoice.Core.Domain;
+using AdaVoice.Core.Storage;
 
 namespace AdaVoice.Host;
 
@@ -37,10 +38,11 @@ public interface ILibraryHost
     /// inside the binding engine, where WPF swallows it silently (review finding 9).</summary>
     bool IsWritable { get; }
 
-    /// <summary>Operator-readable warning about how the library loaded (locked file, corrupt file,
-    /// restored backup), or null when the load was clean. The board shows it at startup so an empty
-    /// board is never mistaken for an empty library (design 04 §3).</summary>
-    string? LibraryWarning { get; }
+    /// <summary>How the library loaded (locked file, corrupt file, restored backup, or clean). The
+    /// board maps this to a localized warning at startup so an empty board is never mistaken for an
+    /// empty library (design 04 §3) — kept as the raw status code here since Host carries no display
+    /// text, only App does.</summary>
+    LibraryLoadStatus LoadStatus { get; }
 
     /// <summary>Rename a phrase. Returns the updated entry, or null if the id is unknown.</summary>
     PhraseEntry? SetPhraseTitle(string phraseId, string title);

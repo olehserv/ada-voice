@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using AdaVoice.App.Resources;
 using AdaVoice.Host;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -51,10 +52,10 @@ public partial class SetupWizardViewModel : ObservableObject
 
     /// <summary>"Step n of N" progress text (finding 8) — 1-based for display, derived from
     /// <see cref="Steps"/>'s actual count rather than a hardcoded number.</summary>
-    public string StepLabel => $"Step {CurrentStepIndex + 1} of {Steps.Count}";
+    public string StepLabel => string.Format(Strings.Wizard_StepLabelFormat, CurrentStepIndex + 1, Steps.Count);
 
     /// <summary>"Finish" on the last step, "Next" everywhere else.</summary>
-    public string NextLabel => IsLastStep ? "Finish" : "Next";
+    public string NextLabel => IsLastStep ? Strings.Wizard_Finish : Strings.Wizard_Next;
 
     /// <summary>True when the current step allows a normal Next/Finish.</summary>
     public bool CanAdvance => CurrentStep.CanAdvance;

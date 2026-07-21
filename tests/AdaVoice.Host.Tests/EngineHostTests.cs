@@ -2,6 +2,7 @@ using System.Diagnostics;
 using AdaVoice.Audio.Abstractions;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Recording;
+using AdaVoice.Audio.Setup;
 using AdaVoice.Audio.Tests.Engine.Fakes;
 using AdaVoice.Audio.Wasapi;
 using AdaVoice.Core.Domain;
@@ -29,7 +30,7 @@ public class EngineHostTests : IDisposable
     {
         using var host = NewHost();
 
-        Assert.Null(host.LibraryWarning);
+        Assert.Equal(LibraryLoadStatus.SeededDefault, host.LoadStatus);
         Assert.Empty(host.Phrases);
     }
 
@@ -53,7 +54,7 @@ public class EngineHostTests : IDisposable
 
         using var host = NewHost();
 
-        Assert.NotNull(host.SettingsWarning);
+        Assert.True(host.SettingsWereReset);
     }
 
     [Fact]
@@ -61,7 +62,7 @@ public class EngineHostTests : IDisposable
     {
         using var host = NewHost();
 
-        Assert.Null(host.SettingsWarning);
+        Assert.False(host.SettingsWereReset);
     }
 
     [Fact]
@@ -75,8 +76,7 @@ public class EngineHostTests : IDisposable
 
         using var host = NewHost();
 
-        Assert.NotNull(host.LibraryWarning);
-        Assert.Contains("could not be read", host.LibraryWarning);
+        Assert.Equal(LibraryLoadStatus.ReadError, host.LoadStatus);
     }
 
     // ---- Recording / calibration state safety (review M1/M2) ----------------------------------
@@ -132,8 +132,7 @@ public class EngineHostTests : IDisposable
 
         var error = host.PlayEntry(entry, version);
 
-        Assert.Contains("version.wav", error);
-        Assert.DoesNotContain("primary.wav", error ?? "");
+        Assert.Equal("version.wav", error!.FileName);
     }
 
     [Fact]
@@ -146,7 +145,7 @@ public class EngineHostTests : IDisposable
 
         var error = host.PlayEntry(entry, version: null);
 
-        Assert.Contains("primary.wav", error);
+        Assert.Equal("primary.wav", error!.FileName);
     }
 
     // ---- Version WAV lifecycle (review finding 6) ----------------------------------------------
@@ -183,7 +182,7 @@ public class EngineHostTests : IDisposable
         var error = host.PlayEntry(entry);
 
         Assert.NotNull(error);
-        Assert.Contains("not Live", error);
+        Assert.Equal(PlaybackErrorCode.EngineNotLive, error.Code);
     }
 
     [Fact]
@@ -198,7 +197,7 @@ public class EngineHostTests : IDisposable
         var result = host.Calibrate(seconds: 0);
 
         Assert.False(result.Ok);
-        Assert.Contains("recording", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(CalibrationFailureReason.RecordingInProgress, result.Reason);
         host.StopRecording();
     }
 

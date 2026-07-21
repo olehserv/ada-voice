@@ -2,9 +2,20 @@ using AdaVoice.Audio.Dsp;
 
 namespace AdaVoice.Audio.Setup;
 
+/// <summary>Why calibration didn't succeed — the App layer's localization key, since Audio carries no
+/// display text. <see cref="RecordingInProgress"/>/<see cref="CouldNotPauseCallFeed"/> are host-level
+/// preconditions (set by <c>EngineHost.Calibrate</c>), not measurement outcomes, but they share this
+/// enum since they're just other reasons the same <see cref="CalibrationResult"/> can fail.</summary>
+public enum CalibrationFailureReason
+{
+    TooQuiet,
+    RecordingInProgress,
+    CouldNotPauseCallFeed,
+}
+
 /// <summary>Outcome of voice calibration. <see cref="MicReferenceRms"/> (linear) is meaningful only
-/// when <see cref="Ok"/>; otherwise <see cref="Message"/> explains the retry.</summary>
-public sealed record CalibrationResult(bool Ok, double MicReferenceRms, string? Message);
+/// when <see cref="Ok"/>; otherwise <see cref="Reason"/> explains the retry.</summary>
+public sealed record CalibrationResult(bool Ok, double MicReferenceRms, CalibrationFailureReason? Reason);
 
 /// <summary>
 /// The wizard's voice-calibration step (design 05 §4 / decision #13): measure the operator's normal
@@ -22,6 +33,6 @@ public static class VoiceCalibration
         var rms = Loudness.Rms(trimmedSamples);
         return rms >= MinRms
             ? new CalibrationResult(true, rms, null)
-            : new CalibrationResult(false, rms, "We barely heard you — move closer to the mic and try again.");
+            : new CalibrationResult(false, rms, CalibrationFailureReason.TooQuiet);
     }
 }

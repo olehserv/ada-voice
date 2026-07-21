@@ -1,7 +1,9 @@
+using AdaVoice.App.Resources;
 using AdaVoice.App.ViewModels;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Recording;
 using AdaVoice.Core.Domain;
+using AdaVoice.Core.Storage;
 using AdaVoice.Host;
 
 namespace AdaVoice.App.Tests;
@@ -109,22 +111,22 @@ public class BoardViewModelTests
     public void A_settings_warning_shows_on_the_board_at_startup()
     {
         var host = new FakePlaybackHost(); // no library warning
-        var settingsHost = new FakeSettingsHost { SettingsWarning = "Your saved settings were reset." };
+        var settingsHost = new FakeSettingsHost { SettingsWereReset = true };
 
         var board = NewBoard(host, settingsHost: settingsHost);
 
-        Assert.Equal("Your saved settings were reset.", board.Notice);
+        Assert.Equal(Strings.Board_SettingsWereReset, board.Notice);
     }
 
     [Fact]
     public void A_library_warning_takes_priority_over_a_settings_warning()
     {
-        var host = new FakePlaybackHost { LibraryWarning = "library problem" };
-        var settingsHost = new FakeSettingsHost { SettingsWarning = "settings problem" };
+        var host = new FakePlaybackHost { LoadStatus = LibraryLoadStatus.ReadError };
+        var settingsHost = new FakeSettingsHost { SettingsWereReset = true };
 
         var board = NewBoard(host, settingsHost: settingsHost);
 
-        Assert.Equal("library problem", board.Notice);
+        Assert.Equal(Strings.Board_LibraryReadError, board.Notice);
     }
 
     [Fact]
@@ -333,7 +335,7 @@ public class BoardViewModelTests
                 new PhraseEntry { Id = "p-2", FileName = "p-2.wav" },
             ],
             Conversations = [new Conversation { Id = "v-1", Name = "Script", PhraseIds = ["p-1", "p-2"] }],
-            PlayEntryResult = "missing audio file: p-1.wav",
+            PlayEntryResult = new PlaybackError(PlaybackErrorCode.AudioFileMissing),
         };
         var board = NewBoard(host);
         board.SelectedConversationFilter = board.ConversationFilterOptions.Single(c => c.Id == "v-1");
@@ -344,7 +346,7 @@ public class BoardViewModelTests
 
         Assert.NotNull(seen);
         Assert.Equal(NoticeSeverity.Error, seen.Severity);
-        Assert.Contains("missing audio file", seen.Message);
+        Assert.Contains(Strings.Board_AudioFileMissing, seen.Message);
         Assert.True(board.Phrases.Single(p => p.Entry.Id == "p-1").IsCurrentStep); // pointer did not move
     }
 
@@ -496,13 +498,13 @@ public class BoardViewModelTests
         var host = new FakePlaybackHost
         {
             Phrases = [new PhraseEntry { Id = "p-1", FileName = "p-1.wav" }],
-            PreviewEntryResult = "missing audio file: p-1.wav",
+            PreviewEntryResult = new PlaybackError(PlaybackErrorCode.AudioFileMissing),
         };
         var board = NewBoard(host);
 
         await board.TestOnHeadphonesCommand.ExecuteAsync(board.Phrases[0]);
 
-        Assert.Equal("missing audio file: p-1.wav", board.Notice);
+        Assert.Equal(Strings.Board_AudioFileMissing, board.Notice);
     }
 
     [Fact]

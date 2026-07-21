@@ -24,9 +24,14 @@ public sealed class FakeDeviceFactory : IAudioDeviceFactory
     public WaveFormat? AlarmFormat { get; set; }
 
     /// <summary>Format the next Cable device reports (null = engine format). Lets a test simulate a
-    /// cable replugged at the wrong sample rate — its Init then throws NotSupportedException, which
-    /// is NOT an AudioDeviceException (the H1 escape path).</summary>
+    /// cable replugged at the wrong sample rate — its Init then throws UnsupportedSampleRateException,
+    /// which is NOT an AudioDeviceException (the H1 escape path).</summary>
     public WaveFormat? CableFormat { get; set; }
+
+    /// <summary>Format the next Mic device reports (null = engine format). Lets a test simulate a
+    /// multi-capsule mic with more than 2 channels — EngineFormat.Convert then throws
+    /// UnsupportedChannelCountException.</summary>
+    public WaveFormat? MicFormat { get; set; }
 
     /// <summary>Make the next create for <paramref name="role"/> throw.</summary>
     public void FailNext(DeviceRole role, bool transient, string message = "fake failure")
@@ -35,7 +40,7 @@ public sealed class FakeDeviceFactory : IAudioDeviceFactory
     public IAudioCaptureDevice CreateCapture(DeviceRole role)
     {
         ThrowIfArmed(role);
-        return LastMic = new ControllableCaptureDevice();
+        return LastMic = new ControllableCaptureDevice(MicFormat);
     }
 
     public IAudioRenderDevice CreateRender(DeviceRole role)

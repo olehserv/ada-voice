@@ -6,7 +6,10 @@ namespace AdaVoice.App.Tests;
 public class SetupWizardViewModelTests
 {
     private static SetupWizardViewModel NewWizard(FakePlaybackHost? host = null, string? hotkey = "Pause") =>
-        new(host ?? new FakePlaybackHost { NextChecks = [new EnvironmentCheck("Cable", CheckStatus.Pass, "ok")] }, hotkey);
+        new(host ?? new FakePlaybackHost
+        {
+            NextChecks = [new EnvironmentCheck(EnvironmentCheckKind.CableOutput, CheckStatus.Pass, FoundName: "ok")],
+        }, hotkey);
 
     [Fact]
     public void Starts_on_the_first_step()
@@ -56,7 +59,7 @@ public class SetupWizardViewModelTests
     [Fact]
     public void Next_is_disabled_when_the_current_step_blocks_it()
     {
-        var host = new FakePlaybackHost { NextChecks = [new EnvironmentCheck("Cable", CheckStatus.Fail, "missing")] };
+        var host = new FakePlaybackHost { NextChecks = [new EnvironmentCheck(EnvironmentCheckKind.CableOutput, CheckStatus.Fail, RequestedName: "missing")] };
         var wizard = NewWizard(host);
 
         Assert.False(wizard.NextCommand.CanExecute(null));
@@ -65,7 +68,7 @@ public class SetupWizardViewModelTests
     [Fact]
     public void Skip_anyway_advances_even_when_blocked()
     {
-        var host = new FakePlaybackHost { NextChecks = [new EnvironmentCheck("Cable", CheckStatus.Fail, "missing")] };
+        var host = new FakePlaybackHost { NextChecks = [new EnvironmentCheck(EnvironmentCheckKind.CableOutput, CheckStatus.Fail, RequestedName: "missing")] };
         var wizard = NewWizard(host);
         Assert.True(wizard.ShowSkip);
 
@@ -130,7 +133,7 @@ public class SetupWizardViewModelTests
     [Fact]
     public async Task Can_advance_updates_when_the_current_steps_own_state_changes()
     {
-        var host = new FakePlaybackHost { NextCalibrationResult = new CalibrationResult(false, 0.001, "too quiet") };
+        var host = new FakePlaybackHost { NextCalibrationResult = new CalibrationResult(false, 0.001, CalibrationFailureReason.TooQuiet) };
         var wizard = NewWizard(host);
         wizard.NextCommand.Execute(null); // -> calibration step
         Assert.False(wizard.CanAdvance);

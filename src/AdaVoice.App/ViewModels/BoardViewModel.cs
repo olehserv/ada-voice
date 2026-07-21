@@ -1,9 +1,12 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows.Data;
+using AdaVoice.App.Resources;
+using AdaVoice.App.Services;
 using AdaVoice.Audio.Engine;
 using AdaVoice.Audio.Recording;
 using AdaVoice.Core.Domain;
+using AdaVoice.Core.Storage;
 using AdaVoice.Host;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -147,7 +150,8 @@ public partial class BoardViewModel : ObservableObject
         // A problem loading the library must be visible, or an empty board looks like an empty library.
         // A settings reset (which drops the mic calibration) is shown too — the library warning wins if
         // both happened, since an empty board is the more alarming surprise.
-        _notice = library.LibraryWarning ?? settingsHost.SettingsWarning;
+        _notice = LibraryWarningFor(library.LoadStatus)
+            ?? (settingsHost.SettingsWereReset ? Strings.Board_SettingsWereReset : null);
 
         ApplyColors(); // tint each tile with its category colour and resolve its tag chips
 
@@ -181,8 +185,19 @@ public partial class BoardViewModel : ObservableObject
         _playback.PlayingPhraseChanged += OnPlayingPhraseChanged;
     }
 
+    /// <summary>Maps how the library loaded to operator-readable text (or null when the load was
+    /// clean) — the Host layer carries only the raw <see cref="LibraryLoadStatus"/>, never display
+    /// text (design 04 §3).</summary>
+    private static string? LibraryWarningFor(LibraryLoadStatus status) => status switch
+    {
+        LibraryLoadStatus.ReadError => Strings.Board_LibraryReadError,
+        LibraryLoadStatus.Corrupt => Strings.Board_LibraryCorrupt,
+        LibraryLoadStatus.RecoveredFromBackup => Strings.Board_LibraryRecovered,
+        _ => null,
+    };
+
     /// <summary>Sentinel "no conversation" option for the filter dropdown (blank id = no filter).</summary>
-    public static readonly Conversation NoneConversation = new() { Id = "", Name = "None" };
+    public static readonly Conversation NoneConversation = new() { Id = "", Name = Strings.Board_NoneConversation };
 
     /// <summary>Raised after a take is saved, with its title — the view shows a "Saved" toast.</summary>
     public event EventHandler<string>? Saved;
@@ -226,16 +241,16 @@ public partial class BoardViewModel : ObservableObject
             var checkedItems = CategoryFilterItems.Where(i => i.IsChecked).ToList();
             return checkedItems.Count switch
             {
-                0 => "Categories",
-                1 => checkedItems[0].Category.Name,
-                _ => $"{checkedItems.Count} categories",
+                0 => Strings.Board_CategoriesLabel,
+                1 => CategoryDisplay.NameOf(checkedItems[0].Category),
+                _ => string.Format(Strings.Board_CategoriesCountFormat, checkedItems.Count),
             };
         }
     }
 
     /// <summary>The Conversations button's label: "Conversations" when none is active, or the
     /// active conversation's name.</summary>
-    public string ConversationFilterButtonLabel => IsConversationActive ? SelectedConversationFilter.Name : "Conversations";
+    public string ConversationFilterButtonLabel => IsConversationActive ? SelectedConversationFilter.Name : Strings.Board_ConversationsLabel;
 
     /// <summary>"None" followed by the real conversations — the filter dropdown's items. Rebuilt after
     /// the conversation manager runs.</summary>
@@ -300,7 +315,9 @@ public partial class BoardViewModel : ObservableObject
     /// <summary>The checked category's name, when exactly one is checked — bound by the "record
     /// into" CTA card, which only shows in that same condition.</summary>
     public string? EffectiveSingleCategoryName =>
-        EffectiveSingleCategoryId is { } id ? CategoryFilterItems.First(i => i.Category.Id == id).Category.Name : null;
+        EffectiveSingleCategoryId is { } id
+            ? CategoryDisplay.NameOf(CategoryFilterItems.First(i => i.Category.Id == id).Category)
+            : null;
 
     /// <summary>The checked category, when exactly one is checked — the CTA and "record into" flow
     /// only make sense for a single target. Null when zero or 2+ are checked.</summary>
@@ -597,7 +614,7 @@ public partial class BoardViewModel : ObservableObject
 
         if (_playback.State != EngineState.Live)
         {
-            Notify("Start the engine (and be ON AIR) to play to the call.", NoticeSeverity.Warning);
+            Notify(Strings.Board_StartEngineToPlay, NoticeSeverity.Warning);
             return;
         }
 
@@ -605,11 +622,11 @@ public partial class BoardViewModel : ObservableObject
         var version = IsConversationActive && _activeConversationUseRandomVersion
             ? PickVersion(item.Entry) : null;
         var error = _playback.PlayEntry(item.Entry, version);
-        if (error is not null)
+        if (error is { } code)
         {
             // Surface the drop instead of letting it pass as if it played — e.g. the file went missing
             // after the board loaded. Do not advance the conversation step: nothing was actually heard.
-            Notify($"Could not play \"{item.Title}\": {error}", NoticeSeverity.Error);
+            Notify(string.Format(Strings.Board_CouldNotPlayFormat, item.Title, PlaybackErrorText.Describe(code)), NoticeSeverity.Error);
             return;
         }
 
@@ -632,13 +649,13 @@ public partial class BoardViewModel : ObservableObject
         try
         {
             var error = await Task.Run(() => _playback.PreviewEntry(item.Entry));
-            if (error is not null)
-                _onUiThread(() => Notify(error, NoticeSeverity.Error));
+            if (error is { } code)
+                _onUiThread(() => Notify(PlaybackErrorText.Describe(code), NoticeSeverity.Error));
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             // Corrupt WAV, no output device, COM failure — surface it instead of crashing the app.
-            _onUiThread(() => Notify("Could not play the preview — check the playback device and try again.", NoticeSeverity.Error));
+            _onUiThread(() => Notify(Strings.Board_PreviewPlaybackError, NoticeSeverity.Error));
         }
         finally
         {
@@ -768,7 +785,7 @@ public partial class BoardViewModel : ObservableObject
         if (!Status.IsEngineRunning)
         {
             ClearPendingRecording(); // same reasoning as the no-signal branches below
-            Notify("Start the engine before recording.", NoticeSeverity.Warning);
+            Notify(Strings.Board_StartEngineToRecord, NoticeSeverity.Warning);
             return;
         }
 
@@ -788,7 +805,7 @@ public partial class BoardViewModel : ObservableObject
                     // stash made before this call (RecordIntoCategory / repair dialog Re-record)
                     // must not survive to misfile the operator's next, unrelated recording.
                     ClearPendingRecording();
-                    Notify("Press Start to go Live before recording.", NoticeSeverity.Warning);
+                    Notify(Strings.Board_PressStartToRecord, NoticeSeverity.Warning);
                 }
             });
         }
@@ -798,7 +815,7 @@ public partial class BoardViewModel : ObservableObject
             _onUiThread(() =>
             {
                 ClearPendingRecording();
-                Notify("Could not start recording — check the microphone and try again.", NoticeSeverity.Error);
+                Notify(Strings.Board_RecordingStartError, NoticeSeverity.Error);
             });
         }
 
@@ -837,7 +854,7 @@ public partial class BoardViewModel : ObservableObject
                     PendingTake = take;
                     // A repair-dialog Re-record (or RecordIntoCategory) may have stashed the
                     // original title before recording started; fall back to a timestamp otherwise.
-                    NewTitle = _pendingMetadata.Title ?? $"Take {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                    NewTitle = _pendingMetadata.Title ?? string.Format(Strings.Board_DefaultTakeTitleFormat, DateTime.Now);
                     Notice = null;
                 }
                 else
@@ -847,7 +864,7 @@ public partial class BoardViewModel : ObservableObject
                     // cleared here or it would leak into the operator's next, unrelated recording.
                     PendingTake = null;
                     ClearPendingRecording();
-                    Notify("No signal — nothing recorded.", NoticeSeverity.Warning);
+                    Notify(Strings.Board_NoSignal, NoticeSeverity.Warning);
                 }
             });
         }
@@ -858,7 +875,7 @@ public partial class BoardViewModel : ObservableObject
                 // Same reasoning as the no-signal branch above: no take, so no stash may survive.
                 PendingTake = null;
                 ClearPendingRecording();
-                Notify("Could not finish the recording — the take was lost.", NoticeSeverity.Error);
+                Notify(Strings.Board_RecordingFinishError, NoticeSeverity.Error);
             });
         }
         finally
@@ -877,16 +894,16 @@ public partial class BoardViewModel : ObservableObject
         if (PendingTake is not { } take)
             return;
 
-        Notify("Previewing…", NoticeSeverity.Info);
+        Notify(Strings.Board_Previewing, NoticeSeverity.Info);
         try
         {
             var error = await Task.Run(() => _recorder.Preview(take.Samples, take.GainDb));
-            if (error is not null)
-                _onUiThread(() => Notify(error, NoticeSeverity.Error));
+            if (error is { } code)
+                _onUiThread(() => Notify(PlaybackErrorText.Describe(code), NoticeSeverity.Error));
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            _onUiThread(() => Notify("Could not play the preview — check the playback device and try again.", NoticeSeverity.Error));
+            _onUiThread(() => Notify(Strings.Board_PreviewPlaybackError, NoticeSeverity.Error));
         }
     }
 
@@ -918,7 +935,7 @@ public partial class BoardViewModel : ObservableObject
         {
             // Nothing persisted yet — keep PendingTake (and the pending metadata) set so the
             // operator can retry Save or Discard instead of silently losing the recording.
-            Notify("Could not save the recording — check disk space and try again.", NoticeSeverity.Error);
+            Notify(Strings.Board_SaveRecordingError, NoticeSeverity.Error);
             return;
         }
 
@@ -935,7 +952,7 @@ public partial class BoardViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            Notify("Saved, but could not apply the category/tags — edit it manually.", NoticeSeverity.Warning);
+            Notify(Strings.Board_SavedButApplyFailed, NoticeSeverity.Warning);
         }
         _pendingMetadata = default;
 
@@ -961,7 +978,7 @@ public partial class BoardViewModel : ObservableObject
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             // Nothing persisted yet — keep PendingTake and the stash so the operator can retry.
-            Notify("Could not save the version — check disk space and try again.", NoticeSeverity.Error);
+            Notify(Strings.Board_SaveVersionError, NoticeSeverity.Error);
             return;
         }
 
@@ -970,14 +987,14 @@ public partial class BoardViewModel : ObservableObject
             // The phrase this take was for is gone (e.g. deleted from another view while the Recorder
             // was open). Nothing was written — keep PendingTake and the stash so the operator doesn't
             // lose the take, and say so instead of a false "saved" (review finding 7).
-            Notify("Could not save the version — the phrase no longer exists.", NoticeSeverity.Error);
+            Notify(Strings.Board_SaveVersionPhraseGone, NoticeSeverity.Error);
             return;
         }
 
         PendingTake = null;
         Phrases.FirstOrDefault(p => p.Entry.Id == entry.Id)?.Update(entry);
         Notice = null;
-        Saved?.Invoke(this, "New version saved");
+        Saved?.Invoke(this, Strings.Board_NewVersionSaved);
     }
 
     /// <summary>Wires the Recorder dialog's own <c>ConfirmDiscardAsync</c> in — called every time
@@ -995,7 +1012,7 @@ public partial class BoardViewModel : ObservableObject
 
         PendingTake = null;
         ClearPendingRecording();
-        Notify("Take discarded.", NoticeSeverity.Info);
+        Notify(Strings.Board_TakeDiscarded, NoticeSeverity.Info);
     }
 
     /// <summary>Clear both pending-recording stashes — used everywhere an attempt produces no take

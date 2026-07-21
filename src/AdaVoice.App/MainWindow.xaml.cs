@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+using AdaVoice.App.Resources;
 using AdaVoice.App.Services;
 using AdaVoice.App.ViewModels;
 using AdaVoice.Host;
@@ -105,10 +106,10 @@ public partial class MainWindow : FluentWindow
     {
         var result = await _dialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
         {
-            Title = "Delete phrase",
-            Content = $"Delete “{item.Title}”?\n\nThe recording is kept as a backup and can be recovered.",
-            PrimaryButtonText = "Delete",
-            CloseButtonText = "Cancel",
+            Title = Strings.Main_DeletePhraseTitle,
+            Content = string.Format(Strings.Main_DeletePhraseConfirmFormat, item.Title),
+            PrimaryButtonText = Strings.Main_Delete,
+            CloseButtonText = Strings.DialogPrompts_Cancel,
         });
         return result == ContentDialogResult.Primary;
     }
@@ -169,7 +170,7 @@ public partial class MainWindow : FluentWindow
         var menu = new System.Windows.Controls.ContextMenu { PlacementTarget = button };
         menu.Items.Add(new System.Windows.Controls.MenuItem
         {
-            Header = "Manage categories…",
+            Header = Strings.Main_ManageCategoriesMenuItem,
             Command = board.ManageCategoriesCommand,
         });
         menu.Items.Add(new System.Windows.Controls.Separator());
@@ -178,7 +179,7 @@ public partial class MainWindow : FluentWindow
         {
             var menuItem = new System.Windows.Controls.MenuItem
             {
-                Header = item.Category.Name,
+                Header = CategoryDisplay.NameOf(item.Category),
                 IsCheckable = true,
                 IsChecked = item.IsChecked,
             };
@@ -204,7 +205,7 @@ public partial class MainWindow : FluentWindow
         var menu = new System.Windows.Controls.ContextMenu { PlacementTarget = button };
         menu.Items.Add(new System.Windows.Controls.MenuItem
         {
-            Header = "Manage conversations…",
+            Header = Strings.Main_ManageConversationsMenuItem,
             Command = board.ManageConversationsCommand,
         });
         menu.Items.Add(new System.Windows.Controls.Separator());
@@ -293,7 +294,7 @@ public partial class MainWindow : FluentWindow
     {
         var dialog = new SaveFileDialog
         {
-            Filter = "AdaVoice export (*.zip)|*.zip",
+            Filter = Strings.Main_ExportFilter,
             FileName = $"adavoice-export-{DateTime.Now:yyyy-MM-dd}.zip",
         };
         return dialog.ShowDialog(this) == true ? dialog.FileName : null;
@@ -308,14 +309,14 @@ public partial class MainWindow : FluentWindow
         if (_hotkeys.Register())
         {
             Log.Information("Stop hotkey registered: {Key}", _hotkeys.ActiveHotkey);
-            HotkeyHint.Text = $"Or press {_hotkeys.ActiveHotkey} to stop from any window";
+            HotkeyHint.Text = string.Format(Strings.Main_HotkeyHintFormat, _hotkeys.ActiveHotkey);
             HotkeyHint.Visibility = Visibility.Visible;
         }
         else
         {
             Log.Warning("Stop hotkey unavailable: Pause and Ctrl+F12 are both taken");
-            ShowToast("Use the on-screen STOP button.", ControlAppearance.Caution, TimeSpan.FromSeconds(5),
-                toastTitle: "Stop hotkey unavailable");
+            ShowToast(Strings.Main_UseOnScreenStop, ControlAppearance.Caution, TimeSpan.FromSeconds(5),
+                toastTitle: Strings.Main_HotkeyUnavailableTitle);
         }
     }
 
@@ -361,8 +362,8 @@ public partial class MainWindow : FluentWindow
 
     // Fires on the UI thread (SaveTake runs from a command), so showing the toast here is safe.
     private void OnPhraseSaved(object? sender, string title) =>
-        ShowToast(title, ControlAppearance.Success, TimeSpan.FromSeconds(3), toastTitle: "Saved");
+        ShowToast(title, ControlAppearance.Success, TimeSpan.FromSeconds(3), toastTitle: Strings.Main_SavedToastTitle);
 
     private void OnPhraseDeleted(object? sender, string title) =>
-        ShowToast(title, ControlAppearance.Caution, TimeSpan.FromSeconds(3), toastTitle: "Deleted");
+        ShowToast(title, ControlAppearance.Caution, TimeSpan.FromSeconds(3), toastTitle: Strings.Main_DeletedToastTitle);
 }

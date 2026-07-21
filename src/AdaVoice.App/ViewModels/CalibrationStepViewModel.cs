@@ -1,3 +1,4 @@
+using AdaVoice.App.Resources;
 using AdaVoice.Audio.Setup;
 using AdaVoice.Host;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -21,7 +22,12 @@ public partial class CalibrationStepViewModel : ObservableObject, IWizardStep
     [NotifyPropertyChangedFor(nameof(CanAdvance))]
     [NotifyPropertyChangedFor(nameof(Succeeded))]
     [NotifyPropertyChangedFor(nameof(HasMessage))]
+    [NotifyPropertyChangedFor(nameof(Message))]
     private CalibrationResult? _result;
+
+    // Set only by StartCalibration's catch block — a mic-access exception is an App/UI-layer
+    // concern, not one of Audio's CalibrationFailureReason codes, so it rides separately from Result.
+    private string? _micAccessError;
 
     public CalibrationStepViewModel(ISetupHost setup) => _setup = setup;
 
@@ -35,20 +41,35 @@ public partial class CalibrationStepViewModel : ObservableObject, IWizardStep
     public bool Succeeded => Result is { Ok: true };
 
     /// <summary>A retry/error message is present (e.g. "too quiet") and should be shown.</summary>
-    public bool HasMessage => Result?.Message is not null;
+    public bool HasMessage => Message is not null;
+
+    /// <summary>The localized retry/error message for <see cref="Result"/>'s failure reason (Audio
+    /// carries only the reason code, never display text), or the mic-access exception message.</summary>
+    public string? Message => _micAccessError ?? (Result?.Reason is { } reason ? Describe(reason) : null);
+
+    private static string Describe(CalibrationFailureReason reason) => reason switch
+    {
+        CalibrationFailureReason.TooQuiet => Strings.Calibration_TooQuiet,
+        CalibrationFailureReason.RecordingInProgress => Strings.Calibration_AlreadyRecording,
+        CalibrationFailureReason.CouldNotPauseCallFeed => Strings.Calibration_CouldNotPauseCallFeed,
+        _ => "",
+    };
 
     [RelayCommand]
     private async Task StartCalibration()
     {
         IsRecording = true;
         Result = null;
+        _micAccessError = null;
         try
         {
             Result = await Task.Run(() => _setup.Calibrate(5));
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            Result = new CalibrationResult(false, 0, "Could not access the microphone — close anything else using it and try again.");
+            _micAccessError = Strings.Calibration_MicAccessError;
+            OnPropertyChanged(nameof(Message));
+            OnPropertyChanged(nameof(HasMessage));
         }
         finally
         {

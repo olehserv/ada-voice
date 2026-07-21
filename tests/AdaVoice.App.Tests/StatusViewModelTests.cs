@@ -1,3 +1,4 @@
+using AdaVoice.App.Resources;
 using AdaVoice.App.ViewModels;
 using AdaVoice.Audio.Engine;
 
@@ -85,10 +86,42 @@ public class StatusViewModelTests
         var host = new FakePlaybackHost { State = EngineState.Stopped };
         var vm = new StatusViewModel(host);
 
-        host.RaiseStateChanged(EngineState.Stopped, "cable not at 48 kHz");
-        Assert.Equal("cable not at 48 kHz", vm.StateError);
+        host.RaiseStateChanged(EngineState.Stopped, new EngineError(EngineErrorReason.DeviceFailure, "cable not at 48 kHz"));
+        Assert.Equal("cable not at 48 kHz", vm.StateErrorText);
 
         host.RaiseStateChanged(EngineState.Live);
-        Assert.Null(vm.StateError);
+        Assert.Null(vm.StateErrorText);
+    }
+
+    [Theory]
+    [InlineData(EngineErrorReason.DeviceChanged)]
+    [InlineData(EngineErrorReason.CableStalled)]
+    [InlineData(EngineErrorReason.CableSampleRateMismatch)]
+    public void State_error_uses_the_localized_text_for_known_reasons(EngineErrorReason reason)
+    {
+        var host = new FakePlaybackHost { State = EngineState.Stopped };
+        var vm = new StatusViewModel(host);
+        var expected = reason switch
+        {
+            EngineErrorReason.DeviceChanged => Strings.Status_DeviceChanged,
+            EngineErrorReason.CableStalled => Strings.Status_CableStalled,
+            EngineErrorReason.CableSampleRateMismatch => Strings.Status_CableSampleRateMismatch,
+            _ => throw new ArgumentOutOfRangeException(nameof(reason)),
+        };
+
+        host.RaiseStateChanged(EngineState.Stopped, new EngineError(reason));
+
+        Assert.Equal(expected, vm.StateErrorText);
+    }
+
+    [Fact]
+    public void State_error_for_too_many_mic_channels_includes_the_channel_count()
+    {
+        var host = new FakePlaybackHost { State = EngineState.Stopped };
+        var vm = new StatusViewModel(host);
+
+        host.RaiseStateChanged(EngineState.Stopped, new EngineError(EngineErrorReason.TooManyMicChannels, Channels: 4));
+
+        Assert.Equal(string.Format(Strings.Status_TooManyMicChannelsFormat, 4), vm.StateErrorText);
     }
 }

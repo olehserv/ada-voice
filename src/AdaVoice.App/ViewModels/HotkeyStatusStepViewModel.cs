@@ -1,3 +1,4 @@
+using AdaVoice.App.Resources;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AdaVoice.App.ViewModels;
@@ -9,8 +10,8 @@ public sealed class HotkeyStatusStepViewModel : ObservableObject, IWizardStep
 {
     public HotkeyStatusStepViewModel(string? activeHotkey) =>
         StatusLabel = activeHotkey is { } key
-            ? $"Global stop hotkey registered: {key}"
-            : "No global stop hotkey available — use the on-screen STOP button.";
+            ? string.Format(Strings.Hotkey_Registered, key)
+            : Strings.Hotkey_Unavailable;
 
     public string StatusLabel { get; }
 

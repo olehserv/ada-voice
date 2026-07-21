@@ -81,7 +81,7 @@ internal class FakeSettingsHost : ISettingsHost
         return NextImportResult;
     }
 
-    public string? SettingsWarning { get; set; }
+    public bool SettingsWereReset { get; set; }
 
     public DateOnly? LastBackupDate { get; set; }
     public int OpenBackupFolderCount { get; private set; }

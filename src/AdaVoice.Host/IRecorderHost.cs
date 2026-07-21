@@ -23,6 +23,7 @@ public interface IRecorderHost
     /// Returns the updated entry, or null if the phrase id is unknown.</summary>
     PhraseEntry? SaveTakeAsVersion(RecordingResult result, string phraseId, string label);
 
-    /// <summary>Play raw samples to the monitor (to hear a take before saving). Error message, or null.</summary>
-    string? Preview(float[] samples, double gainDb);
+    /// <summary>Play raw samples to the monitor (to hear a take before saving). Why it failed, or
+    /// null on success.</summary>
+    PlaybackError? Preview(float[] samples, double gainDb);
 }

@@ -1,12 +1,17 @@
-<UserControl x:Class="AdaVoice.App.InstructionStepView"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+﻿<UserControl
+    x:Class="AdaVoice.App.InstructionStepView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:res="clr-namespace:AdaVoice.App.Resources">
     <StackPanel>
-        <TextBlock Text="Point Chrome/Zoho at the cable" Style="{StaticResource SectionTitleStyle}" />
+        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="{x:Static res:Strings.Instruction_Title}" />
         <ItemsControl ItemsSource="{Binding Steps}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        Text="{Binding}"
+                        TextWrapping="Wrap" />
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>

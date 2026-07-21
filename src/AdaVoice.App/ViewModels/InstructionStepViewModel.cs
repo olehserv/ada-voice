@@ -1,3 +1,4 @@
+using AdaVoice.App.Resources;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AdaVoice.App.ViewModels;
@@ -9,10 +10,10 @@ public sealed class InstructionStepViewModel : ObservableObject, IWizardStep
 {
     public IReadOnlyList<string> Steps { get; } =
     [
-        "Open Chrome and go to your call site (e.g. Zoho Meeting or Zoho Voice).",
-        "Open the microphone/audio settings for the call.",
-        "Set the microphone to \"CABLE Output (VB-Audio Virtual Cable)\".",
-        "Continue to the next step to confirm it works with a real test call.",
+        Strings.Instruction_Step1,
+        Strings.Instruction_Step2,
+        Strings.Instruction_Step3,
+        Strings.Instruction_Step4,
     ];
 
     public bool CanAdvance => true;

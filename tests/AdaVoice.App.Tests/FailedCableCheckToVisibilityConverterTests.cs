@@ -12,7 +12,7 @@ public class FailedCableCheckToVisibilityConverterTests
     [Fact]
     public void Visible_when_the_cable_check_failed()
     {
-        var check = new EnvironmentCheck("Cable output", CheckStatus.Fail, "not found");
+        var check = new EnvironmentCheck(EnvironmentCheckKind.CableOutput, CheckStatus.Fail, RequestedName: "not found");
 
         var result = Sut.Convert(check, typeof(Visibility), null, CultureInfo.InvariantCulture);
 
@@ -22,7 +22,7 @@ public class FailedCableCheckToVisibilityConverterTests
     [Fact]
     public void Collapsed_when_the_cable_check_passed()
     {
-        var check = new EnvironmentCheck("Cable output", CheckStatus.Pass, "ok");
+        var check = new EnvironmentCheck(EnvironmentCheckKind.CableOutput, CheckStatus.Pass, FoundName: "ok");
 
         var result = Sut.Convert(check, typeof(Visibility), null, CultureInfo.InvariantCulture);
 
@@ -32,7 +32,7 @@ public class FailedCableCheckToVisibilityConverterTests
     [Fact]
     public void Collapsed_when_a_different_check_fails()
     {
-        var check = new EnvironmentCheck("Default output", CheckStatus.Fail, "is the cable");
+        var check = new EnvironmentCheck(EnvironmentCheckKind.DefaultOutput, CheckStatus.Fail, FoundName: "is the cable");
 
         var result = Sut.Convert(check, typeof(Visibility), null, CultureInfo.InvariantCulture);
 

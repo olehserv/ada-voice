@@ -156,13 +156,16 @@ public class BackupSettingsViewModelTests
     [Fact]
     public void Import_failure_is_surfaced_without_throwing()
     {
-        var host = new FakeSettingsHost { NextImportResult = new ImportResult(false, 0, 0, "bad archive") };
+        var host = new FakeSettingsHost
+        {
+            NextImportResult = new ImportResult(false, 0, 0, ImportErrorCode.NoValidLibraryJson),
+        };
         var errors = new List<string>();
         var vm = NewVm(host, pickImportFile: () => (@"C:\bad.zip", ImportMode.Replace), errors: errors);
 
         vm.ImportCommand.Execute(null);
 
-        Assert.Contains(errors, e => e.Contains("bad archive"));
+        Assert.Contains(errors, e => e.Contains("no valid library.json"));
     }
 
     [Fact]

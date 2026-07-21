@@ -1,4 +1,5 @@
 using System.Windows;
+using AdaVoice.App.Resources;
 using AdaVoice.App.Services;
 using AdaVoice.App.ViewModels;
 using Wpf.Ui;
@@ -34,5 +35,6 @@ public partial class ManageConversationsDialog : Wpf.Ui.Controls.FluentWindow
 
     /// <summary>Confirm before deleting a conversation.</summary>
     public Task<bool> ConfirmDeleteAsync(ConversationRowViewModel row) => DialogPrompts.ConfirmAsync(
-        _dialogService, "Delete conversation", $"Delete \"{row.Name}\"?", "Delete");
+        _dialogService, Strings.ManageConversations_DeleteConfirmTitle,
+        string.Format(Strings.ManageConversations_DeleteConfirmFormat, row.Name), Strings.ManageConversations_Delete);
 }

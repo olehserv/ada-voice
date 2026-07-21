@@ -3,9 +3,10 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="clr-namespace:AdaVoice.App"
+    xmlns:res="clr-namespace:AdaVoice.App.Resources"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:vm="clr-namespace:AdaVoice.App.ViewModels"
-    Title="AdaVoice setup"
+    Title="{x:Static res:Strings.Wizard_Title}"
     Width="480"
     MinHeight="320"
     Background="{DynamicResource Surface.Window}"
@@ -42,7 +43,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <ui:TitleBar
-            Title="AdaVoice setup"
+            Title="{x:Static res:Strings.Wizard_Title}"
             Grid.Row="0"
             CanMaximize="False"
             ShowMaximize="False"
@@ -63,18 +64,18 @@
                 <ui:Button
                     Margin="0,0,8,0"
                     Appearance="Secondary"
-                    Content="Cancel"
+                    Content="{x:Static res:Strings.Wizard_Cancel}"
                     IsCancel="True" />
                 <ui:Button
                     Margin="0,0,8,0"
                     Appearance="Secondary"
                     Command="{Binding BackCommand}"
-                    Content="Back" />
+                    Content="{x:Static res:Strings.Wizard_Back}" />
                 <ui:Button
                     Margin="0,0,8,0"
                     Appearance="Secondary"
                     Command="{Binding SkipAnywayCommand}"
-                    Content="Skip anyway"
+                    Content="{x:Static res:Strings.Wizard_SkipAnyway}"
                     Visibility="{Binding ShowSkip, Converter={StaticResource BoolToVis}}" />
                 <ui:Button
                     Command="{Binding NextCommand}"

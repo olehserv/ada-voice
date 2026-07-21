@@ -186,7 +186,7 @@ static void Import(EngineHost host)
     var result = host.ImportLibrary(path, mode);
     Console.WriteLine(result.Success
         ? $"Imported ({mode}): added {result.Added}, skipped {result.Skipped}."
-        : $"Import failed: {result.Error}");
+        : $"Import failed: {result.ErrorCode} {result.ExceptionMessage}");
 }
 
 // List the active output devices and choose which one previews play to (blank = OS default output).
@@ -221,7 +221,8 @@ static void Wizard(EngineHost host)
 {
     Console.WriteLine("Environment checks:");
     foreach (var check in host.RunEnvironmentChecks())
-        Console.WriteLine($"  [{(check.Status == CheckStatus.Pass ? "OK" : "!!")}] {check.Name}: {check.Detail}");
+        Console.WriteLine($"  [{(check.Status == CheckStatus.Pass ? "OK" : "!!")}] {check.Kind}: " +
+            $"requested={check.RequestedName}, found={check.FoundName}, rate={check.MeasuredSampleRate}");
 
     Console.Write("Calibrate the mic now? Speak normally for 5s. [y/N] ");
     if (Console.ReadKey(intercept: true).Key != ConsoleKey.Y)
@@ -234,7 +235,7 @@ static void Wizard(EngineHost host)
     var result = host.Calibrate();
     Console.WriteLine(result.Ok
         ? $"Voice level captured ✓ (reference RMS {result.MicReferenceRms:F4})."
-        : $"Calibration: {result.Message}");
+        : $"Calibration: {result.Reason}");
 }
 
 // A 1-second 660 Hz tone, so [P] sends something audible to the cable.

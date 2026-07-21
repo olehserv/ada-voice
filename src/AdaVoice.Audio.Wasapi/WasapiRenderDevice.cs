@@ -1,3 +1,4 @@
+using AdaVoice.Audio;
 using AdaVoice.Audio.Abstractions;
 using AdaVoice.Audio.Dsp;
 using AdaVoice.Audio.Wasapi.Interop;
@@ -59,9 +60,7 @@ public sealed class WasapiRenderDevice : IAudioRenderDevice
     public void Init(ISampleProvider source)
     {
         if (source.WaveFormat.SampleRate != Format.SampleRate)
-            throw new NotSupportedException(
-                $"Source is {source.WaveFormat.SampleRate} Hz but the device is {Format.SampleRate} Hz. " +
-                "Set the cable to 48 kHz (a wizard check later).");
+            throw new UnsupportedSampleRateException();
 
         var matched = ChannelAdapter.Match(source, Format.Channels);
 

@@ -2,8 +2,9 @@
     x:Class="AdaVoice.App.ManageConversationsDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:res="clr-namespace:AdaVoice.App.Resources"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    Title="Manage conversations"
+    Title="{x:Static res:Strings.ManageConversations_Title}"
     Width="560"
     MaxHeight="620"
     Background="{DynamicResource Surface.Window}"
@@ -23,7 +24,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <ui:TitleBar
-            Title="Manage conversations"
+            Title="{x:Static res:Strings.ManageConversations_Title}"
             Grid.Row="0"
             CanMaximize="False"
             ShowMaximize="False"
@@ -52,7 +53,7 @@
                     Margin="4,8,4,0"
                     VerticalAlignment="Top"
                     Foreground="{DynamicResource Text.Muted}"
-                    Text="No conversations yet — add one below."
+                    Text="{x:Static res:Strings.ManageConversations_NoConversationsYet}"
                     TextWrapping="Wrap"
                     Visibility="{Binding HasNoConversations, Converter={StaticResource BoolToVis}}" />
             </Grid>
@@ -68,17 +69,17 @@
                 <ui:TextBox
                     Grid.Column="0"
                     Height="36"
-                    PlaceholderText="New conversation name"
+                    PlaceholderText="{x:Static res:Strings.ManageConversations_NewNamePlaceholder}"
                     Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}" />
                 <ui:Button
                     Grid.Column="1"
                     Height="36"
                     Margin="8,0,0,0"
                     Appearance="Success"
-                    AutomationProperties.Name="Add conversation"
+                    AutomationProperties.Name="{x:Static res:Strings.ManageConversations_AddConversation}"
                     Command="{Binding AddCommand}"
                     Content="✓"
-                    ToolTip="Add conversation" />
+                    ToolTip="{x:Static res:Strings.ManageConversations_AddConversation}" />
             </Grid>
 
             <!--  Right: the selected conversation's steps  -->
@@ -105,12 +106,12 @@
                             Appearance="Danger"
                             Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                             CommandParameter="{Binding}"
-                            Content="Delete" />
+                            Content="{x:Static res:Strings.ManageConversations_Delete}" />
                     </Grid>
 
                     <CheckBox
                         Margin="0,0,0,8"
-                        Content="Play a random version of each phrase"
+                        Content="{x:Static res:Strings.ManageConversations_PlayRandomVersion}"
                         IsChecked="{Binding UseRandomVersion}"
                         IsEnabled="{Binding IsWritable}" />
 
@@ -133,29 +134,29 @@
                                             Grid.Column="1"
                                             Margin="4,0,0,0"
                                             Appearance="Secondary"
-                                            AutomationProperties.Name="Move up"
+                                            AutomationProperties.Name="{x:Static res:Strings.ManageConversations_MoveUp}"
                                             Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}"
                                             Content="↑"
-                                            ToolTip="Move up" />
+                                            ToolTip="{x:Static res:Strings.ManageConversations_MoveUp}" />
                                         <ui:Button
                                             Grid.Column="2"
                                             Margin="4,0,0,0"
                                             Appearance="Secondary"
-                                            AutomationProperties.Name="Move down"
+                                            AutomationProperties.Name="{x:Static res:Strings.ManageConversations_MoveDown}"
                                             Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}"
                                             Content="↓"
-                                            ToolTip="Move down" />
+                                            ToolTip="{x:Static res:Strings.ManageConversations_MoveDown}" />
                                         <ui:Button
                                             Grid.Column="3"
                                             Margin="4,0,0,0"
                                             Appearance="Transparent"
-                                            AutomationProperties.Name="Remove"
+                                            AutomationProperties.Name="{x:Static res:Strings.ManageConversations_Remove}"
                                             Command="{Binding DataContext.RemovePhraseCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}"
                                             Content="✕"
-                                            ToolTip="Remove" />
+                                            ToolTip="{x:Static res:Strings.ManageConversations_Remove}" />
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -179,7 +180,7 @@
                             Height="36"
                             Margin="8,0,0,0"
                             Command="{Binding AddPhraseCommand}"
-                            Content="Add phrase" />
+                            Content="{x:Static res:Strings.ManageConversations_AddPhrase}" />
                     </Grid>
                 </StackPanel>
             </Border>
@@ -190,7 +191,7 @@
                 Margin="{StaticResource Space.ButtonRow}"
                 HorizontalAlignment="Right"
                 Appearance="Success"
-                Content="Done"
+                Content="{x:Static res:Strings.ManageConversations_Done}"
                 IsCancel="True" />
         </Grid>
 

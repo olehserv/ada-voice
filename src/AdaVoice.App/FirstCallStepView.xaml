@@ -1,14 +1,22 @@
-<UserControl x:Class="AdaVoice.App.FirstCallStepView"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+﻿<UserControl
+    x:Class="AdaVoice.App.FirstCallStepView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:res="clr-namespace:AdaVoice.App.Resources">
     <StackPanel>
-        <TextBlock Text="Before your first client call" Style="{StaticResource SectionTitleStyle}" />
-        <TextBlock Text="Make a test call and confirm everything sounds right:"
-                   Foreground="{DynamicResource Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,8" />
+        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="{x:Static res:Strings.FirstCall_Title}" />
+        <TextBlock
+            Margin="0,0,0,8"
+            Foreground="{DynamicResource Text.Secondary}"
+            Text="{x:Static res:Strings.FirstCall_Subtitle}"
+            TextWrapping="Wrap" />
         <ItemsControl ItemsSource="{Binding Checklist}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <CheckBox Content="{Binding Text}" IsChecked="{Binding IsChecked}" Margin="0,0,0,8" />
+                    <CheckBox
+                        Margin="0,0,0,8"
+                        Content="{Binding Text}"
+                        IsChecked="{Binding IsChecked}" />
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>

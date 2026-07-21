@@ -13,6 +13,15 @@
     <ProjectReference Include="..\AdaVoice.Host\AdaVoice.Host.csproj" />
   </ItemGroup>
 
+  <!--
+    Localization (en/uk/pl). Strings.resx (neutral = English) + Strings.uk.resx/Strings.pl.resx
+    (satellites, by naming convention — no extra config needed) compile automatically via the
+    SDK's default EmbeddedResource glob. The strongly typed accessor is Resources/Strings.cs,
+    hand-written rather than VS-generated: PublicResXFileCodeGenerator is a Visual Studio
+    "single file generator" feature that `dotnet build` never invokes (confirmed empirically —
+    a CLI build compiles the .resources/satellite assemblies fine but produces no Designer.cs).
+  -->
+
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="WPF-UI" />

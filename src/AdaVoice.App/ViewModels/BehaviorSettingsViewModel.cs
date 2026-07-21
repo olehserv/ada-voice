@@ -1,3 +1,4 @@
+using AdaVoice.App.Resources;
 using AdaVoice.Host;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -24,8 +25,8 @@ public partial class BehaviorSettingsViewModel : ObservableObject
         _alwaysOnTop = settings.AlwaysOnTop;
         _replaceOnRetrigger = settings.ReplaceOnRetrigger;
         HotkeyStatus = activeHotkey is { } key
-            ? $"Global stop hotkey: {key}"
-            : "No global stop hotkey available — use the on-screen STOP button.";
+            ? string.Format(Strings.Hotkey_Status, key)
+            : Strings.Hotkey_Unavailable;
     }
 
     /// <summary>The currently active stop hotkey, or the unavailable message. Read-only —

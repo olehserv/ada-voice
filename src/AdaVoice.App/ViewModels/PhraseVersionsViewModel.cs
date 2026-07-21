@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using AdaVoice.App.Resources;
+using AdaVoice.App.Services;
 using AdaVoice.Core.Domain;
 using AdaVoice.Host;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -103,13 +105,13 @@ public partial class PhraseVersionsViewModel : ObservableObject
             var error = row.Version is { } version
                 ? await Task.Run(() => _playback.PreviewVersion(version))
                 : await Task.Run(() => _playback.PreviewEntry(row.PrimaryEntry!));
-            if (error is not null)
-                Notified?.Invoke(this, new BoardNotification(error, NoticeSeverity.Error));
+            if (error is { } code)
+                Notified?.Invoke(this, new BoardNotification(PlaybackErrorText.Describe(code), NoticeSeverity.Error));
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             Notified?.Invoke(this, new BoardNotification(
-                "Could not play the preview — check the playback device and try again.", NoticeSeverity.Error));
+                Strings.Board_PreviewPlaybackError, NoticeSeverity.Error));
         }
         finally
         {
@@ -155,7 +157,7 @@ public partial class PhraseVersionRowViewModel : ObservableObject
     private PhraseVersionRowViewModel(PhraseEntry primary, bool isBroken)
     {
         PrimaryEntry = primary;
-        _label = "Primary";
+        _label = Strings.PhraseVersions_PrimaryLabel;
         IsBroken = isBroken;
     }
 

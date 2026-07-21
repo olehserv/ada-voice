@@ -23,7 +23,7 @@ public class VoiceCalibrationTests
         var result = VoiceCalibration.FromTrimmedSamples(samples);
 
         Assert.False(result.Ok);
-        Assert.NotNull(result.Message);
+        Assert.Equal(CalibrationFailureReason.TooQuiet, result.Reason);
     }
 
     [Fact]
